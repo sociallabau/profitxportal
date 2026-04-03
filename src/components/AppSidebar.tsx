@@ -21,7 +21,7 @@ export const CIRCLE_URLS = {
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
-  { label: 'Content Tracker', path: '/content', icon: PenLine },
+  { label: 'Content Tracker', path: '/content', icon: BarChart3 },
   {
     label: 'Submissions', icon: Award, children: [
       { label: 'Weekly Wins', path: '/submissions/wins' },
