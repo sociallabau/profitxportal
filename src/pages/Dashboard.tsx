@@ -1,233 +1,176 @@
-import { DollarSign, Users, UserPlus, Target } from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
-import { Link } from "react-router-dom";
-import PageLayout from "@/components/PageLayout";
-import StatCard from "@/components/StatCard";
-
-const revenueData = [
-  { month: "Oct", revenue: 3200 },
-  { month: "Nov", revenue: 4800 },
-  { month: "Dec", revenue: 6100 },
-  { month: "Jan", revenue: 7500 },
-  { month: "Feb", revenue: 9200 },
-  { month: "Mar", revenue: 11800 },
-];
-
-const recentSubmissions = [
-  { date: "Mar 28", type: "Weekly Win", title: "Signed 2nd retainer client this month!" },
-  { date: "Mar 25", type: "New Client", title: "Studio Bloom — $2,500/mo retainer" },
-  { date: "Mar 21", type: "Weekly Win", title: "Hit 5k followers on Instagram" },
-  { date: "Mar 18", type: "New Client", title: "FreshCut Media — $1,800/mo retainer" },
-  { date: "Mar 14", type: "Weekly Win", title: "First YouTube video got 2.4k views" },
-];
+import { useNavigate, Link } from 'react-router-dom';
+import { DollarSign, Users, UserPlus, Target } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import PageLayout from '@/components/PageLayout';
+import StatCard from '@/components/StatCard';
+import { supabase } from '@/lib/supabase';
+import { useRequireAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function Dashboard() {
+  const { user, loading: authLoading } = useRequireAuth();
+  const { data: profile } = useProfile();
+
+  const { data: monthlyData } = useQuery({
+    queryKey: ['monthly-totals', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('monthly_totals')
+        .select('month, mrr, new_clients, leads_generated')
+        .eq('user_id', user!.id)
+        .order('month', { ascending: true })
+        .limit(6);
+      if (error) throw error;
+      return data.map((row) => ({
+        month: new Date(row.month).toLocaleString('default', { month: 'short' }),
+        revenue: row.mrr,
+        clients: row.new_clients,
+        leads: row.leads_generated,
+      }));
+    },
+  });
+
+  const { data: recentWins } = useQuery({
+    queryKey: ['recent-wins', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('weekly_wins')
+        .select('win_text, created_at')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      return data ?? [];
+    },
+  });
+
+  const { data: recentClients } = useQuery({
+    queryKey: ['recent-clients', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('new_clients')
+        .select('client_name, monthly_value, signed_date')
+        .eq('user_id', user!.id)
+        .order('signed_date', { ascending: false })
+        .limit(3);
+      return data ?? [];
+    },
+  });
+
+  const latest = monthlyData?.at(-1);
+  const prev = monthlyData?.at(-2);
+  const mrrChange = latest && prev && prev.revenue > 0
+    ? Math.round(((latest.revenue - prev.revenue) / prev.revenue) * 100)
+    : 0;
+
+  if (authLoading) return null;
+
   const now = new Date();
-  const greeting =
-    now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
+  const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
     <PageLayout>
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {greeting} 👋
+          <h1 className="text-2xl text-foreground">
+            {greeting}{profile?.full_name ? `, ${profile.full_name}` : ''} 👋
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
         <Link
           to="/submissions/monthly"
-          className="inline-flex items-center gap-2 h-10 px-5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm shrink-0"
+          className="inline-flex items-center gap-2 h-10 px-5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all shadow-md shadow-primary/20 text-sm shrink-0"
         >
           Submit this month's data →
         </Link>
       </div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Revenue This Month" value="$11,800" change={28} icon={DollarSign} />
-        <StatCard title="Active Retainer Clients" value="6" change={20} icon={Users} />
-        <StatCard title="New Clients Signed" value="2" change={100} icon={UserPlus} />
-        <StatCard title="Leads Generated" value="14" change={-7} icon={Target} />
+        <StatCard title="MRR This Month" value={latest?.revenue ? `$${latest.revenue.toLocaleString()}` : '—'} change={mrrChange} icon={DollarSign} />
+        <StatCard title="New Clients" value={String(latest?.clients ?? '—')} change={0} icon={UserPlus} />
+        <StatCard title="Leads Generated" value={String(latest?.leads ?? '—')} change={0} icon={Target} />
+        <StatCard title="Months Tracked" value={String(monthlyData?.length ?? 0)} change={0} icon={Users} />
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: "View Roadmap", path: "/roadmap", emoji: "🗺️" },
-          { label: "Log a Win", path: "/submissions/wins", emoji: "🏆" },
-          { label: "Content Stats", path: "/content", emoji: "📊" },
-          { label: "AI Tools", path: "/ai-tools", emoji: "✨" },
-        ].map((action) => (
-          <Link
-            key={action.path}
-            to={action.path}
-            className="flex flex-col items-center gap-2 p-4 bg-card border border-border rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all text-center group"
-          >
-            <span className="text-2xl">{action.emoji}</span>
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
-              {action.label}
-            </span>
+          { label: 'View Roadmap', path: '/roadmap', emoji: '🗺️' },
+          { label: 'Log a Win', path: '/submissions/wins', emoji: '🏆' },
+          { label: 'Content Stats', path: '/content', emoji: '📊' },
+          { label: 'AI Tools', path: '/ai-tools', emoji: '✨' },
+        ].map((a) => (
+          <Link key={a.path} to={a.path}
+            className="flex flex-col items-center gap-2 p-4 bg-card border border-border rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all text-center group">
+            <span className="text-2xl">{a.emoji}</span>
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">{a.label}</span>
           </Link>
         ))}
       </div>
 
-      {/* Revenue chart + Quick Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
-        <div className="lg:col-span-3 bg-card border border-border rounded-xl p-5 animate-fade-in">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Revenue — Last 6 Months</h3>
-          <div className="h-64">
+      <div className="bg-card border border-border rounded-xl p-5 mb-6">
+        <h3 className="text-sm font-semibold text-foreground mb-4">Revenue — Last 6 Months</h3>
+        {monthlyData && monthlyData.length > 0 ? (
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 28%)" />
-                <XAxis dataKey="month" stroke="hsl(0 0% 65%)" fontSize={12} />
-                <YAxis stroke="hsl(0 0% 65%)" fontSize={12} tickFormatter={(v) => `$${v / 1000}k`} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(0 0% 20%)",
-                    border: "1px solid hsl(0 0% 28%)",
-                    borderRadius: "0.5rem",
-                    color: "hsl(0 0% 95%)",
-                    fontSize: 13,
-                  }}
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="hsl(270 100% 50%)"
-                  strokeWidth={2.5}
-                  dot={{ fill: "hsl(270 100% 50%)", r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2e2e2e" />
+                <XAxis dataKey="month" stroke="#888" tick={{ fontSize: 11 }} />
+                <YAxis stroke="#888" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v / 1000}k`} />
+                <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, 'MRR']} contentStyle={{ background: '#1c1c1c', border: '1px solid #2e2e2e', borderRadius: 8 }} />
+                <Line type="monotone" dataKey="revenue" stroke="#AA44FF" strokeWidth={2} dot={{ fill: '#AA44FF', r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
-
-        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5 animate-fade-in">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Quick Stats</h3>
-          <div className="space-y-4">
-            {[
-              { label: "Cash Collected", value: "$10,600" },
-              { label: "Expenses", value: "$3,200" },
-              { label: "Profit Margin", value: "73%" },
-              { label: "Sales Call Close Rate", value: "40%" },
-              { label: "Client Retention Rate", value: "83%" },
-            ].map((stat) => (
-              <div key={stat.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <span className="text-sm text-muted-foreground">{stat.label}</span>
-                <span className="text-sm font-semibold text-foreground">{stat.value}</span>
-              </div>
-            ))}
+        ) : (
+          <div className="h-56 flex flex-col items-center justify-center text-muted-foreground">
+            <p className="text-sm">No data yet.</p>
+            <Link to="/submissions/monthly" className="mt-2 text-sm text-primary hover:underline">Submit your first month →</Link>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Third row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-card border border-border rounded-xl p-5 animate-fade-in">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Content Performance</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Posts this month</span>
-              <span className="text-sm font-semibold text-foreground">12</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Avg views/post</span>
-              <span className="text-sm font-semibold text-foreground">1,240</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Top platform</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                Instagram
-              </span>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-foreground">Recent Wins</h3>
+            <Link to="/submissions/wins" className="text-xs text-primary hover:underline">View all</Link>
           </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-5 animate-fade-in">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Growth Metrics</h3>
-          <div className="space-y-3">
-            {[
-              { label: "Instagram Followers", value: "5,120", change: "+340" },
-              { label: "YouTube Subscribers", value: "892", change: "+78" },
-              { label: "Email List", value: "1,450", change: "+112" },
-            ].map((m) => (
-              <div key={m.label} className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{m.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">{m.value}</span>
-                  <span className="text-xs text-success">{m.change}</span>
+          {recentWins && recentWins.length > 0 ? (
+            <div className="space-y-2">
+              {recentWins.map((w: any, i: number) => (
+                <div key={i} className="flex items-start gap-2 text-sm">
+                  <span className="text-primary mt-0.5">🏆</span>
+                  <span className="text-muted-foreground">{w.win_text}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-5 animate-fade-in">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Roadmap Progress</h3>
-          <div className="flex items-center gap-6 mb-4">
-            <div className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-destructive traffic-dot" />
-              <span className="text-sm text-muted-foreground">3</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-warning traffic-dot" />
-              <span className="text-sm text-muted-foreground">4</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-success traffic-dot" />
-              <span className="text-sm text-muted-foreground">5</span>
-            </div>
-          </div>
-          <Link
-            to="/roadmap"
-            className="text-sm text-primary hover:underline font-medium"
-          >
-            View Roadmap →
-          </Link>
-        </div>
-      </div>
-
-      {/* Recent Submissions */}
-      <div className="bg-card border border-border rounded-xl p-5 animate-fade-in">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Recent Submissions</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 text-xs font-medium text-muted-foreground">Date</th>
-                <th className="text-left py-2 text-xs font-medium text-muted-foreground">Type</th>
-                <th className="text-left py-2 text-xs font-medium text-muted-foreground">Title</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentSubmissions.map((s, i) => (
-                <tr key={i} className="border-b border-border last:border-0">
-                  <td className="py-3 text-sm text-muted-foreground whitespace-nowrap">{s.date}</td>
-                  <td className="py-3">
-                    <Link
-                      to={s.type === "Weekly Win" ? "/submissions/wins" : "/submissions/clients"}
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity ${
-                        s.type === "Weekly Win"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-success/10 text-success"
-                      }`}
-                    >
-                      {s.type}
-                    </Link>
-                  </td>
-                  <td className="py-3 text-sm text-foreground">{s.title}</td>
-                </tr>
               ))}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No wins logged yet. <Link to="/submissions/wins" className="text-primary hover:underline">Add your first →</Link></p>
+          )}
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-foreground">Recent Clients</h3>
+            <Link to="/submissions/clients" className="text-xs text-primary hover:underline">View all</Link>
+          </div>
+          {recentClients && recentClients.length > 0 ? (
+            <div className="space-y-2">
+              {recentClients.map((c: any, i: number) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground">{c.client_name}</span>
+                  <span className="text-primary font-semibold">${c.monthly_value.toLocaleString()}/mo</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No clients yet. <Link to="/submissions/clients" className="text-primary hover:underline">Add your first →</Link></p>
+          )}
         </div>
       </div>
     </PageLayout>

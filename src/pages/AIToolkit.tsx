@@ -1,6 +1,7 @@
 import PageLayout from "@/components/PageLayout";
 import { useState } from "react";
 import { Search, ExternalLink } from "lucide-react";
+import { useRequireAuth } from '@/hooks/useAuth';
 
 const CIRCLE_AI_URL = "https://app.circle.so/sign_in";
 
@@ -25,8 +26,10 @@ const categoryColor: Record<string, string> = {
 const tabs = ["All", "Build", "Traffic", "Sales", "Scale"];
 
 export default function AIToolkit() {
+  const { loading } = useRequireAuth();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("All");
+  if (loading) return null;
 
   const filtered = tools.filter(
     (t) =>

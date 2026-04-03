@@ -1,6 +1,7 @@
 import PageLayout from "@/components/PageLayout";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { useRequireAuth } from '@/hooks/useAuth';
 
 const checklistData = [
   {
@@ -20,7 +21,9 @@ const checklistData = [
 ];
 
 export default function Checklist() {
+  const { loading } = useRequireAuth();
   const [openPillars, setOpenPillars] = useState<string[]>(["BUILD"]);
+  if (loading) return null;
 
   const toggle = (p: string) =>
     setOpenPillars((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);

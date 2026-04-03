@@ -1,55 +1,88 @@
-import PageLayout from "@/components/PageLayout";
-import { Trophy } from "lucide-react";
-import { useState } from "react";
-
-const initialWins = [
-  { text: "Signed 2nd retainer client this month!", date: "3 days ago", week: 14 },
-  { text: "Hit 5k followers on Instagram", date: "1 week ago", week: 13 },
-  { text: "First YouTube video got 2.4k views", date: "2 weeks ago", week: 12 },
-  { text: "Booked 3 discovery calls from one LinkedIn post", date: "3 weeks ago", week: 11 },
-];
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import PageLayout from '@/components/PageLayout';
+import { supabase } from '@/lib/supabase';
+import { useRequireAuth } from '@/hooks/useAuth';
 
 export default function WeeklyWins() {
-  const [wins] = useState(initialWins);
-  const [newWin, setNewWin] = useState("");
+  const { user } = useRequireAuth();
+  const qc = useQueryClient();
+  const [winText, setWinText] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const { data: wins } = useQuery({
+    queryKey: ['wins', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('weekly_wins')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  const addWin = useMutation({
+    mutationFn: async (text: string) => {
+      const { error } = await supabase.from('weekly_wins').insert({
+        user_id: user!.id,
+        win_text: text,
+        week_ending: new Date().toISOString().split('T')[0],
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wins'] });
+      qc.invalidateQueries({ queryKey: ['recent-wins'] });
+      setWinText('');
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 3000);
+    },
+  });
 
   return (
     <PageLayout>
-      <h1 className="text-2xl font-bold text-foreground mb-6">Weekly Wins</h1>
+      <h1 className="text-2xl mb-1">Weekly Wins</h1>
+      <p className="text-sm text-muted-foreground mb-6">Log a win from this week — anything counts.</p>
 
       <div className="bg-card border border-border rounded-xl p-5 mb-6">
-        <label className="block text-sm font-medium text-foreground mb-2">
-          What's your win this week?
-        </label>
         <textarea
-          value={newWin}
-          onChange={(e) => setNewWin(e.target.value)}
-          placeholder="Share something you're proud of..."
-          className="w-full h-24 px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+          value={winText}
+          onChange={(e) => setWinText(e.target.value)}
+          placeholder="e.g. Signed a $2k/mo retainer client, hit 1k followers, landed my first discovery call..."
+          rows={3}
+          className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition resize-none"
         />
-        <button className="mt-3 inline-flex items-center gap-2 h-10 px-5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm">
-          Submit Win 🏆
-        </button>
+        <div className="flex items-center justify-between mt-3">
+          {submitted && <span className="text-sm text-success">🏆 Win logged!</span>}
+          {!submitted && <span />}
+          <button
+            onClick={() => winText.trim() && addWin.mutate(winText.trim())}
+            disabled={!winText.trim() || addWin.isPending}
+            className="px-5 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-sm hover:bg-primary/90 transition-all disabled:opacity-50"
+          >
+            {addWin.isPending ? 'Saving...' : 'Submit Win →'}
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-3">
-        {wins.map((win, i) => (
-          <div key={i} className="bg-card border border-border rounded-xl p-4 flex items-start gap-4 animate-fade-in">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Trophy className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-foreground font-medium">{win.text}</p>
-              <div className="flex items-center gap-3 mt-1.5">
-                <span className="text-xs text-muted-foreground">{win.date}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                  Week {win.week}
-                </span>
+      <h2 className="text-base font-semibold text-foreground mb-3">Your Wins History</h2>
+      {wins && wins.length > 0 ? (
+        <div className="space-y-2">
+          {wins.map((w: any) => (
+            <div key={w.id} className="flex items-start gap-3 bg-card border border-border rounded-lg px-4 py-3">
+              <span className="text-primary text-lg">🏆</span>
+              <div>
+                <p className="text-sm text-foreground">{w.win_text}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{new Date(w.created_at).toLocaleDateString()}</p>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No wins yet — add your first one above!</p>
+      )}
     </PageLayout>
   );
 }

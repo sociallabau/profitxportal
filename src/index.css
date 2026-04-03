@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,78 +6,93 @@
 
 @layer base {
   :root {
-    --background: 0 0% 17%;
-    --foreground: 0 0% 95%;
-
-    --card: 0 0% 20%;
-    --card-foreground: 0 0% 95%;
-
-    --popover: 0 0% 20%;
-    --popover-foreground: 0 0% 95%;
-
-    --primary: 270 100% 50%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 94%;
+    --card: 0 0% 11%;
+    --card-foreground: 0 0% 94%;
+    --popover: 0 0% 11%;
+    --popover-foreground: 0 0% 94%;
+    --primary: 275 100% 65%;
     --primary-foreground: 0 0% 100%;
-
     --secondary: 0 0% 91%;
-    --secondary-foreground: 0 0% 17%;
-
-    --muted: 0 0% 22%;
-    --muted-foreground: 0 0% 65%;
-
-    --accent: 0 0% 91%;
-    --accent-foreground: 0 0% 17%;
-
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 275 100% 65%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
-
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 0%;
-
-    --border: 0 0% 28%;
-    --input: 0 0% 25%;
-    --ring: 270 100% 50%;
-
+    --border: 0 0% 18%;
+    --input: 0 0% 14%;
+    --ring: 275 100% 65%;
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 20%;
-    --sidebar-foreground: 0 0% 65%;
-    --sidebar-primary: 270 100% 50%;
+    --sidebar-background: 0 0% 11%;
+    --sidebar-foreground: 0 0% 55%;
+    --sidebar-primary: 275 100% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 25%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 28%;
-    --sidebar-ring: 270 100% 50%;
-
-    --chart-gold: 46 91% 57%;
-    --chart-green: 160 84% 39%;
-    --chart-blue: 217 91% 60%;
-    --chart-purple: 270 100% 50%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 94%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 275 100% 65%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
 
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
     font-weight: 400;
+    /* Prism texture: multiple faint radial glows at different positions and hues */
+    background-image:
+      radial-gradient(ellipse 80% 50% at 15% 20%,  rgba(170, 68,  255, 0.055) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 85% 10%,  rgba(99,  102, 241, 0.045) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 40% at 70% 75%,  rgba(192, 132, 252, 0.04)  0%, transparent 50%),
+      radial-gradient(ellipse 50% 70% at 5%  80%,  rgba(139, 92,  246, 0.035) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 40% at 50% 50%,  rgba(220, 38,  255, 0.02)  0%, transparent 60%);
+    background-attachment: fixed;
   }
 
-  h1, h2, h3 {
+  h1 {
     font-family: 'Inter', sans-serif;
     font-weight: 700;
+    font-style: italic;
+  }
+  h2, h3 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-style: italic;
   }
 
   h4, h5, h6, label, .font-semibold {
     font-family: 'Inter', sans-serif;
     font-weight: 600;
   }
+}
+
+/* Subtle noise grain overlay for extra texture depth */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+}
+
+/* Make sure all content sits above the overlay */
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 /* Scrollbar styling */

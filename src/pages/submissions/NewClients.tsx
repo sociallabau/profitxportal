@@ -1,62 +1,126 @@
-import PageLayout from "@/components/PageLayout";
-
-const clients = [
-  { date: "Mar 25", name: "Studio Bloom", package: "3-month retainer", value: 2500, start: "Apr 1" },
-  { date: "Mar 10", name: "FreshCut Media", package: "Monthly retainer", value: 1800, start: "Mar 15" },
-  { date: "Feb 22", name: "Pixel Perfect Co", package: "6-month retainer", value: 3200, start: "Mar 1" },
-];
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import PageLayout from '@/components/PageLayout';
+import { supabase } from '@/lib/supabase';
+import { useRequireAuth } from '@/hooks/useAuth';
 
 export default function NewClients() {
+  const { user } = useRequireAuth();
+  const qc = useQueryClient();
+  const [form, setForm] = useState({ client_name: '', monthly_value: '', notes: '' });
+  const [saved, setSaved] = useState(false);
+
+  const { data: clients } = useQuery({
+    queryKey: ['new-clients', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('new_clients')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('signed_date', { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  const addClient = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('new_clients').insert({
+        user_id: user!.id,
+        client_name: form.client_name,
+        monthly_value: parseFloat(form.monthly_value),
+        signed_date: new Date().toISOString().split('T')[0],
+        notes: form.notes,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['new-clients'] });
+      qc.invalidateQueries({ queryKey: ['recent-clients'] });
+      setForm({ client_name: '', monthly_value: '', notes: '' });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    },
+  });
+
+  const totalMRR = clients?.reduce((sum: number, c: any) => sum + Number(c.monthly_value), 0) ?? 0;
+
   return (
     <PageLayout>
-      <h1 className="text-2xl font-bold text-foreground mb-6">New Clients</h1>
+      <h1 className="text-2xl mb-1">New Clients</h1>
+      <p className="text-sm text-muted-foreground mb-6">Log a new retainer client.</p>
+
+      <div className="bg-card border border-border rounded-xl p-5 mb-6 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">Client Name</label>
+            <input
+              value={form.client_name}
+              onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+              placeholder="Studio Bloom"
+              className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">Monthly Value ($)</label>
+            <input
+              type="number"
+              value={form.monthly_value}
+              onChange={(e) => setForm({ ...form, monthly_value: e.target.value })}
+              placeholder="2500"
+              className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1.5">Notes (optional)</label>
+          <input
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            placeholder="e.g. 3-month contract, social media content..."
+            className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+          />
+        </div>
+        <div className="flex items-center justify-between pt-1">
+          {saved && <span className="text-sm text-success">✓ Client saved!</span>}
+          {!saved && <span />}
+          <button
+            onClick={() => addClient.mutate()}
+            disabled={!form.client_name || !form.monthly_value || addClient.isPending}
+            className="px-5 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-sm hover:bg-primary/90 transition-all disabled:opacity-50"
+          >
+            {addClient.isPending ? 'Saving...' : 'Add Client →'}
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground">New clients this month</p>
-          <p className="text-2xl font-bold text-foreground mt-1">2</p>
+        <div className="bg-card border border-border rounded-xl p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-1">Total Clients Logged</p>
+          <p className="text-2xl font-bold text-foreground">{clients?.length ?? 0}</p>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground">Total value</p>
-          <p className="text-2xl font-bold text-foreground mt-1">$4,300</p>
+        <div className="bg-card border border-border rounded-xl p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-1">Total MRR Logged</p>
+          <p className="text-2xl font-bold text-primary">${totalMRR.toLocaleString()}</p>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-5 mb-6">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Log a New Client</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input placeholder="Client name" className="h-10 px-4 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-          <input placeholder="Package sold" className="h-10 px-4 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-          <input placeholder="Deal value ($)" type="number" className="h-10 px-4 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-          <input type="date" className="h-10 px-4 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+      {clients && clients.length > 0 && (
+        <div className="space-y-2">
+          {clients.map((c: any) => (
+            <div key={c.id} className="flex items-center justify-between bg-card border border-border rounded-lg px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{c.client_name}</p>
+                {c.notes && <p className="text-xs text-muted-foreground mt-0.5">{c.notes}</p>}
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-primary">${Number(c.monthly_value).toLocaleString()}/mo</p>
+                <p className="text-xs text-muted-foreground">{new Date(c.signed_date).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <button className="mt-4 h-10 px-5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm">
-          Log New Client 🎉
-        </button>
-      </div>
-
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              {["Date", "Client", "Package", "Deal Value", "Start Date"].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {clients.map((c, i) => (
-              <tr key={i} className="border-b border-border last:border-0">
-                <td className="px-4 py-3 text-sm text-muted-foreground">{c.date}</td>
-                <td className="px-4 py-3 text-sm text-foreground font-medium">{c.name}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{c.package}</td>
-                <td className="px-4 py-3 text-sm text-foreground">${c.value.toLocaleString()}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{c.start}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
     </PageLayout>
   );
 }
