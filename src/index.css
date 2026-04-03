@@ -69,6 +69,7 @@
   h4, h5, h6, label, .font-semibold {
     font-family: 'Inter', sans-serif;
     font-weight: 600;
+    letter-spacing: -0.01em;
   }
 }
 
