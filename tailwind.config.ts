@@ -68,21 +68,13 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        "brand-purple": "#7F00FF",
-        "brand-base": "#2b2b2b",
-        "brand-accent": "#e6e6e6",
-        pillar: {
-          build: "hsl(270 100% 50%)",
-          traffic: "hsl(270 100% 50%)",
-          sales: "hsl(280 59% 65%)",
-          scale: "hsl(239 84% 67%)",
-        },
-      },
-      backgroundImage: {
-        'texture-dots': "radial-gradient(circle, #e6e6e610 1px, transparent 1px)",
-      },
-      backgroundSize: {
-        'dots': '24px 24px',
+        "brand-purple": "#AA44FF",
+        "brand-base": "#111111",
+        "brand-card": "#1c1c1c",
+        "pillar-build": "#AA44FF",
+        "pillar-traffic": "#8B5CF6",
+        "pillar-sales": "#C084FC",
+        "pillar-scale": "#7C3AED",
       },
       borderRadius: {
         lg: "var(--radius)",
