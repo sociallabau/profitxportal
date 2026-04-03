@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Gauge, Route, PenLine, Award,
-  Wallet, Wand2, UserCog, SlidersHorizontal, LogOut,
-  Menu, X, ExternalLink, ChevronDown, ChevronRight,
+  Gauge, Route, BarChart3, BadgeCheck, Wallet, Cpu, HeartPulse,
+  SlidersHorizontal, LogOut, Menu, X, ExternalLink, ChevronDown,
+  ChevronRight, GraduationCap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
