@@ -39,6 +39,8 @@ export default function ClientHealth() {
     scale: 'bg-primary/20 text-primary',
   };
 
+  if (loading) return null;
+
   return (
     <PageLayout>
       <h1 className="text-2xl mb-1">Client Health</h1>
