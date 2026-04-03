@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Gauge, Route, PenLine, Award,
-  Wallet, Wand2, UserCog, SlidersHorizontal, LogOut,
-  Menu, X, ExternalLink, ChevronDown, ChevronRight,
+  Gauge, Route, BarChart3, BadgeCheck, Wallet, Cpu, HeartPulse,
+  SlidersHorizontal, LogOut, Menu, X, ExternalLink, ChevronDown,
+  ChevronRight, GraduationCap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -21,9 +21,9 @@ export const CIRCLE_URLS = {
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
-  { label: 'Content Tracker', path: '/content', icon: PenLine },
+  { label: 'Content Tracker', path: '/content', icon: BarChart3 },
   {
-    label: 'Submissions', icon: Award, children: [
+    label: 'Submissions', icon: BadgeCheck, children: [
       { label: 'Weekly Wins', path: '/submissions/wins' },
       { label: 'New Clients', path: '/submissions/clients' },
       { label: 'Monthly Totals', path: '/submissions/monthly' },
@@ -31,12 +31,12 @@ const navItems = [
     ],
   },
   { label: 'Financials', path: '/financials', icon: Wallet },
-  { label: 'AI Toolkit', path: '/ai-tools', icon: Wand2 },
+  { label: 'AI Toolkit', path: '/ai-tools', icon: Cpu },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
 ];
 
 const adminItems = [
-  { label: 'Client Health', path: '/admin/clients', icon: UserCog },
+  { label: 'Client Health', path: '/admin/clients', icon: HeartPulse },
 ];
 
 function NavContent({ onClose }: { onClose?: () => void }) {
