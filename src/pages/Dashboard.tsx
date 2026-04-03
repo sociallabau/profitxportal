@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { DollarSign, Users, UserPlus, Target, Route } from 'lucide-react';
+import { DollarSign, Users, UserPlus, Target, Route, Banknote, ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
@@ -74,6 +74,17 @@ export default function Dashboard() {
     },
   });
 
+  const { data: cashMenuCount = 0 } = useQuery({
+    queryKey: ['cash-menu-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('cash_menu_actions')
+        .select('*', { count: 'exact', head: true });
+      return count ?? 0;
+    },
+  });
+
+  const navigate = useNavigate();
   const latest = monthlyData?.at(-1);
   const prev = monthlyData?.at(-2);
   const mrrChange = latest && prev && prev.revenue > 0
@@ -160,6 +171,30 @@ export default function Dashboard() {
           </div>
         );
       })()}
+
+      {/* Cash Menu Teaser */}
+      <div
+        onClick={() => navigate('/cash-menu')}
+        className="bg-card border border-border rounded-xl p-5 mb-6 cursor-pointer hover:border-primary/50 transition-all group"
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Banknote className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Cash Menu</p>
+              <p className="text-foreground font-bold italic text-lg">Quick Cash Moves</p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+        </div>
+        <p className="text-muted-foreground text-sm mt-3">
+          {cashMenuCount === 4
+            ? 'All 4 moves completed 🎉'
+            : `${cashMenuCount}/4 moves done — scripts to book calls fast`}
+        </p>
+      </div>
 
       {/* This Week's Focus */}
       {focusItems && focusItems.length > 0 && (
