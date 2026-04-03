@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      cash_menu_actions: {
+        Row: {
+          action_key: string
+          completed_at: string | null
+          id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          action_key: string
+          completed_at?: string | null
+          id?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          action_key?: string
+          completed_at?: string | null
+          id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_menu_actions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_posts: {
         Row: {
           content_type: string | null
