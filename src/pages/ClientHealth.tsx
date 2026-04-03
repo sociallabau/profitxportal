@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, ArrowUpCircle } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
