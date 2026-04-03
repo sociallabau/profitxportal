@@ -38,7 +38,7 @@ export default function ClientHealth() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, tier, created_at');
+        .select('id, full_name, email, tier, created_at, coach_notes');
       if (error) throw error;
       return data ?? [];
     },
