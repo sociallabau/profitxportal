@@ -23,7 +23,7 @@ const navItems = [
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Content Tracker', path: '/content', icon: BarChart3 },
   {
-    label: 'Submissions', icon: Award, children: [
+    label: 'Submissions', icon: BadgeCheck, children: [
       { label: 'Weekly Wins', path: '/submissions/wins' },
       { label: 'New Clients', path: '/submissions/clients' },
       { label: 'Monthly Totals', path: '/submissions/monthly' },
