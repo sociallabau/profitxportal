@@ -2,6 +2,8 @@ import PageLayout from "@/components/PageLayout";
 import { useState } from "react";
 import { Search, ExternalLink } from "lucide-react";
 
+const CIRCLE_AI_URL = "https://app.circle.so/sign_in";
+
 const tools = [
   { name: "Retainer Offer Builder", category: "Build", description: "Build your video retainer offer structure and pricing" },
   { name: "Case Study Writer", category: "Build", description: "Turn client results into compelling written case studies" },
@@ -71,9 +73,14 @@ export default function AIToolkit() {
             </span>
             <h3 className="text-sm font-bold text-foreground mb-1.5">{tool.name}</h3>
             <p className="text-sm text-muted-foreground flex-1 mb-4">{tool.description}</p>
-            <button className="inline-flex items-center gap-2 text-sm text-primary font-medium hover:underline">
-              Open Tool <ExternalLink className="h-3.5 w-3.5" />
-            </button>
+            <a
+              href={CIRCLE_AI_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors self-start"
+            >
+              Open Tool <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
         ))}
       </div>

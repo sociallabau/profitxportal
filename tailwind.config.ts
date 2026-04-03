@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Space Grotesk", "sans-serif"],
+        sans: ["Inter", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -68,13 +68,21 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Pillar colors
+        "brand-purple": "#7F00FF",
+        "brand-base": "#2b2b2b",
+        "brand-accent": "#e6e6e6",
         pillar: {
-          build: "hsl(217 91% 60%)",
-          traffic: "hsl(160 84% 39%)",
-          sales: "hsl(258 90% 66%)",
-          scale: "hsl(46 91% 57%)",
+          build: "hsl(270 100% 50%)",
+          traffic: "hsl(270 100% 50%)",
+          sales: "hsl(280 59% 65%)",
+          scale: "hsl(239 84% 67%)",
         },
+      },
+      backgroundImage: {
+        'texture-dots': "radial-gradient(circle, #e6e6e610 1px, transparent 1px)",
+      },
+      backgroundSize: {
+        'dots': '24px 24px',
       },
       borderRadius: {
         lg: "var(--radius)",

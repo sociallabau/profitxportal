@@ -1,20 +1,77 @@
 import PageLayout from "@/components/PageLayout";
-import { Map } from "lucide-react";
+import { Map, ExternalLink } from "lucide-react";
+
+const CIRCLE_URL = "https://app.circle.so/sign_in";
 
 const pillars = [
-  { name: "BUILD", color: "text-pillar-build", modules: ["Define Your Retainer Offer", "Price Your Package", "Build Your Delivery Roadmap", "Get Your First 3 Results", "Create Case Study Assets", "Referral & Renewal System"] },
-  { name: "TRAFFIC", color: "text-pillar-traffic", modules: ["Define Your Ideal Client", "Your Content Strategy", "Short Form Content System", "Long Form / YouTube Authority", "Warm Outreach System", "Lead Magnet & Email List"] },
-  { name: "SALES", color: "text-pillar-sales", modules: ["Your Offer Document", "The Discovery Call Framework", "Chat-to-Close Process", "Objection Handling Scripts", "Follow-Up Sequence", "Sales Metrics & Tracking"] },
-  { name: "SCALE", color: "text-pillar-scale", modules: ["Document Your SOPs", "Hire Your First Editor", "Client Onboarding Automation", "Project Management System", "Finance & Profit System", "Team Expansion & Delegation"] },
+  {
+    name: "BUILD",
+    subtitle: "Retainer Offer",
+    color: "text-pillar-build",
+    modules: [
+      "Build Your Offer",
+      "Get Client Results",
+      "Offer Optimisation",
+      "Case Study System",
+      "Premium Positioning",
+      "Offer to Agency",
+    ],
+  },
+  {
+    name: "TRAFFIC",
+    subtitle: "Growth Engine",
+    color: "text-pillar-traffic",
+    modules: [
+      "Content Foundation",
+      "First 1k Followers",
+      "Ads Foundations",
+      "Paid Traffic System",
+      "Content to Leads Machine",
+      "Full Funnel",
+    ],
+  },
+  {
+    name: "SALES",
+    subtitle: "Sales System",
+    color: "text-pillar-sales",
+    modules: [
+      "Discovery Call Framework",
+      "Objection Handling",
+      "Close Rate Optimisation",
+      "Sales CRM Setup",
+      "Sales Script Mastery",
+      "Hire a Setter",
+    ],
+  },
+  {
+    name: "SCALE",
+    subtitle: "Scale System",
+    color: "text-pillar-scale",
+    modules: [
+      "Remove Yourself from Delivery",
+      "SOP Library",
+      "First Hire",
+      "Team Systems",
+      "Agency Model",
+      "Operator Handoff",
+    ],
+  },
 ];
 
-const scores = ["green", "green", "amber", "red", "red", "red", "green", "amber", "amber", "green", "red", "amber", "green", "green", "amber", "amber", "red", "green", "green", "amber", "amber", "red", "red", "red"];
+const scores = [
+  "green", "green", "amber", "red", "red", "red",
+  "green", "amber", "amber", "green", "red", "amber",
+  "green", "green", "amber", "amber", "red", "green",
+  "green", "amber", "amber", "red", "red", "red",
+];
 
 const scoreColor: Record<string, string> = {
   green: "bg-success",
   amber: "bg-warning",
   red: "bg-destructive",
 };
+
+const tierLabels = ["Onramp", "Onramp", "Growth", "Growth", "Scale", "Scale"];
 
 export default function Roadmap() {
   let idx = 0;
@@ -36,17 +93,30 @@ export default function Roadmap() {
           <div key={pillar.name} className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
               <h3 className={`text-sm font-bold ${pillar.color}`}>{pillar.name}</h3>
+              <p className="text-xs text-muted-foreground">{pillar.subtitle}</p>
             </div>
             <div className="p-3 space-y-2">
               {pillar.modules.map((mod, i) => {
                 const score = scores[idx++] || "red";
+                const tier = tierLabels[i];
                 return (
-                  <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-secondary/50">
+                  <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/50">
                     <div className={`h-2.5 w-2.5 rounded-full ${scoreColor[score]} traffic-dot shrink-0`} />
-                    <span className="text-sm text-foreground flex-1">{mod}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-foreground block">{mod}</span>
+                      <span className="text-[10px] text-muted-foreground">{tier}</span>
+                    </div>
                   </div>
                 );
               })}
+              <a
+                href={CIRCLE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors px-3"
+              >
+                Open in Circle <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </div>
         ))}
