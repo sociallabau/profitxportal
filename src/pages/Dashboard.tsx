@@ -74,6 +74,17 @@ export default function Dashboard() {
     },
   });
 
+  const { data: cashMenuCount = 0 } = useQuery({
+    queryKey: ['cash-menu-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('cash_menu_actions')
+        .select('*', { count: 'exact', head: true });
+      return count ?? 0;
+    },
+  });
+
+  const navigate = useNavigate();
   const latest = monthlyData?.at(-1);
   const prev = monthlyData?.at(-2);
   const mrrChange = latest && prev && prev.revenue > 0
