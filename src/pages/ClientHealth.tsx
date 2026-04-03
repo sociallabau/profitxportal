@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, ArrowUpCircle } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
@@ -46,11 +46,19 @@ export default function ClientHealth() {
 
   const getMrrAlert = (mrr: number | null | undefined, currentTier: string | null) => {
     if (!mrr) return null;
+    // Upgrade suggestions
     if (mrr >= 20000 && currentTier !== 'scale') {
-      return { message: 'Ready for Scale tier ($20k+ MRR)', suggested: 'scale', color: 'text-success' };
+      return { type: 'upgrade' as const, message: 'Ready for Scale tier ($20k+ MRR)', suggested: 'scale', color: 'text-success' };
     }
     if (mrr >= 15000 && currentTier !== 'scale' && currentTier !== 'growth') {
-      return { message: 'Ready for Growth tier ($15k+ MRR)', suggested: 'growth', color: 'text-primary' };
+      return { type: 'upgrade' as const, message: 'Ready for Growth tier ($15k+ MRR)', suggested: 'growth', color: 'text-primary' };
+    }
+    // Drop warnings
+    if (mrr < 15000 && currentTier === 'growth') {
+      return { type: 'drop' as const, message: 'MRR dropped below $15k — consider moving back to Onramp', suggested: 'onramp', color: 'text-warning' };
+    }
+    if (mrr < 20000 && currentTier === 'scale') {
+      return { type: 'drop' as const, message: 'MRR dropped below $20k — consider moving back to Growth', suggested: 'growth', color: 'text-destructive' };
     }
     return null;
   };
@@ -118,13 +126,17 @@ export default function ClientHealth() {
 
               {alert && (
                 <div className={`flex items-center gap-2 text-xs font-semibold ${alert.color} bg-muted/50 rounded-lg px-3 py-2`}>
-                  <ArrowUpCircle className="w-4 h-4 shrink-0" />
+                  {alert.type === 'upgrade' ? <ArrowUpCircle className="w-4 h-4 shrink-0" /> : <ArrowDownCircle className="w-4 h-4 shrink-0" />}
                   <span className="flex-1">{alert.message}</span>
                   <button
                     onClick={() => handleTierChange(c.id, alert.suggested, c.full_name)}
-                    className="ml-2 px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-xs font-semibold"
+                    className={`ml-2 px-3 py-1 rounded-md transition-colors text-xs font-semibold ${
+                      alert.type === 'upgrade'
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30'
+                    }`}
                   >
-                    Upgrade →
+                    {alert.type === 'upgrade' ? 'Upgrade →' : 'Downgrade →'}
                   </button>
                 </div>
               )}
