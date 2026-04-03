@@ -5,7 +5,9 @@ import { useRequireAuth } from '@/hooks/useAuth';
 const tabs = ["Profile", "Integrations", "Notifications"];
 
 export default function SettingsPage() {
+  const { loading } = useRequireAuth();
   const [activeTab, setActiveTab] = useState("Profile");
+  if (loading) return null;
 
   return (
     <PageLayout>

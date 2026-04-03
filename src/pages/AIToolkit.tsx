@@ -26,6 +26,7 @@ const categoryColor: Record<string, string> = {
 const tabs = ["All", "Build", "Traffic", "Sales", "Scale"];
 
 export default function AIToolkit() {
+  const { loading } = useRequireAuth();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("All");
 
