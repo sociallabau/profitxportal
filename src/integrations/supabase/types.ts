@@ -61,6 +61,44 @@ export type Database = {
           },
         ]
       }
+      goals: {
+        Row: {
+          created_at: string | null
+          id: string
+          starting_mrr: number | null
+          target_date: string | null
+          target_mrr: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          starting_mrr?: number | null
+          target_date?: string | null
+          target_mrr: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          starting_mrr?: number | null
+          target_date?: string | null
+          target_mrr?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_totals: {
         Row: {
           content_posts: number | null
@@ -149,30 +187,72 @@ export type Database = {
       profiles: {
         Row: {
           circle_url: string | null
+          coach_notes: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
           is_admin: boolean | null
+          milestones_hit: number[] | null
+          onboarded: boolean | null
           tier: string | null
         }
         Insert: {
           circle_url?: string | null
+          coach_notes?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          milestones_hit?: number[] | null
+          onboarded?: boolean | null
           tier?: string | null
         }
         Update: {
           circle_url?: string | null
+          coach_notes?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          milestones_hit?: number[] | null
+          onboarded?: boolean | null
           tier?: string | null
+        }
+        Relationships: []
+      }
+      resources: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          title: string
+          url: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title: string
+          url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title?: string
+          url?: string
         }
         Relationships: []
       }
