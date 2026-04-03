@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Map, FileText, Trophy,
-  DollarSign, Sparkles, Users, Settings, LogOut,
+  Gauge, Route, PenLine, Award,
+  Wallet, Wand2, UserCog, SlidersHorizontal, LogOut,
   Menu, X, ExternalLink, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { useState } from 'react';
