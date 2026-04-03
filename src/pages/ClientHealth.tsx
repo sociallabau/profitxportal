@@ -111,6 +111,16 @@ export default function ClientHealth() {
     }
   };
 
+  const updateNotes = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ coach_notes: notes })
+        .eq('id', id);
+      if (error) throw error;
+    },
+  });
+
   if (loading) return null;
 
   return (
