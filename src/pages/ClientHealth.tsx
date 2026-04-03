@@ -46,11 +46,19 @@ export default function ClientHealth() {
 
   const getMrrAlert = (mrr: number | null | undefined, currentTier: string | null) => {
     if (!mrr) return null;
+    // Upgrade suggestions
     if (mrr >= 20000 && currentTier !== 'scale') {
-      return { message: 'Ready for Scale tier ($20k+ MRR)', suggested: 'scale', color: 'text-success' };
+      return { type: 'upgrade' as const, message: 'Ready for Scale tier ($20k+ MRR)', suggested: 'scale', color: 'text-success' };
     }
     if (mrr >= 15000 && currentTier !== 'scale' && currentTier !== 'growth') {
-      return { message: 'Ready for Growth tier ($15k+ MRR)', suggested: 'growth', color: 'text-primary' };
+      return { type: 'upgrade' as const, message: 'Ready for Growth tier ($15k+ MRR)', suggested: 'growth', color: 'text-primary' };
+    }
+    // Drop warnings
+    if (mrr < 15000 && currentTier === 'growth') {
+      return { type: 'drop' as const, message: 'MRR dropped below $15k — consider moving back to Onramp', suggested: 'onramp', color: 'text-warning' };
+    }
+    if (mrr < 20000 && currentTier === 'scale') {
+      return { type: 'drop' as const, message: 'MRR dropped below $20k — consider moving back to Growth', suggested: 'growth', color: 'text-destructive' };
     }
     return null;
   };
