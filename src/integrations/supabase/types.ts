@@ -14,13 +14,238 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      content_posts: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          id: string
+          leads: number | null
+          likes: number | null
+          notes: string | null
+          platform: string
+          posted_at: string
+          user_id: string | null
+          views: number | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          id?: string
+          leads?: number | null
+          likes?: number | null
+          notes?: string | null
+          platform: string
+          posted_at: string
+          user_id?: string | null
+          views?: number | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          id?: string
+          leads?: number | null
+          likes?: number | null
+          notes?: string | null
+          platform?: string
+          posted_at?: string
+          user_id?: string | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_totals: {
+        Row: {
+          content_posts: number | null
+          created_at: string | null
+          id: string
+          leads_generated: number | null
+          month: string
+          mrr: number | null
+          new_clients: number | null
+          user_id: string | null
+        }
+        Insert: {
+          content_posts?: number | null
+          created_at?: string | null
+          id?: string
+          leads_generated?: number | null
+          month: string
+          mrr?: number | null
+          new_clients?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          content_posts?: number | null
+          created_at?: string | null
+          id?: string
+          leads_generated?: number | null
+          month?: string
+          mrr?: number | null
+          new_clients?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_totals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      new_clients: {
+        Row: {
+          client_name: string
+          created_at: string | null
+          id: string
+          monthly_value: number
+          notes: string | null
+          signed_date: string
+          user_id: string | null
+        }
+        Insert: {
+          client_name: string
+          created_at?: string | null
+          id?: string
+          monthly_value: number
+          notes?: string | null
+          signed_date: string
+          user_id?: string | null
+        }
+        Update: {
+          client_name?: string
+          created_at?: string | null
+          id?: string
+          monthly_value?: number
+          notes?: string | null
+          signed_date?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "new_clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          circle_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          is_admin: boolean | null
+          tier: string | null
+        }
+        Insert: {
+          circle_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          is_admin?: boolean | null
+          tier?: string | null
+        }
+        Update: {
+          circle_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_admin?: boolean | null
+          tier?: string | null
+        }
+        Relationships: []
+      }
+      roadmap_scores: {
+        Row: {
+          id: string
+          module_number: number
+          notes: string | null
+          pillar: string
+          score: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          module_number: number
+          notes?: string | null
+          pillar: string
+          score?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          module_number?: number
+          notes?: string | null
+          pillar?: string
+          score?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_wins: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string | null
+          week_ending: string
+          win_text: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          week_ending: string
+          win_text: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          week_ending?: string
+          win_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_wins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
