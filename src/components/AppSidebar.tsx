@@ -32,6 +32,7 @@ const navItems = [
   },
   { label: 'Financials', path: '/financials', icon: Wallet },
   { label: 'AI Toolkit', path: '/ai-tools', icon: Cpu },
+  { label: 'Resources', path: '/resources', icon: BookOpen },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
 ];
 

@@ -1,16 +1,30 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { DollarSign, Users, UserPlus, Target } from 'lucide-react';
+import { DollarSign, Users, UserPlus, Target, Route } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
 import StatCard from '@/components/StatCard';
+import MilestoneCelebration from '@/components/MilestoneCelebration';
+import OnboardingModal from '@/components/OnboardingModal';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useGoal } from '@/hooks/useGoal';
+import { useWeeklyFocus } from '@/hooks/useWeeklyFocus';
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useRequireAuth();
   const { data: profile } = useProfile();
+  const { goal: { data: goalData } } = useGoal();
+  const { data: focusItems } = useWeeklyFocus();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (profile && profile.onboarded === false) {
+      setShowOnboarding(true);
+    }
+  }, [profile]);
 
   const { data: monthlyData } = useQuery({
     queryKey: ['monthly-totals', user?.id],
@@ -112,6 +126,78 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* 90-Day MRR Goal Card */}
+      {goalData && (() => {
+        const currentMRR = latest?.revenue ?? goalData.starting_mrr;
+        const range = goalData.target_mrr - goalData.starting_mrr;
+        const progress = range > 0 ? Math.min(100, Math.round(((currentMRR - goalData.starting_mrr) / range) * 100)) : 0;
+        const remaining = Math.max(0, goalData.target_mrr - currentMRR);
+        return (
+          <div className="bg-card border border-border rounded-xl p-5 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">90-Day MRR Goal</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Target: <span className="text-primary font-semibold">${goalData.target_mrr.toLocaleString()}</span>
+                  {goalData.target_date && ` · Due ${new Date(goalData.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                </p>
+              </div>
+              <span className="text-2xl font-bold text-primary">{progress}%</span>
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${progress}%`, boxShadow: '0 0 8px rgba(170,68,255,0.5)' }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Current: <span className="text-foreground font-semibold">${currentMRR.toLocaleString()}</span></span>
+              {remaining > 0
+                ? <span>$<span className="text-foreground font-semibold">{remaining.toLocaleString()}</span> to go</span>
+                : <span className="text-emerald-400 font-semibold">🎯 Goal reached!</span>
+              }
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* This Week's Focus */}
+      {focusItems && focusItems.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Route className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">This Week's Focus</h3>
+            </div>
+            <Link to="/roadmap" className="text-xs text-primary hover:underline">View Roadmap →</Link>
+          </div>
+          <div className="space-y-2">
+            {focusItems.map((item, i) => {
+              const statusConfig = {
+                red:      { dot: 'bg-destructive',   label: 'Needs work',  text: 'text-destructive' },
+                amber:    { dot: 'bg-warning',       label: 'In progress', text: 'text-warning' },
+                unscored: { dot: 'bg-muted',         label: 'Not started', text: 'text-muted-foreground' },
+              }[item.status] ?? { dot: 'bg-muted', label: 'Not started', text: 'text-muted-foreground' };
+              return (
+                <div key={`${item.pillar}-${item.n}`}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/30 border border-border/50">
+                  <span className="text-xs font-bold text-primary/60 w-4 shrink-0">#{i + 1}</span>
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${statusConfig.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">{item.pillarLabel} · Module {item.n}</p>
+                  </div>
+                  <span className={`text-xs font-medium shrink-0 ${statusConfig.text}`}>{statusConfig.label}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            These modules are your biggest unlock right now. Head to the Roadmap to score them after doing the work.
+          </p>
+        </div>
+      )}
+
       <div className="bg-card border border-border rounded-xl p-5 mb-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">Revenue — Last 6 Months</h3>
         {monthlyData && monthlyData.length > 0 ? (
@@ -173,6 +259,19 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Milestone Celebration */}
+      {latest?.revenue && profile && (
+        <MilestoneCelebration
+          currentMrr={latest.revenue}
+          milestonesHit={(profile as any).milestones_hit ?? []}
+        />
+      )}
+
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <OnboardingModal onComplete={() => setShowOnboarding(false)} />
+      )}
     </PageLayout>
   );
 }
