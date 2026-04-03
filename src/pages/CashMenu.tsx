@@ -1,0 +1,444 @@
+import { useState } from 'react';
+import { Check, Copy, ChevronDown, ChevronUp, Zap, Lock } from 'lucide-react';
+import { useCashMenu } from '@/hooks/useCashMenu';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import PageLayout from '@/components/PageLayout';
+
+const ACTIONS = [
+  {
+    key: 'past_clients',
+    emoji: '📬',
+    label: 'Message Every Past Client',
+    subtitle: "Email, text or DM anyone you've ever shot for — one message, multiple retainer conversations.",
+    effort: '30 mins',
+    expectedResult: '1–3 discovery calls booked',
+    scripts: [
+      {
+        channel: 'DM (Instagram / WhatsApp)',
+        body: `Hey [Name]! Hope things are going well. I've just put together a new programme for businesses like yours and I genuinely think it could do some serious numbers for you.
+
+It's a monthly video content retainer — short-form videos, social strategy, and paid ads all rolled in together. The goal is simple: more enquiries, more visibility, more revenue. I've seen it work really well for [niche/similar businesses].
+
+I've only got a couple of spots left this month. If you're keen, let me know and I'll send you the details — I think it'd crush for you.`,
+      },
+      {
+        channel: 'Email',
+        body: `Subject: Something I think could do really well for [Business Name]
+
+Hey [Name],
+
+Hope you're well! Just wanted to reach out because I've designed a new programme and I immediately thought of you.
+
+It's a monthly video content retainer — I handle the filming, editing, social posting and paid ads, and you get a consistent stream of content working hard for your business every single week.
+
+The clients I'm running this with right now are seeing a real increase in enquiries and leads from social — not just views, actual people reaching out.
+
+I've got a couple of spots available this month and wanted to offer it to people I've already worked with first. If it's of interest, I'll send you the full breakdown — just hit reply.
+
+Cheers,
+[Your Name]`,
+      },
+      {
+        channel: 'Text (SMS)',
+        body: `Hey [Name], it's [Your Name] from [Business]. Hope you're good! I've put together something new — a monthly video retainer that handles content, socials and ads for businesses like yours. Think it could work really well for you. Got a couple spots left — keen to hear more?`,
+      },
+    ],
+    tips: [
+      'Personalise the business name and one specific thing you remember about their project',
+      "Don't pitch in the first message — just spark curiosity and get a \"tell me more\"",
+      'Your goal is a discovery call, not a sale in the DM',
+      'Send to minimum 10 past clients. Even a 20% reply rate gets you 2 conversations.',
+    ],
+  },
+  {
+    key: 'warm_reactivation',
+    emoji: '🔥',
+    label: 'Warm Reactivation',
+    subtitle: 'Reach out to every lead who showed interest in the last 6 months but never converted.',
+    effort: '45 mins',
+    expectedResult: '1–2 booked calls from cold conversations',
+    scripts: [
+      {
+        channel: 'DM / WhatsApp',
+        body: `Hey [Name]! Just circling back — I know we chatted a while back and the timing wasn't quite right.
+
+I've since put together something a bit different — a monthly video retainer that covers short-form content, social strategy and paid ads. The focus is entirely on getting you more enquiries, not just better-looking content.
+
+I'm not here to push anything, but I do think there's a real opportunity here for you and I'd hate for you to miss it. Would it be worth a quick 20-min chat to see if it makes sense?`,
+      },
+      {
+        channel: 'If they go quiet after that — follow-up (3 days later)',
+        body: `No pressure at all — I know how it is when things get busy. Just wanted to check: is the main thing putting you off timing, budget, or you're not sure the content side would actually move the needle for your business?
+
+Whatever it is, happy to be straight with you.`,
+      },
+      {
+        channel: 'Final message (if still quiet — 1 week later)',
+        body: `[Name] — I'm going to leave it here so I'm not spamming your DMs. But I genuinely think there's something here for you. If you ever want to explore it, just hit me up. I'll be here.`,
+      },
+    ],
+    tips: [
+      "Don't start with \"just following up\" — it's weak. Lead with the new angle or new result.",
+      'The second message that asks "what\'s putting you off" forces them to say it. If they reply, you can handle it. If they don\'t, they\'re not serious — move on.',
+      'Pull out your old DMs and make a list before you start. Aim for 15–20 reactivations.',
+      'Anyone who enquired in the last 12 months goes on this list.',
+    ],
+  },
+  {
+    key: 'push_week',
+    emoji: '📣',
+    label: 'Push Week on Socials',
+    subtitle: "Only do this if you've been consistent with content for 4+ weeks. A 5-day push to drive inbound enquiries.",
+    effort: '5 days of posting',
+    expectedResult: '3–8 inbound DMs from engaged followers',
+    warning: "Only run this if you've been posting consistently. A push week with a dead feed won't work.",
+    scripts: [
+      {
+        channel: 'Day 1 — The Problem Post',
+        body: `Most [niche] businesses are creating content that gets views but no enquiries.
+
+Here's why: they're optimising for likes, not leads.
+
+Every piece of content should have one job: get the right person to DM you, comment, or book a call.
+
+That's the difference between content that looks nice and content that actually makes you money.
+
+[CTA: If this is something you're dealing with, drop me a DM — happy to show you what we do differently.]`,
+      },
+      {
+        channel: 'Day 2 — Client Result / Proof',
+        body: `[Client name/business] came to me [X months] ago. They were getting [struggle: e.g. "0–2 enquiries a month from social"].
+
+We set up their video content strategy, started posting consistently, ran a simple ad.
+
+[Result: e.g. "Within 8 weeks they had 11 new enquiry DMs and signed 2 new retainer clients."]
+
+This is what consistent, strategic content does. Not viral content. Consistent content.
+
+[CTA: Got a couple of spots available this month if you want to know more.]`,
+      },
+      {
+        channel: 'Day 3 — The Education Post',
+        body: `The 3 reasons your video content isn't generating leads:
+
+1. You're creating content for everyone (so it speaks to no one)
+2. You're not posting consistently enough to build trust
+3. There's no clear next step for someone who's interested
+
+Fix all 3 of those and you've got a content machine, not just a feed.
+
+[CTA: DM me "LEADS" and I'll tell you which one is your biggest issue.]`,
+      },
+      {
+        channel: 'Day 4 — Behind the Scenes / Authority',
+        body: `Here's what a shoot day looks like with one of my retainer clients.
+
+[Video/photo of shoot setup, editing, or on-location content creation]
+
+They get [X] videos per month, [X] posts per week, and we run a simple ad on top to amplify what's already working organically.
+
+This is a system. Not random content. A system.
+
+[CTA: One spot left this month. DM me if you want in.]`,
+      },
+      {
+        channel: 'Day 5 — The Direct Offer Post',
+        body: `Going to be straight with you.
+
+I've got [X] spots left for my video content retainer this month.
+
+Here's what you get: monthly filming, short-form editing, social posting strategy, and a simple paid ad running alongside your organic content.
+
+Here's what you don't get: excuses about the algorithm, random content that doesn't convert, or someone who disappears after month one.
+
+If you're a [niche] business that's serious about content actually working for you — DM me or drop a comment.
+
+Let's talk.`,
+      },
+      {
+        channel: 'Inbound DM Reply Script (when someone messages after the push week)',
+        body: `Hey [Name]! Thanks for reaching out — appreciate it.
+
+Quick question before I go into anything: what does your content situation look like right now? Are you posting consistently, or has it been a bit stop-start?
+
+Just want to make sure what I do is actually the right fit for you.`,
+      },
+    ],
+    tips: [
+      "Post once per day for 5 days. Don't overthink it — use these scripts as a direct starting point.",
+      'Stories matter. Post a "behind the scenes" or a question box on stories each day too.',
+      'The goal of push week is inbound DMs, not likes. Track every conversation that comes in.',
+      'If someone comments on a post, DM them within 5 minutes while they\'re in buying mode.',
+      'After push week, follow up with everyone who engaged but didn\'t message.',
+    ],
+  },
+  {
+    key: 'simple_ad',
+    emoji: '💸',
+    label: 'The Stupidly Simple Ad',
+    subtitle: '$20/day for 5 days. One video, one static/carousel. A follow-up DM to everyone who engages.',
+    effort: '2 hours to set up, 5 days to run',
+    expectedResult: '5–15 warm engagements, 2–4 conversations',
+    scripts: [
+      {
+        channel: '📹 Video Ad Script (speak to camera or voiceover)',
+        body: `If you're a [niche] business spending money on marketing but not seeing it come back through the door — this is for you.
+
+Most content looks good but doesn't convert. The reason is always the same: there's no system behind it.
+
+We handle everything — the filming, the editing, the social strategy, and the ads. You just show up.
+
+The businesses we work with go from [problem: "posting randomly with no results"] to [outcome: "consistent enquiries and signed clients within 90 days"].
+
+If that sounds like something you need — click the link or send us a message.
+
+[End card: Your name + "DM us" or "Book a free call"]`,
+      },
+      {
+        channel: '🖼️ Static / Carousel Ad Copy',
+        body: `Headline: "Is your content making you money or just getting you likes?"
+
+Body:
+Most [niche] businesses are posting consistently but not converting. Not because the content is bad — because there's no system behind it.
+
+We do monthly video retainers for [niche] businesses that want content that actually brings in enquiries.
+
+Short-form video. Social strategy. Simple ads. All handled.
+
+CTA: "DM us to find out if we're a fit" or "Book a free 20-min call"
+
+[Visual: Before/after of a client result, or a clean behind-the-scenes shot]`,
+      },
+      {
+        channel: '📲 Follow-Up DM (send to everyone who likes, comments or clicks)',
+        body: `Hey [Name]! Noticed you came across our content — appreciate it.
+
+Quick question: are you just here to watch the content, or are you actually after some help with your video content and socials?
+
+No wrong answer — just want to know if it's worth having a chat.`,
+      },
+      {
+        channel: "➡️ If they say they're interested — next message",
+        body: `Nice one. So what does your content situation look like right now? Are you posting, running ads, or starting from scratch?
+
+Want to make sure we're actually the right fit before we waste each other's time.`,
+      },
+      {
+        channel: '📋 Ad Setup (quick guide)',
+        body: `Platform: Instagram + Facebook (Meta Ads Manager)
+Budget: $20/day for 5 days ($100 total)
+Objective: Engagement or Messages (not Reach)
+Audience: Interest-based targeting — your niche (e.g. "fitness", "gym owners", "coaches", "local businesses")
+Placement: Instagram Feed + Reels + Facebook Feed
+Ad format: Run one video ad AND one static/carousel at the same time
+Duration: 5 days, then review which performed better
+
+After 5 days:
+— Check which ad got more engagement/messages
+— DM everyone who interacted
+— Pause the weaker ad if you want to continue`,
+      },
+    ],
+    tips: [
+      "The DM is the most important part — not the ad itself. The ad just starts the conversation.",
+      'Check your ad account daily and DM every new engagement within an hour.',
+      "Don't send a pitch in the first DM. Ask the question, let them qualify themselves.",
+      'The "are you just here to watch or do you want help" message is deliberately casual — it doesn\'t feel like a sales DM.',
+      "If Meta Ads is new to you — use \"Boost Post\" on your best-performing organic reel first. It's simpler and good enough to start.",
+    ],
+  },
+];
+
+export default function CashMenu() {
+  const { completed, markDone } = useCashMenu();
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile-tier'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data } = await supabase
+        .from('profiles')
+        .select('tier')
+        .eq('id', user!.id)
+        .single();
+      return data;
+    },
+  });
+
+  const isUnlocked = profile?.tier && profile.tier !== 'onramp';
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const toggle = (key: string) => setExpanded(exp => exp === key ? null : key);
+
+  if (!isUnlocked) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+          <Lock className="w-10 h-10 text-primary" />
+          <h1 className="text-2xl font-bold italic text-foreground">Cash Menu</h1>
+          <p className="text-muted-foreground max-w-sm">
+            The Cash Menu unlocks once you've completed your Onramp. Finish your first roadmap pillar to get access.
+          </p>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const completedCount = completed.length;
+
+  return (
+    <PageLayout>
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            <span className="text-xs font-medium text-primary uppercase tracking-wider">Cash Menu</span>
+          </div>
+          <h1 className="text-3xl font-bold italic text-foreground">Put Cash in the Bank</h1>
+          <p className="text-muted-foreground text-sm">
+            4 proven moves to book calls and sign retainers fast — right after you complete your Onramp.
+            Each one has a copy-paste script ready to go.
+          </p>
+        </div>
+
+        {/* Progress */}
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">Moves completed</p>
+            <p className="text-2xl font-bold text-foreground">{completedCount} <span className="text-muted-foreground text-base font-normal">/ 4</span></p>
+          </div>
+          <div className="flex gap-2">
+            {ACTIONS.map(a => (
+              <div
+                key={a.key}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm
+                  ${completed.includes(a.key)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                  }`}
+              >
+                {completed.includes(a.key) ? <Check className="w-4 h-4" /> : a.emoji}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-3">
+          {ACTIONS.map((action) => {
+            const isDone = completed.includes(action.key);
+            const isOpen = expanded === action.key;
+
+            return (
+              <div
+                key={action.key}
+                className={`border rounded-xl overflow-hidden transition-all
+                  ${isDone ? 'border-primary/40 bg-primary/5' : 'border-border bg-card'}`}
+              >
+                <button
+                  onClick={() => toggle(action.key)}
+                  className="w-full flex items-start justify-between p-5 text-left gap-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl mt-0.5">{action.emoji}</span>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className={`font-bold italic text-lg ${isDone ? 'text-primary' : 'text-foreground'}`}>
+                          {action.label}
+                        </h3>
+                        {isDone && (
+                          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Done</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-0.5">{action.subtitle}</p>
+                      <div className="flex gap-4 mt-2">
+                        <span className="text-xs text-muted-foreground">⏱ {action.effort}</span>
+                        <span className="text-xs text-primary">🎯 {action.expectedResult}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /> : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />}
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-border p-5 space-y-6">
+                    {action.warning && (
+                      <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm text-warning">
+                        ⚠️ {action.warning}
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Scripts</h4>
+                      {action.scripts.map((script, i) => (
+                        <div key={i} className="bg-background rounded-lg overflow-hidden border border-border">
+                          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                            <span className="text-xs font-medium text-primary">{script.channel}</span>
+                            <button
+                              onClick={() => handleCopy(script.body, `${action.key}-${i}`)}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {copied === `${action.key}-${i}` ? (
+                                <><Check className="w-3 h-3 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
+                              ) : (
+                                <><Copy className="w-3 h-3" />Copy</>
+                              )}
+                            </button>
+                          </div>
+                          <pre className="p-4 text-sm text-muted-foreground whitespace-pre-wrap font-sans leading-relaxed">
+                            {script.body}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tips</h4>
+                      <ul className="space-y-1.5">
+                        {action.tips.map((tip, i) => (
+                          <li key={i} className="flex gap-2 text-sm text-muted-foreground">
+                            <span className="text-primary flex-shrink-0">→</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={() => markDone(action.key)}
+                      disabled={isDone}
+                      className={`w-full py-3 rounded-lg font-semibold text-sm transition-all
+                        ${isDone
+                          ? 'bg-primary/20 text-primary cursor-default'
+                          : 'bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer'
+                        }`}
+                    >
+                      {isDone ? '✓ Marked as done' : 'Mark as done'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {completedCount === 4 && (
+          <div className="bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-xl p-6 text-center space-y-2">
+            <p className="text-2xl">🎉</p>
+            <h3 className="text-foreground font-bold italic text-xl">You've run all 4 moves.</h3>
+            <p className="text-muted-foreground text-sm">Now it's about consistency. Head back to your Roadmap and keep pushing your scores green.</p>
+          </div>
+        )}
+      </div>
+    </PageLayout>
+  );
+}

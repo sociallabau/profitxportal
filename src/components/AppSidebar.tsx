@@ -20,6 +20,7 @@ export const CIRCLE_URLS = {
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
+  { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Content Tracker', path: '/content', icon: BarChart3 },
   {

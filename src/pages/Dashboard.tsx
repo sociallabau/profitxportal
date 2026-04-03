@@ -172,6 +172,30 @@ export default function Dashboard() {
         );
       })()}
 
+      {/* Cash Menu Teaser */}
+      <div
+        onClick={() => navigate('/cash-menu')}
+        className="bg-card border border-border rounded-xl p-5 mb-6 cursor-pointer hover:border-primary/50 transition-all group"
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Banknote className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Cash Menu</p>
+              <p className="text-foreground font-bold italic text-lg">Quick Cash Moves</p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+        </div>
+        <p className="text-muted-foreground text-sm mt-3">
+          {cashMenuCount === 4
+            ? 'All 4 moves completed 🎉'
+            : `${cashMenuCount}/4 moves done — scripts to book calls fast`}
+        </p>
+      </div>
+
       {/* This Week's Focus */}
       {focusItems && focusItems.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5 mb-6">

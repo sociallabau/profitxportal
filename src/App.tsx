@@ -41,6 +41,7 @@ const App = () => (
           <Route path="/ai-tools" element={<AIToolkit />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/resources" element={<Resources />} />
+          <Route path="/cash-menu" element={<CashMenu />} />
           <Route path="/admin/clients" element={<ClientHealth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
