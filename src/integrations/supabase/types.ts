@@ -65,31 +65,37 @@ export type Database = {
         Row: {
           content_posts: number | null
           created_at: string | null
+          expenses: number | null
           id: string
           leads_generated: number | null
           month: string
           mrr: number | null
           new_clients: number | null
+          oneoff_revenue: number | null
           user_id: string | null
         }
         Insert: {
           content_posts?: number | null
           created_at?: string | null
+          expenses?: number | null
           id?: string
           leads_generated?: number | null
           month: string
           mrr?: number | null
           new_clients?: number | null
+          oneoff_revenue?: number | null
           user_id?: string | null
         }
         Update: {
           content_posts?: number | null
           created_at?: string | null
+          expenses?: number | null
           id?: string
           leads_generated?: number | null
           month?: string
           mrr?: number | null
           new_clients?: number | null
+          oneoff_revenue?: number | null
           user_id?: string | null
         }
         Relationships: [
