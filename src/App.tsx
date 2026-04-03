@@ -16,6 +16,7 @@ import AIToolkit from "./pages/AIToolkit";
 import SettingsPage from "./pages/SettingsPage";
 import ClientHealth from "./pages/ClientHealth";
 import Resources from "./pages/Resources";
+import CashMenu from "./pages/CashMenu";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
