@@ -1,4 +1,4 @@
-import { DollarSign, Users, UserPlus, Target, TrendingUp } from "lucide-react";
+import { DollarSign, Users, UserPlus, Target } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -34,7 +34,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {greeting}, Test Client 👋
+            {greeting} 👋
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
@@ -56,6 +56,27 @@ export default function Dashboard() {
         <StatCard title="Leads Generated" value="14" change={-7} icon={Target} />
       </div>
 
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {[
+          { label: "View Roadmap", path: "/roadmap", emoji: "🗺️" },
+          { label: "Log a Win", path: "/submissions/wins", emoji: "🏆" },
+          { label: "Content Stats", path: "/content", emoji: "📊" },
+          { label: "AI Tools", path: "/ai-tools", emoji: "✨" },
+        ].map((action) => (
+          <Link
+            key={action.path}
+            to={action.path}
+            className="flex flex-col items-center gap-2 p-4 bg-card border border-border rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all text-center group"
+          >
+            <span className="text-2xl">{action.emoji}</span>
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
+              {action.label}
+            </span>
+          </Link>
+        ))}
+      </div>
+
       {/* Revenue chart + Quick Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
         <div className="lg:col-span-3 bg-card border border-border rounded-xl p-5 animate-fade-in">
@@ -63,15 +84,15 @@ export default function Dashboard() {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 12%)" />
-                <XAxis dataKey="month" stroke="hsl(220 9% 46%)" fontSize={12} />
-                <YAxis stroke="hsl(220 9% 46%)" fontSize={12} tickFormatter={(v) => `$${v / 1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 28%)" />
+                <XAxis dataKey="month" stroke="hsl(0 0% 65%)" fontSize={12} />
+                <YAxis stroke="hsl(0 0% 65%)" fontSize={12} tickFormatter={(v) => `$${v / 1000}k`} />
                 <Tooltip
                   contentStyle={{
-                    background: "hsl(0 0% 5.9%)",
-                    border: "1px solid hsl(0 0% 12%)",
+                    background: "hsl(0 0% 20%)",
+                    border: "1px solid hsl(0 0% 28%)",
                     borderRadius: "0.5rem",
-                    color: "white",
+                    color: "hsl(0 0% 95%)",
                     fontSize: 13,
                   }}
                   formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
@@ -79,9 +100,9 @@ export default function Dashboard() {
                 <Line
                   type="monotone"
                   dataKey="revenue"
-                  stroke="hsl(46 91% 57%)"
+                  stroke="hsl(270 100% 50%)"
                   strokeWidth={2.5}
-                  dot={{ fill: "hsl(46 91% 57%)", r: 4 }}
+                  dot={{ fill: "hsl(270 100% 50%)", r: 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
@@ -191,15 +212,16 @@ export default function Dashboard() {
                 <tr key={i} className="border-b border-border last:border-0">
                   <td className="py-3 text-sm text-muted-foreground whitespace-nowrap">{s.date}</td>
                   <td className="py-3">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    <Link
+                      to={s.type === "Weekly Win" ? "/submissions/wins" : "/submissions/clients"}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity ${
                         s.type === "Weekly Win"
                           ? "bg-primary/10 text-primary"
                           : "bg-success/10 text-success"
                       }`}
                     >
                       {s.type}
-                    </span>
+                    </Link>
                   </td>
                   <td className="py-3 text-sm text-foreground">{s.title}</td>
                 </tr>
