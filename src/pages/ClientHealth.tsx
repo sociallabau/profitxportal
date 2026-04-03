@@ -5,7 +5,6 @@ import { useRequireAuth } from '@/hooks/useAuth';
 
 export default function ClientHealth() {
   const { user, loading } = useRequireAuth();
-  if (loading) return null;
 
   const { data: clients } = useQuery({
     queryKey: ['all-clients'],
@@ -39,6 +38,8 @@ export default function ClientHealth() {
     growth: 'bg-primary/20 text-primary',
     scale: 'bg-primary/20 text-primary',
   };
+
+  if (loading) return null;
 
   return (
     <PageLayout>
