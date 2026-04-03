@@ -76,6 +76,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
           rel="noopener noreferrer"
           className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors group"
         >
+          <GraduationCap className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-primary">Course Modules</span>
           <ExternalLink className="w-3.5 h-3.5 text-primary/60 group-hover:text-primary transition-colors" />
         </a>
