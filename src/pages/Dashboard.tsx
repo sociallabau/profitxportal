@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { DollarSign, Users, UserPlus, Target, Route } from 'lucide-react';
+import { DollarSign, Users, UserPlus, Target, Route, Banknote, ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
