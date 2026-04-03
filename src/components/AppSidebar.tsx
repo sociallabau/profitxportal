@@ -36,7 +36,7 @@ const navItems = [
 ];
 
 const adminItems = [
-  { label: 'Client Health', path: '/admin/clients', icon: UserCog },
+  { label: 'Client Health', path: '/admin/clients', icon: HeartPulse },
 ];
 
 function NavContent({ onClose }: { onClose?: () => void }) {
