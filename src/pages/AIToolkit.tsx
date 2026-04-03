@@ -1,6 +1,7 @@
 import PageLayout from "@/components/PageLayout";
 import { useState } from "react";
 import { Search, ExternalLink } from "lucide-react";
+import { useRequireAuth } from '@/hooks/useAuth';
 
 const CIRCLE_AI_URL = "https://app.circle.so/sign_in";
 

@@ -1,5 +1,6 @@
 import PageLayout from "@/components/PageLayout";
 import { useState } from "react";
+import { useRequireAuth } from '@/hooks/useAuth';
 
 const tabs = ["Profile", "Integrations", "Notifications"];
 

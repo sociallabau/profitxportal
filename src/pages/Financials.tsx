@@ -34,6 +34,8 @@ const monthlyBreakdown = [
 ];
 
 export default function Financials() {
+  const { loading } = useRequireAuth();
+  if (loading) return null;
   return (
     <PageLayout>
       <h1 className="text-2xl font-bold text-foreground mb-8">Financials</h1>

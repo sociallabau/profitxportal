@@ -1,6 +1,7 @@
 import PageLayout from "@/components/PageLayout";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { useRequireAuth } from '@/hooks/useAuth';
 
 const checklistData = [
   {
