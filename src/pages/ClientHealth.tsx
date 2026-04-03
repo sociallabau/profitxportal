@@ -126,13 +126,17 @@ export default function ClientHealth() {
 
               {alert && (
                 <div className={`flex items-center gap-2 text-xs font-semibold ${alert.color} bg-muted/50 rounded-lg px-3 py-2`}>
-                  <ArrowUpCircle className="w-4 h-4 shrink-0" />
+                  {alert.type === 'upgrade' ? <ArrowUpCircle className="w-4 h-4 shrink-0" /> : <ArrowDownCircle className="w-4 h-4 shrink-0" />}
                   <span className="flex-1">{alert.message}</span>
                   <button
                     onClick={() => handleTierChange(c.id, alert.suggested, c.full_name)}
-                    className="ml-2 px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-xs font-semibold"
+                    className={`ml-2 px-3 py-1 rounded-md transition-colors text-xs font-semibold ${
+                      alert.type === 'upgrade'
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30'
+                    }`}
                   >
-                    Upgrade →
+                    {alert.type === 'upgrade' ? 'Upgrade →' : 'Downgrade →'}
                   </button>
                 </div>
               )}
