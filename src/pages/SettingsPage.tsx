@@ -1,13 +1,38 @@
 import PageLayout from "@/components/PageLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRequireAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const tabs = ["Profile", "Integrations", "Notifications"];
 
 export default function SettingsPage() {
-  const { loading } = useRequireAuth();
+  const { user, loading } = useRequireAuth();
+  const { data: profile } = useProfile();
+  const [fullName, setFullName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile?.full_name) setFullName(profile.full_name);
+  }, [profile?.full_name]);
+
   const [activeTab, setActiveTab] = useState("Profile");
   if (loading) return null;
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({ id: user.id, full_name: fullName }, { onConflict: 'id' });
+    setSaving(false);
+    if (error) {
+      toast.error('Failed to save profile');
+    } else {
+      toast.success('Profile saved');
+    }
+  };
 
   return (
     <PageLayout>
@@ -30,31 +55,38 @@ export default function SettingsPage() {
       {activeTab === "Profile" && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { label: "Full Name", placeholder: "Test Client", type: "text" },
-              { label: "Email", placeholder: "testclient@videoOS.com", type: "email", disabled: true },
-              { label: "Instagram Handle", placeholder: "@yourbiz", type: "text" },
-              { label: "YouTube Channel URL", placeholder: "https://youtube.com/...", type: "url" },
-              { label: "LinkedIn URL", placeholder: "https://linkedin.com/in/...", type: "url" },
-              { label: "Skool Community URL", placeholder: "https://skool.com/...", type: "url" },
-            ].map((f) => (
-              <div key={f.label}>
-                <label className="block text-xs text-muted-foreground mb-1.5">{f.label}</label>
-                <input
-                  type={f.type}
-                  placeholder={f.placeholder}
-                  disabled={f.disabled}
-                  className="w-full h-10 px-4 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-                />
-              </div>
-            ))}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">Full Name</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your name"
+                className="w-full h-10 px-4 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">Email</label>
+              <input
+                type="email"
+                value={profile?.email ?? user?.email ?? ''}
+                disabled
+                className="w-full h-10 px-4 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+              />
+            </div>
           </div>
           <div>
             <span className="block text-xs text-muted-foreground mb-1.5">Revenue Tier</span>
-            <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium">Growth</span>
+            <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium capitalize">
+              {profile?.tier ?? 'onramp'}
+            </span>
           </div>
-          <button className="h-10 px-5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm">
-            Save Changes
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="h-10 px-5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       )}
