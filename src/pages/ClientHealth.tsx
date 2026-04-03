@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import PageLayout from '@/components/PageLayout';
@@ -38,7 +38,7 @@ export default function ClientHealth() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, tier, created_at');
+        .select('id, full_name, email, tier, created_at, coach_notes');
       if (error) throw error;
       return data ?? [];
     },
@@ -110,6 +110,16 @@ export default function ClientHealth() {
       queryClient.invalidateQueries({ queryKey: ['all-clients'] });
     }
   };
+
+  const updateNotes = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ coach_notes: notes })
+        .eq('id', id);
+      if (error) throw error;
+    },
+  });
 
   if (loading) return null;
 
@@ -210,6 +220,20 @@ export default function ClientHealth() {
                   </button>
                 </div>
               )}
+
+              {/* Coach Notes */}
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  Coach Notes <span className="font-normal opacity-60">(private)</span>
+                </label>
+                <textarea
+                  defaultValue={c.coach_notes ?? ''}
+                  onBlur={(e) => updateNotes.mutate({ id: c.id, notes: e.target.value })}
+                  placeholder="Add private notes about this client..."
+                  rows={2}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition resize-none"
+                />
+              </div>
             </div>
           );
         })}

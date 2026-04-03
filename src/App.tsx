@@ -15,6 +15,7 @@ import Financials from "./pages/Financials";
 import AIToolkit from "./pages/AIToolkit";
 import SettingsPage from "./pages/SettingsPage";
 import ClientHealth from "./pages/ClientHealth";
+import Resources from "./pages/Resources";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/financials" element={<Financials />} />
           <Route path="/ai-tools" element={<AIToolkit />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/resources" element={<Resources />} />
           <Route path="/admin/clients" element={<ClientHealth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Gauge, Route, BarChart3, BadgeCheck, Wallet, Cpu, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X, ExternalLink, ChevronDown,
-  ChevronRight, GraduationCap,
+  ChevronRight, GraduationCap, BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,7 @@ const navItems = [
   },
   { label: 'Financials', path: '/financials', icon: Wallet },
   { label: 'AI Toolkit', path: '/ai-tools', icon: Cpu },
+  { label: 'Resources', path: '/resources', icon: BookOpen },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
 ];
 
