@@ -59,15 +59,11 @@
     background-attachment: fixed;
   }
 
-  h1 {
+  h1, h2, h3 {
     font-family: 'Inter', sans-serif;
     font-weight: 700;
     font-style: italic;
-  }
-  h2, h3 {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-style: italic;
+    letter-spacing: -0.02em;
   }
 
   h4, h5, h6, label, .font-semibold {
