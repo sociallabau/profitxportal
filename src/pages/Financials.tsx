@@ -1,5 +1,6 @@
 import PageLayout from "@/components/PageLayout";
 import StatCard from "@/components/StatCard";
+import { useRequireAuth } from '@/hooks/useAuth';
 import { DollarSign, TrendingUp, Receipt, PiggyBank } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
