@@ -29,6 +29,7 @@ export default function AIToolkit() {
   const { loading } = useRequireAuth();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("All");
+  if (loading) return null;
 
   const filtered = tools.filter(
     (t) =>
