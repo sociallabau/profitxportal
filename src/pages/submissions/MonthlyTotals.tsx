@@ -8,7 +8,10 @@ export default function MonthlyTotals() {
   const { user } = useRequireAuth();
   const qc = useQueryClient();
   const currentMonth = new Date().toISOString().slice(0, 7);
-  const [form, setForm] = useState({ mrr: '', new_clients: '', leads_generated: '', content_posts: '' });
+  const [form, setForm] = useState({
+    mrr: '', oneoff_revenue: '', expenses: '',
+    new_clients: '', leads_generated: '', content_posts: '',
+  });
   const [saved, setSaved] = useState(false);
 
   const { data: history } = useQuery({
@@ -30,6 +33,8 @@ export default function MonthlyTotals() {
         user_id: user!.id,
         month: `${currentMonth}-01`,
         mrr: parseFloat(form.mrr) || 0,
+        oneoff_revenue: parseFloat(form.oneoff_revenue) || 0,
+        expenses: parseFloat(form.expenses) || 0,
         new_clients: parseInt(form.new_clients) || 0,
         leads_generated: parseInt(form.leads_generated) || 0,
         content_posts: parseInt(form.content_posts) || 0,
@@ -39,14 +44,19 @@ export default function MonthlyTotals() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['monthly-totals'] });
       qc.invalidateQueries({ queryKey: ['monthly-totals-history'] });
-      setForm({ mrr: '', new_clients: '', leads_generated: '', content_posts: '' });
+      setForm({ mrr: '', oneoff_revenue: '', expenses: '', new_clients: '', leads_generated: '', content_posts: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     },
   });
 
-  const fields = [
-    { key: 'mrr', label: 'MRR This Month ($)', placeholder: '8500' },
+  const revenueFields = [
+    { key: 'mrr', label: 'Retainer MRR ($)', placeholder: '8500' },
+    { key: 'oneoff_revenue', label: 'One-Off Shoots ($)', placeholder: '2000' },
+    { key: 'expenses', label: 'Expenses ($)', placeholder: '3200' },
+  ];
+
+  const kpiFields = [
     { key: 'new_clients', label: 'New Clients Signed', placeholder: '2' },
     { key: 'leads_generated', label: 'Leads Generated', placeholder: '12' },
     { key: 'content_posts', label: 'Content Posts Published', placeholder: '20' },
@@ -57,12 +67,17 @@ export default function MonthlyTotals() {
       <h1 className="text-2xl mb-1">Monthly Totals</h1>
       <p className="text-sm text-muted-foreground mb-6">
         Submit your numbers for {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}.
-        This automatically updates your dashboard chart.
+        This automatically updates your dashboard and financials.
       </p>
 
       <div className="bg-card border border-border rounded-xl p-5 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          {fields.map((f) => (
+        {/* Revenue section */}
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Revenue &amp; Expenses</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Retainers = your recurring monthly clients. One-off shoots get added on top to make your total revenue.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {revenueFields.map((f) => (
             <div key={f.key}>
               <label className="block text-sm font-semibold text-foreground mb-1.5">{f.label}</label>
               <input
@@ -75,10 +90,28 @@ export default function MonthlyTotals() {
             </div>
           ))}
         </div>
+
+        {/* KPI section */}
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Growth KPIs</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          {kpiFields.map((f) => (
+            <div key={f.key}>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">{f.label}</label>
+              <input
+                type="number"
+                value={form[f.key as keyof typeof form]}
+                onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+                className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+              />
+            </div>
+          ))}
+        </div>
+
         <div className="flex items-center justify-between pt-1">
           {saved ? (
-            <span className="text-sm text-success">✓ Saved! Your dashboard chart has been updated.</span>
-          ) : <span className="text-xs text-muted-foreground">Submitting will update your revenue chart on the dashboard.</span>}
+            <span className="text-sm text-success">✓ Saved! Your dashboard and financials have been updated.</span>
+          ) : <span className="text-xs text-muted-foreground">Submitting will update your revenue chart and financials page.</span>}
           <button
             onClick={() => submitMonth.mutate()}
             disabled={submitMonth.isPending}
@@ -97,22 +130,31 @@ export default function MonthlyTotals() {
               <thead>
                 <tr className="border-b border-border text-left">
                   <th className="pb-2 text-xs font-semibold text-muted-foreground">Month</th>
-                  <th className="pb-2 text-xs font-semibold text-muted-foreground">MRR</th>
-                  <th className="pb-2 text-xs font-semibold text-muted-foreground">New Clients</th>
-                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Leads</th>
-                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Posts</th>
+                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Retainers</th>
+                  <th className="pb-2 text-xs font-semibold text-muted-foreground">One-Offs</th>
+                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Revenue</th>
+                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Expenses</th>
+                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Profit</th>
                 </tr>
               </thead>
               <tbody>
-                {history.map((row: any) => (
-                  <tr key={row.id} className="border-b border-border/50">
-                    <td className="py-2.5 text-foreground">{new Date(row.month).toLocaleString('default', { month: 'short', year: 'numeric' })}</td>
-                    <td className="py-2.5 font-semibold text-primary">${Number(row.mrr).toLocaleString()}</td>
-                    <td className="py-2.5 text-foreground">{row.new_clients}</td>
-                    <td className="py-2.5 text-foreground">{row.leads_generated}</td>
-                    <td className="py-2.5 text-foreground">{row.content_posts}</td>
-                  </tr>
-                ))}
+                {history.map((row: any) => {
+                  const retainers = Number(row.mrr) || 0;
+                  const oneoffs = Number(row.oneoff_revenue) || 0;
+                  const expenses = Number(row.expenses) || 0;
+                  const revenue = retainers + oneoffs;
+                  const profit = revenue - expenses;
+                  return (
+                    <tr key={row.id} className="border-b border-border/50">
+                      <td className="py-2.5 text-foreground">{new Date(row.month).toLocaleString('default', { month: 'short', year: 'numeric' })}</td>
+                      <td className="py-2.5 font-semibold text-primary">${retainers.toLocaleString()}</td>
+                      <td className="py-2.5 text-foreground">${oneoffs.toLocaleString()}</td>
+                      <td className="py-2.5 text-foreground">${revenue.toLocaleString()}</td>
+                      <td className="py-2.5 text-muted-foreground">${expenses.toLocaleString()}</td>
+                      <td className={`py-2.5 font-semibold ${profit >= 0 ? 'text-success' : 'text-destructive'}`}>${profit.toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
