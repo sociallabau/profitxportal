@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Map, FileText, Trophy,
-  DollarSign, Sparkles, Users, Settings, LogOut,
+  Gauge, Route, PenLine, Award,
+  Wallet, Wand2, UserCog, SlidersHorizontal, LogOut,
   Menu, X, ExternalLink, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -19,24 +19,24 @@ export const CIRCLE_URLS = {
 };
 
 const navItems = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'Roadmap', path: '/roadmap', icon: Map },
-  { label: 'Content Tracker', path: '/content', icon: FileText },
+  { label: 'Dashboard', path: '/dashboard', icon: Gauge },
+  { label: 'Roadmap', path: '/roadmap', icon: Route },
+  { label: 'Content Tracker', path: '/content', icon: PenLine },
   {
-    label: 'Submissions', icon: Trophy, children: [
+    label: 'Submissions', icon: Award, children: [
       { label: 'Weekly Wins', path: '/submissions/wins' },
       { label: 'New Clients', path: '/submissions/clients' },
       { label: 'Monthly Totals', path: '/submissions/monthly' },
       { label: 'Checklist', path: '/submissions/checklist' },
     ],
   },
-  { label: 'Financials', path: '/financials', icon: DollarSign },
-  { label: 'AI Toolkit', path: '/ai-tools', icon: Sparkles },
-  { label: 'Settings', path: '/settings', icon: Settings },
+  { label: 'Financials', path: '/financials', icon: Wallet },
+  { label: 'AI Toolkit', path: '/ai-tools', icon: Wand2 },
+  { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
 ];
 
 const adminItems = [
-  { label: 'Client Health', path: '/admin/clients', icon: Users },
+  { label: 'Client Health', path: '/admin/clients', icon: UserCog },
 ];
 
 function NavContent({ onClose }: { onClose?: () => void }) {
