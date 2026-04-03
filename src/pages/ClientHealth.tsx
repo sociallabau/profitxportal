@@ -13,6 +13,21 @@ const TIER_COLORS: Record<string, string> = {
   scale: 'bg-success/20 text-success border-success/30',
 };
 
+const PILLARS = [
+  { key: 'build', label: 'Build', color: 'bg-purple-400' },
+  { key: 'traffic', label: 'Traffic', color: 'bg-violet-400' },
+  { key: 'sales', label: 'Sales', color: 'bg-fuchsia-400' },
+  { key: 'scale', label: 'Scale', color: 'bg-indigo-400' },
+];
+
+const SCORE_COLORS: Record<string, string> = {
+  green: 'bg-success',
+  amber: 'bg-warning',
+  red: 'bg-destructive',
+};
+
+const MODULES_PER_PILLAR = 6;
+
 export default function ClientHealth() {
   const { user, loading } = useRequireAuth();
   const queryClient = useQueryClient();
@@ -41,19 +56,39 @@ export default function ClientHealth() {
     },
   });
 
+  const { data: allScores } = useQuery({
+    queryKey: ['all-roadmap-scores'],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('roadmap_scores')
+        .select('user_id, pillar, module_number, score');
+      return data ?? [];
+    },
+  });
+
   const getLatest = (userId: string) =>
     allMonthly?.find((m: any) => m.user_id === userId);
 
+  const getUserScores = (userId: string) => {
+    const userScores = allScores?.filter((s: any) => s.user_id === userId) ?? [];
+    return PILLARS.map((pillar) => {
+      const pillarScores = userScores.filter((s: any) => s.pillar === pillar.key);
+      const green = pillarScores.filter((s: any) => s.score === 'green').length;
+      const amber = pillarScores.filter((s: any) => s.score === 'amber').length;
+      const red = pillarScores.filter((s: any) => s.score === 'red').length;
+      return { ...pillar, green, amber, red, total: pillarScores.length };
+    });
+  };
+
   const getMrrAlert = (mrr: number | null | undefined, currentTier: string | null) => {
     if (!mrr) return null;
-    // Upgrade suggestions
     if (mrr >= 20000 && currentTier !== 'scale') {
       return { type: 'upgrade' as const, message: 'Ready for Scale tier ($20k+ MRR)', suggested: 'scale', color: 'text-success' };
     }
     if (mrr >= 15000 && currentTier !== 'scale' && currentTier !== 'growth') {
       return { type: 'upgrade' as const, message: 'Ready for Growth tier ($15k+ MRR)', suggested: 'growth', color: 'text-primary' };
     }
-    // Drop warnings
     if (mrr < 15000 && currentTier === 'growth') {
       return { type: 'drop' as const, message: 'MRR dropped below $15k — consider moving back to Onramp', suggested: 'onramp', color: 'text-warning' };
     }
@@ -71,7 +106,7 @@ export default function ClientHealth() {
     if (error) {
       toast.error('Failed to update tier');
     } else {
-      toast.success(`${name || 'Client'} upgraded to ${newTier}`);
+      toast.success(`${name || 'Client'} updated to ${newTier}`);
       queryClient.invalidateQueries({ queryKey: ['all-clients'] });
     }
   };
@@ -89,6 +124,10 @@ export default function ClientHealth() {
         {clients?.map((c: any) => {
           const latest = getLatest(c.id);
           const alert = getMrrAlert(latest?.mrr, c.tier);
+          const scores = getUserScores(c.id);
+          const totalGreen = scores.reduce((sum, s) => sum + s.green, 0);
+          const totalModules = PILLARS.length * MODULES_PER_PILLAR;
+
           return (
             <div key={c.id} className="bg-card border border-border rounded-xl px-5 py-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -121,7 +160,35 @@ export default function ClientHealth() {
                     <p className="text-xs text-muted-foreground">New Clients</p>
                     <p className="font-bold text-foreground text-sm">{latest?.new_clients ?? '—'}</p>
                   </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Roadmap</p>
+                    <p className="font-bold text-foreground text-sm">{totalGreen}/{totalModules}</p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Roadmap pillar progress */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {scores.map((pillar) => (
+                  <div key={pillar.key} className="bg-muted/30 rounded-lg px-3 py-2">
+                    <p className="text-xs font-semibold text-muted-foreground mb-1.5">{pillar.label}</p>
+                    <div className="flex gap-1">
+                      {Array.from({ length: MODULES_PER_PILLAR }).map((_, i) => {
+                        const userScore = allScores?.find(
+                          (s: any) => s.user_id === c.id && s.pillar === pillar.key && s.module_number === i + 1
+                        );
+                        const scoreColor = userScore?.score ? SCORE_COLORS[userScore.score] : 'bg-muted-foreground/20';
+                        return (
+                          <div
+                            key={i}
+                            className={`w-3 h-3 rounded-sm ${scoreColor}`}
+                            title={`Module ${i + 1}: ${userScore?.score ?? 'not started'}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {alert && (
