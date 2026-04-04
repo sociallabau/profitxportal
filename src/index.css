@@ -51,11 +51,11 @@
     font-weight: 400;
     /* Prism texture: multiple faint radial glows at different positions and hues */
     background-image:
-      radial-gradient(ellipse 80% 50% at 15% 20%,  rgba(170, 68,  255, 0.12) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 60% at 85% 10%,  rgba(99,  102, 241, 0.10) 0%, transparent 55%),
-      radial-gradient(ellipse 70% 40% at 70% 75%,  rgba(192, 132, 252, 0.09) 0%, transparent 50%),
-      radial-gradient(ellipse 50% 70% at 5%  80%,  rgba(139, 92,  246, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse 40% 40% at 50% 50%,  rgba(220, 38,  255, 0.05) 0%, transparent 60%);
+      radial-gradient(ellipse 80% 50% at 15% 20%,  rgba(170, 68,  255, 0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 85% 10%,  rgba(99,  102, 241, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 40% at 70% 75%,  rgba(192, 132, 252, 0.16) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 70% at 5%  80%,  rgba(139, 92,  246, 0.14) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 40% at 50% 50%,  rgba(220, 38,  255, 0.08) 0%, transparent 60%);
     background-attachment: fixed;
   }
 
