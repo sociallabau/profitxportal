@@ -17,6 +17,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ClientHealth from "./pages/ClientHealth";
 import Resources from "./pages/Resources";
 import CashMenu from "./pages/CashMenu";
+import WinsWall from "./pages/WinsWall";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/cash-menu" element={<CashMenu />} />
+          <Route path="/wins" element={<WinsWall />} />
           <Route path="/admin/clients" element={<ClientHealth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

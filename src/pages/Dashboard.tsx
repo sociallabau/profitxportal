@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { DollarSign, Users, UserPlus, Target, Route, Banknote, ArrowRight } from 'lucide-react';
+import { DollarSign, Users, UserPlus, Target, Route, Banknote, ArrowRight, Trophy } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
@@ -193,6 +193,28 @@ export default function Dashboard() {
           {cashMenuCount === 4
             ? 'All 4 moves completed 🎉'
             : `${cashMenuCount}/4 moves done — scripts to book calls fast`}
+        </p>
+      </div>
+
+      {/* Wins Wall Teaser */}
+      <div
+        onClick={() => navigate('/wins')}
+        className="bg-card border border-border rounded-xl p-5 mb-6 cursor-pointer hover:border-primary/50 transition-all group"
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Trophy className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Community</p>
+              <p className="text-foreground font-bold italic text-lg">Wins Wall</p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+        </div>
+        <p className="text-muted-foreground text-sm mt-3">
+          See what everyone's achieving — and add your own wins.
         </p>
       </div>
 
