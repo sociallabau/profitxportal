@@ -43,6 +43,7 @@ const App = () => (
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/cash-menu" element={<CashMenu />} />
+          <Route path="/wins" element={<WinsWall />} />
           <Route path="/admin/clients" element={<ClientHealth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
