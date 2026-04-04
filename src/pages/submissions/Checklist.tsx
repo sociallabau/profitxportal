@@ -1,28 +1,61 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageLayout from "@/components/PageLayout";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 
 const checklistData = [
   {
     pillar: "BUILD", color: "text-pillar-build",
     modules: [
-      { name: "Define Your Retainer Offer", tasks: ["Identify target client", "Define deliverables", "Write offer summary"], completed: [true, true, false] },
-      { name: "Price Your Package", tasks: ["Research competitor pricing", "Set your price point", "Create pricing tier doc"], completed: [true, false, false] },
+      { name: "Define Your Retainer Offer", tasks: ["Identify target client", "Define deliverables", "Write offer summary"] },
+      { name: "Price Your Package", tasks: ["Research competitor pricing", "Set your price point", "Create pricing tier doc"] },
     ],
   },
   {
     pillar: "TRAFFIC", color: "text-pillar-traffic",
     modules: [
-      { name: "Define Your Ideal Client", tasks: ["Create ICP document", "List pain points", "Identify platforms"], completed: [true, true, true] },
-      { name: "Your Content Strategy", tasks: ["Choose primary platform", "Set posting cadence", "Create content calendar"], completed: [true, true, false] },
+      { name: "Define Your Ideal Client", tasks: ["Create ICP document", "List pain points", "Identify platforms"] },
+      { name: "Your Content Strategy", tasks: ["Choose primary platform", "Set posting cadence", "Create content calendar"] },
     ],
   },
 ];
 
 export default function Checklist() {
-  const { loading } = useRequireAuth();
+  const { user, loading } = useRequireAuth();
+  const qc = useQueryClient();
   const [openPillars, setOpenPillars] = useState<string[]>(["BUILD"]);
+
+  const { data: savedProgress = [] } = useQuery({
+    queryKey: ['checklist-progress', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('checklist_progress')
+        .select('task_key, completed')
+        .eq('user_id', user!.id);
+      return data ?? [];
+    },
+  });
+
+  const progressMap: Record<string, boolean> = Object.fromEntries(
+    savedProgress.map((p: any) => [p.task_key, p.completed])
+  );
+
+  const toggleTask = useMutation({
+    mutationFn: async ({ taskKey, completed }: { taskKey: string; completed: boolean }) => {
+      const { error } = await supabase.from('checklist_progress').upsert(
+        { user_id: user!.id, task_key: taskKey, completed, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,task_key' }
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['checklist-progress', user?.id] });
+    },
+  });
+
   if (loading) return null;
 
   const toggle = (p: string) =>
@@ -45,7 +78,8 @@ export default function Checklist() {
             {openPillars.includes(pillar.pillar) && (
               <div className="px-5 pb-5 space-y-4">
                 {pillar.modules.map((mod) => {
-                  const done = mod.completed.filter(Boolean).length;
+                  const taskKeys = mod.tasks.map((_, i) => `${pillar.pillar}:${mod.name}:${i}`);
+                  const done = taskKeys.filter((k) => progressMap[k]).length;
                   const total = mod.tasks.length;
                   const allDone = done === total;
                   return (
@@ -60,12 +94,26 @@ export default function Checklist() {
                         <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(done / total) * 100}%` }} />
                       </div>
                       <div className="space-y-2">
-                        {mod.tasks.map((task, i) => (
-                          <label key={i} className="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" defaultChecked={mod.completed[i]} className="h-4 w-4 rounded border-border accent-primary" />
-                            <span className={`text-sm ${mod.completed[i] ? "text-muted-foreground line-through" : "text-foreground"}`}>{task}</span>
-                          </label>
-                        ))}
+                        {mod.tasks.map((task, i) => {
+                          const taskKey = `${pillar.pillar}:${mod.name}:${i}`;
+                          const isCompleted = !!progressMap[taskKey];
+
+                          return (
+                            <label key={i} className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isCompleted}
+                                onChange={(e) =>
+                                  toggleTask.mutate({ taskKey, completed: e.target.checked })
+                                }
+                                className="h-4 w-4 rounded border-border accent-primary"
+                              />
+                              <span className={`text-sm ${isCompleted ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                                {task}
+                              </span>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
                   );

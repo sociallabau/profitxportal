@@ -9,10 +9,27 @@ export default function MonthlyTotals() {
   const qc = useQueryClient();
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [form, setForm] = useState({
-    mrr: '', oneoff_revenue: '', expenses: '',
+    oneoff_revenue: '', expenses: '',
     new_clients: '', leads_generated: '', content_posts: '',
   });
   const [saved, setSaved] = useState(false);
+
+  const { data: retainerClients = [] } = useQuery({
+    queryKey: ['retainer-clients-mrr', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('new_clients')
+        .select('monthly_value')
+        .eq('user_id', user!.id);
+      return data ?? [];
+    },
+  });
+
+  const calculatedMRR = retainerClients.reduce(
+    (sum: number, client: any) => sum + Number(client.monthly_value),
+    0
+  );
 
   const { data: history } = useQuery({
     queryKey: ['monthly-totals-history', user?.id],
@@ -32,7 +49,7 @@ export default function MonthlyTotals() {
       const { error } = await supabase.from('monthly_totals').upsert({
         user_id: user!.id,
         month: `${currentMonth}-01`,
-        mrr: parseFloat(form.mrr) || 0,
+        mrr: calculatedMRR,
         oneoff_revenue: parseFloat(form.oneoff_revenue) || 0,
         expenses: parseFloat(form.expenses) || 0,
         new_clients: parseInt(form.new_clients) || 0,
@@ -44,14 +61,13 @@ export default function MonthlyTotals() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['monthly-totals'] });
       qc.invalidateQueries({ queryKey: ['monthly-totals-history'] });
-      setForm({ mrr: '', oneoff_revenue: '', expenses: '', new_clients: '', leads_generated: '', content_posts: '' });
+      setForm({ oneoff_revenue: '', expenses: '', new_clients: '', leads_generated: '', content_posts: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     },
   });
 
-  const revenueFields = [
-    { key: 'mrr', label: 'Retainer MRR ($)', placeholder: '8500' },
+  const manualFields = [
     { key: 'oneoff_revenue', label: 'One-Off Shoots ($)', placeholder: '2000' },
     { key: 'expenses', label: 'Expenses ($)', placeholder: '3200' },
   ];
@@ -71,13 +87,26 @@ export default function MonthlyTotals() {
       </p>
 
       <div className="bg-card border border-border rounded-xl p-5 mb-6">
-        {/* Revenue section */}
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+          Retainer MRR — auto-calculated from your clients
+        </h3>
+        <div className="flex items-center gap-3 mb-5 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <div>
+            <p className="text-xs text-muted-foreground mb-0.5">Current Retainer MRR</p>
+            <p className="text-2xl font-bold text-primary">${calculatedMRR.toLocaleString()}</p>
+          </div>
+          <p className="text-xs text-muted-foreground ml-auto max-w-[200px] text-right">
+            Sum of all retainer clients logged in New Clients.
+            To update this, add or remove clients there.
+          </p>
+        </div>
+
         <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Revenue &amp; Expenses</h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Retainers = your recurring monthly clients. One-off shoots get added on top to make your total revenue.
+          One-off shoots add to your total revenue this month but do not count toward MRR.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {revenueFields.map((f) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {manualFields.map((f) => (
             <div key={f.key}>
               <label className="block text-sm font-semibold text-foreground mb-1.5">{f.label}</label>
               <input
@@ -110,8 +139,8 @@ export default function MonthlyTotals() {
 
         <div className="flex items-center justify-between pt-1">
           {saved ? (
-            <span className="text-sm text-success">✓ Saved! Your dashboard and financials have been updated.</span>
-          ) : <span className="text-xs text-muted-foreground">Submitting will update your revenue chart and financials page.</span>}
+            <span className="text-sm text-success">✓ Saved! Dashboard and financials updated.</span>
+          ) : <span className="text-xs text-muted-foreground">MRR snapshot: ${calculatedMRR.toLocaleString()} · One-offs logged separately</span>}
           <button
             onClick={() => submitMonth.mutate()}
             disabled={submitMonth.isPending}
@@ -130,26 +159,26 @@ export default function MonthlyTotals() {
               <thead>
                 <tr className="border-b border-border text-left">
                   <th className="pb-2 text-xs font-semibold text-muted-foreground">Month</th>
-                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Retainers</th>
+                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Retainer MRR</th>
                   <th className="pb-2 text-xs font-semibold text-muted-foreground">One-Offs</th>
-                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Revenue</th>
+                  <th className="pb-2 text-xs font-semibold text-muted-foreground">Total Revenue</th>
                   <th className="pb-2 text-xs font-semibold text-muted-foreground">Expenses</th>
                   <th className="pb-2 text-xs font-semibold text-muted-foreground">Profit</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((row: any) => {
-                  const retainers = Number(row.mrr) || 0;
+                  const mrr = Number(row.mrr) || 0;
                   const oneoffs = Number(row.oneoff_revenue) || 0;
                   const expenses = Number(row.expenses) || 0;
-                  const revenue = retainers + oneoffs;
-                  const profit = revenue - expenses;
+                  const totalRevenue = mrr + oneoffs;
+                  const profit = totalRevenue - expenses;
                   return (
                     <tr key={row.id} className="border-b border-border/50">
                       <td className="py-2.5 text-foreground">{new Date(row.month).toLocaleString('default', { month: 'short', year: 'numeric' })}</td>
-                      <td className="py-2.5 font-semibold text-primary">${retainers.toLocaleString()}</td>
+                      <td className="py-2.5 font-semibold text-primary">${mrr.toLocaleString()}</td>
                       <td className="py-2.5 text-foreground">${oneoffs.toLocaleString()}</td>
-                      <td className="py-2.5 text-foreground">${revenue.toLocaleString()}</td>
+                      <td className="py-2.5 text-foreground">${totalRevenue.toLocaleString()}</td>
                       <td className="py-2.5 text-muted-foreground">${expenses.toLocaleString()}</td>
                       <td className={`py-2.5 font-semibold ${profit >= 0 ? 'text-success' : 'text-destructive'}`}>${profit.toLocaleString()}</td>
                     </tr>
