@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Gauge, Route, BarChart3, BadgeCheck, Wallet, Cpu, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X, ExternalLink, ChevronDown,
-  ChevronRight, GraduationCap, BookOpen, Banknote,
+  ChevronRight, GraduationCap, BookOpen, Banknote, Trophy,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
