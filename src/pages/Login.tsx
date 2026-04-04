@@ -24,7 +24,7 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen bg-background flex items-center justify-center px-4"
+      className="min-h-screen flex items-center justify-center px-4"
       style={{ backgroundImage: 'none' }}
     >
       <div className="w-full max-w-sm">
