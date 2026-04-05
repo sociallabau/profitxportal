@@ -41,13 +41,6 @@ export type Database = {
             foreignKeyName: "cash_menu_actions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cash_menu_actions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -76,13 +69,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "checklist_progress_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "checklist_progress_user_id_fkey"
             columns: ["user_id"]
@@ -158,13 +144,6 @@ export type Database = {
             foreignKeyName: "content_posts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "content_posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -199,13 +178,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "goals_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "goals_user_id_fkey"
             columns: ["user_id"]
@@ -311,13 +283,6 @@ export type Database = {
             foreignKeyName: "monthly_totals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "monthly_totals_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -352,13 +317,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "new_clients_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "new_clients_user_id_fkey"
             columns: ["user_id"]
@@ -473,13 +431,6 @@ export type Database = {
             foreignKeyName: "roadmap_scores_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "roadmap_scores_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -512,13 +463,6 @@ export type Database = {
             foreignKeyName: "weekly_wins_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "admin_client_overview"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "weekly_wins_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -526,27 +470,7 @@ export type Database = {
       }
     }
     Views: {
-      admin_client_overview: {
-        Row: {
-          days_since_monday_win: number | null
-          days_since_submission: number | null
-          full_name: string | null
-          health_notes: string | null
-          id: string | null
-          is_admin: boolean | null
-          last_biggest_win: string | null
-          last_confidence: number | null
-          last_monday_win_at: string | null
-          last_mrr: number | null
-          last_needs: string | null
-          last_nps: number | null
-          last_submission_at: string | null
-          last_submission_month: string | null
-          manual_status: string | null
-          tier: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
