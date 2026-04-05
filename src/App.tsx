@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Roadmap from "./pages/Roadmap";
-import ContentTracker from "./pages/ContentTracker";
+import MondayWins from "./pages/MondayWins";
 import WeeklyWins from "./pages/submissions/WeeklyWins";
 import NewClients from "./pages/submissions/NewClients";
 import MonthlyTotals from "./pages/submissions/MonthlyTotals";
