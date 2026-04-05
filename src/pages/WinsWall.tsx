@@ -19,6 +19,7 @@ function timeAgo(date: string) {
 
 export default function WinsWall() {
   useRequireAuth();
+  usePageTracking('wins-wall');
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['wins-wall'],
