@@ -10,7 +10,7 @@ import ContentTracker from "./pages/ContentTracker";
 import WeeklyWins from "./pages/submissions/WeeklyWins";
 import NewClients from "./pages/submissions/NewClients";
 import MonthlyTotals from "./pages/submissions/MonthlyTotals";
-import Checklist from "./pages/submissions/Checklist";
+
 import Financials from "./pages/Financials";
 import AIToolkit from "./pages/AIToolkit";
 import SettingsPage from "./pages/SettingsPage";
