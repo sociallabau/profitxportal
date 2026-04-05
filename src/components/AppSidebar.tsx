@@ -29,7 +29,6 @@ const navItems = [
       { label: 'Weekly Wins', path: '/submissions/wins' },
       { label: 'New Clients', path: '/submissions/clients' },
       { label: 'Monthly Totals', path: '/submissions/monthly' },
-      { label: 'Checklist', path: '/submissions/checklist' },
     ],
   },
   { label: 'Financials', path: '/financials', icon: Wallet },

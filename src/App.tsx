@@ -37,7 +37,7 @@ const App = () => (
           <Route path="/submissions/wins" element={<WeeklyWins />} />
           <Route path="/submissions/clients" element={<NewClients />} />
           <Route path="/submissions/monthly" element={<MonthlyTotals />} />
-          <Route path="/submissions/checklist" element={<Checklist />} />
+          
           <Route path="/financials" element={<Financials />} />
           <Route path="/ai-tools" element={<AIToolkit />} />
           <Route path="/settings" element={<SettingsPage />} />
