@@ -4,6 +4,7 @@ import { useCashMenu } from '@/hooks/useCashMenu';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import PageLayout from '@/components/PageLayout';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 const ACTIONS = [
   {
