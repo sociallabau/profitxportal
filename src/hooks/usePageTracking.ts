@@ -7,6 +7,6 @@ export function usePageTracking(page: string) {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('page_views').insert({ user_id: user.id, page }).catch(() => {});
+    supabase.from('page_views').insert({ user_id: user.id, page }).then(() => {}).catch(() => {});
   }, [user, page]);
 }
