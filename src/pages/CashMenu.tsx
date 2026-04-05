@@ -4,6 +4,7 @@ import { useCashMenu } from '@/hooks/useCashMenu';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import PageLayout from '@/components/PageLayout';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 const ACTIONS = [
   {
@@ -252,6 +253,7 @@ After 5 days:
 
 export default function CashMenu() {
   const { completed, markDone } = useCashMenu();
+  usePageTracking('cash-menu');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 

@@ -1,0 +1,1 @@
+ALTER VIEW public.admin_client_overview SET (security_invoker = on);

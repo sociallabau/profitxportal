@@ -3,6 +3,7 @@ import { Trophy } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 function timeAgo(date: string) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -18,6 +19,7 @@ function timeAgo(date: string) {
 
 export default function WinsWall() {
   useRequireAuth();
+  usePageTracking('wins-wall');
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['wins-wall'],

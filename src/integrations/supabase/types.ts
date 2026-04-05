@@ -250,6 +250,7 @@ export type Database = {
       }
       monthly_totals: {
         Row: {
+          ad_spend: number | null
           biggest_win: string | null
           booked_calls: number | null
           business_confidence: number | null
@@ -259,16 +260,20 @@ export type Database = {
           expenses: number | null
           id: string
           leads_generated: number | null
+          meetings: number | null
           month: string
           mrr: number | null
+          mrr_manual: number | null
           needs_this_month: string | null
           new_clients: number | null
           nps: number | null
           offers_made: number | null
           oneoff_revenue: number | null
+          total_revenue: number | null
           user_id: string | null
         }
         Insert: {
+          ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null
           business_confidence?: number | null
@@ -278,16 +283,20 @@ export type Database = {
           expenses?: number | null
           id?: string
           leads_generated?: number | null
+          meetings?: number | null
           month: string
           mrr?: number | null
+          mrr_manual?: number | null
           needs_this_month?: string | null
           new_clients?: number | null
           nps?: number | null
           offers_made?: number | null
           oneoff_revenue?: number | null
+          total_revenue?: number | null
           user_id?: string | null
         }
         Update: {
+          ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null
           business_confidence?: number | null
@@ -297,13 +306,16 @@ export type Database = {
           expenses?: number | null
           id?: string
           leads_generated?: number | null
+          meetings?: number | null
           month?: string
           mrr?: number | null
+          mrr_manual?: number | null
           needs_this_month?: string | null
           new_clients?: number | null
           nps?: number | null
           offers_made?: number | null
           oneoff_revenue?: number | null
+          total_revenue?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -361,6 +373,42 @@ export type Database = {
           },
           {
             foreignKeyName: "new_clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_views: {
+        Row: {
+          id: string
+          page: string
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          page: string
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          page?: string
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_views_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -487,22 +535,28 @@ export type Database = {
       }
       weekly_wins: {
         Row: {
+          cash_amount: number | null
           created_at: string | null
           id: string
+          source: string | null
           user_id: string | null
           week_ending: string
           win_text: string
         }
         Insert: {
+          cash_amount?: number | null
           created_at?: string | null
           id?: string
+          source?: string | null
           user_id?: string | null
           week_ending: string
           win_text: string
         }
         Update: {
+          cash_amount?: number | null
           created_at?: string | null
           id?: string
+          source?: string | null
           user_id?: string | null
           week_ending?: string
           win_text?: string
@@ -528,22 +582,35 @@ export type Database = {
     Views: {
       admin_client_overview: {
         Row: {
-          days_since_monday_win: number | null
+          cash_views: number | null
+          days_since_last_win: number | null
           days_since_submission: number | null
+          financials_views: number | null
           full_name: string | null
           health_notes: string | null
           id: string | null
           is_admin: boolean | null
+          last_ad_spend: number | null
           last_biggest_win: string | null
           last_confidence: number | null
-          last_monday_win_at: string | null
+          last_content_posts: number | null
+          last_expenses: number | null
+          last_leads: number | null
+          last_meetings: number | null
           last_mrr: number | null
           last_needs: string | null
+          last_new_clients: number | null
           last_nps: number | null
+          last_oneoffs: number | null
           last_submission_at: string | null
           last_submission_month: string | null
+          last_total_revenue: number | null
           manual_status: string | null
+          modules_completed: number | null
+          most_visited_page: string | null
+          roadmap_views: number | null
           tier: string | null
+          total_wins_submitted: number | null
         }
         Relationships: []
       }

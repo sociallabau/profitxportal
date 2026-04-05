@@ -1,0 +1,1 @@
+DROP VIEW IF EXISTS public.admin_client_overview;
