@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Roadmap from "./pages/Roadmap";
-import ContentTracker from "./pages/ContentTracker";
+import MondayWins from "./pages/MondayWins";
 import WeeklyWins from "./pages/submissions/WeeklyWins";
 import NewClients from "./pages/submissions/NewClients";
 import MonthlyTotals from "./pages/submissions/MonthlyTotals";
@@ -32,7 +32,7 @@ const App = () => (
           <Route path="/" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/content" element={<ContentTracker />} />
+          <Route path="/monday-wins" element={<MondayWins />} />
           <Route path="/submissions" element={<Navigate to="/submissions/wins" replace />} />
           <Route path="/submissions/wins" element={<WeeklyWins />} />
           <Route path="/submissions/clients" element={<NewClients />} />
@@ -45,6 +45,7 @@ const App = () => (
           <Route path="/cash-menu" element={<CashMenu />} />
           <Route path="/wins" element={<WinsWall />} />
           <Route path="/admin/clients" element={<ClientHealth />} />
+          <Route path="/admin/health" element={<ClientHealth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -41,6 +41,13 @@ export type Database = {
             foreignKeyName: "cash_menu_actions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_menu_actions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -73,10 +80,41 @@ export type Database = {
             foreignKeyName: "checklist_progress_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      client_health: {
+        Row: {
+          client_user_id: string
+          health_status: string | null
+          id: string
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_user_id: string
+          health_status?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_user_id?: string
+          health_status?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       content_posts: {
         Row: {
@@ -120,6 +158,13 @@ export type Database = {
             foreignKeyName: "content_posts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -158,13 +203,57 @@ export type Database = {
             foreignKeyName: "goals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
       }
+      monday_wins: {
+        Row: {
+          cash_collected: number | null
+          created_at: string | null
+          deal_value: number | null
+          id: string
+          new_client: boolean | null
+          occurred_on: string | null
+          user_id: string
+          win_text: string
+        }
+        Insert: {
+          cash_collected?: number | null
+          created_at?: string | null
+          deal_value?: number | null
+          id?: string
+          new_client?: boolean | null
+          occurred_on?: string | null
+          user_id: string
+          win_text: string
+        }
+        Update: {
+          cash_collected?: number | null
+          created_at?: string | null
+          deal_value?: number | null
+          id?: string
+          new_client?: boolean | null
+          occurred_on?: string | null
+          user_id?: string
+          win_text?: string
+        }
+        Relationships: []
+      }
       monthly_totals: {
         Row: {
+          biggest_win: string | null
+          booked_calls: number | null
+          business_confidence: number | null
+          calls_showed: number | null
           content_posts: number | null
           created_at: string | null
           expenses: number | null
@@ -172,11 +261,18 @@ export type Database = {
           leads_generated: number | null
           month: string
           mrr: number | null
+          needs_this_month: string | null
           new_clients: number | null
+          nps: number | null
+          offers_made: number | null
           oneoff_revenue: number | null
           user_id: string | null
         }
         Insert: {
+          biggest_win?: string | null
+          booked_calls?: number | null
+          business_confidence?: number | null
+          calls_showed?: number | null
           content_posts?: number | null
           created_at?: string | null
           expenses?: number | null
@@ -184,11 +280,18 @@ export type Database = {
           leads_generated?: number | null
           month: string
           mrr?: number | null
+          needs_this_month?: string | null
           new_clients?: number | null
+          nps?: number | null
+          offers_made?: number | null
           oneoff_revenue?: number | null
           user_id?: string | null
         }
         Update: {
+          biggest_win?: string | null
+          booked_calls?: number | null
+          business_confidence?: number | null
+          calls_showed?: number | null
           content_posts?: number | null
           created_at?: string | null
           expenses?: number | null
@@ -196,11 +299,21 @@ export type Database = {
           leads_generated?: number | null
           month?: string
           mrr?: number | null
+          needs_this_month?: string | null
           new_clients?: number | null
+          nps?: number | null
+          offers_made?: number | null
           oneoff_revenue?: number | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "monthly_totals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "monthly_totals_user_id_fkey"
             columns: ["user_id"]
@@ -239,6 +352,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "new_clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "new_clients_user_id_fkey"
             columns: ["user_id"]
@@ -353,6 +473,13 @@ export type Database = {
             foreignKeyName: "roadmap_scores_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -385,6 +512,13 @@ export type Database = {
             foreignKeyName: "weekly_wins_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_wins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -392,7 +526,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_client_overview: {
+        Row: {
+          days_since_monday_win: number | null
+          days_since_submission: number | null
+          full_name: string | null
+          health_notes: string | null
+          id: string | null
+          is_admin: boolean | null
+          last_biggest_win: string | null
+          last_confidence: number | null
+          last_monday_win_at: string | null
+          last_mrr: number | null
+          last_needs: string | null
+          last_nps: number | null
+          last_submission_at: string | null
+          last_submission_month: string | null
+          manual_status: string | null
+          tier: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
