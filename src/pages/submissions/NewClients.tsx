@@ -33,10 +33,18 @@ export default function NewClients() {
         notes: form.notes,
       });
       if (error) throw error;
+
+      await supabase.from('weekly_wins').insert({
+        user_id: user!.id,
+        win_text: `New retainer client signed: ${form.client_name} — $${parseFloat(form.monthly_value).toLocaleString()}/mo 🎉`,
+        week_ending: new Date().toISOString().split('T')[0],
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['new-clients'] });
       qc.invalidateQueries({ queryKey: ['recent-clients'] });
+      qc.invalidateQueries({ queryKey: ['wins-wall'] });
+      qc.invalidateQueries({ queryKey: ['retainer-clients-mrr'] });
       setForm({ client_name: '', monthly_value: '', notes: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -48,7 +56,9 @@ export default function NewClients() {
   return (
     <PageLayout>
       <h1 className="text-2xl mb-1">New Clients</h1>
-      <p className="text-sm text-muted-foreground mb-6">Log a new retainer client.</p>
+      <p className="text-sm text-muted-foreground mb-6">
+        Log a new retainer client. This updates your contracted MRR and posts to the Wins Wall.
+      </p>
 
       <div className="bg-card border border-border rounded-xl p-5 mb-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -82,8 +92,11 @@ export default function NewClients() {
           />
         </div>
         <div className="flex items-center justify-between pt-1">
-          {saved && <span className="text-sm text-success">✓ Client saved!</span>}
-          {!saved && <span />}
+          {saved ? (
+            <span className="text-sm text-success">✓ Client saved and posted to Wins Wall!</span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Logging a client auto-updates your MRR and Wins Wall.</span>
+          )}
           <button
             onClick={() => addClient.mutate()}
             disabled={!form.client_name || !form.monthly_value || addClient.isPending}
@@ -100,7 +113,7 @@ export default function NewClients() {
           <p className="text-2xl font-bold text-foreground">{clients?.length ?? 0}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4 text-center">
-          <p className="text-xs text-muted-foreground mb-1">Total MRR Logged</p>
+          <p className="text-xs text-muted-foreground mb-1">Contracted MRR</p>
           <p className="text-2xl font-bold text-primary">${totalMRR.toLocaleString()}</p>
         </div>
       </div>

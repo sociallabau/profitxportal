@@ -1,239 +1,325 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink } from 'lucide-react';
+import { Lock, LayoutGrid, List, ExternalLink } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { cn } from '@/lib/utils';
 
-const CIRCLE_PILLAR_URLS: Record<string, string> = {
-  build:   'https://app.circle.so/c/YOUR-BUILD-SPACE',
-  traffic: 'https://app.circle.so/c/YOUR-TRAFFIC-SPACE',
-  sales:   'https://app.circle.so/c/YOUR-SALES-SPACE',
-  scale:   'https://app.circle.so/c/YOUR-SCALE-SPACE',
-};
+type Tier = 'onramp' | 'growth' | 'scale';
+type ViewMode = 'modules' | 'table';
 
-type Module = {
-  id: string;
-  name: string;
-  tier: 'onramp' | 'growth' | 'scale';
-  description: string;
-  circleUrl: string;
-};
+const TIER_ORDER: Record<Tier, number> = { onramp: 0, growth: 1, scale: 2 };
 
-type Pillar = {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  modules: Module[];
-};
-
-const PILLARS: Pillar[] = [
-  {
-    id: 'build',
-    name: 'Build',
-    description: 'The foundation of your retainer business — offer, delivery, finances, and systems.',
-    color: '#AA44FF',
-    modules: [
-      { id: 'build-1', name: 'Design Your Retainer Offer + Delivery Roadmap', tier: 'onramp', description: "Build one clear, sellable retainer offer — what's included, what's not, what it costs. Then map out exactly how you deliver it week by week so clients know what's coming.", circleUrl: CIRCLE_PILLAR_URLS.build },
-      { id: 'build-2', name: 'Client Onboarding & Strategy Sessions', tier: 'onramp', description: 'What happens the moment someone says yes. The onboarding call, strategy session structure, and how to set expectations that make clients stick around.', circleUrl: CIRCLE_PILLAR_URLS.build },
-      { id: 'build-3', name: 'P&L and Margins', tier: 'growth', description: "Revenue vs cost per client, overheads, net profit per retainer. Know exactly what you're making after expenses — and what it costs you when you undercharge.", circleUrl: CIRCLE_PILLAR_URLS.build },
-      { id: 'build-4', name: 'Upsell Architecture', tier: 'growth', description: 'Map your offer ladder. What else can you sell existing clients once trust is built? Ad management, events, photography, strategy days. Revenue per client grows without needing more clients.', circleUrl: CIRCLE_PILLAR_URLS.build },
-      { id: 'build-5', name: 'SOP Library', tier: 'scale', description: 'Document everything before you delegate it. Editing brief, caption style, shoot checklist, client comms templates. Your SOP library is what lets someone else do your job.', circleUrl: CIRCLE_PILLAR_URLS.build },
-      { id: 'build-6', name: 'Full Funnel Paid Ads', tier: 'scale', description: 'Graduate from the Simple Ad to a proper Meta funnel. Top of funnel (brand awareness), middle (case study retargeting), bottom (direct offer to warm audience). Full setup guide included.', circleUrl: CIRCLE_PILLAR_URLS.build },
-    ],
-  },
-  {
-    id: 'traffic',
-    name: 'Traffic',
-    description: 'Getting in front of the right people, consistently — organic, paid, and outreach.',
-    color: '#6633ee',
-    modules: [
-      { id: 'traffic-1', name: 'Optimise Your Profile', tier: 'onramp', description: "Before ads, before outreach — your profile has to convert. Bio that says who you help and what result, highlights, pinned posts, link in bio. If your profile doesn't convert, everything else is wasted.", circleUrl: CIRCLE_PILLAR_URLS.traffic },
-      { id: 'traffic-2', name: 'The Stupidly Simple Ad', tier: 'onramp', description: '$20/day for 5 days. One video, one static or carousel. Follow up by DM with everyone who engages. Prove the model before scaling. Full setup guide, targeting, and DM script included.', circleUrl: CIRCLE_PILLAR_URLS.traffic },
-      { id: 'traffic-3', name: 'Warm Outreach', tier: 'onramp', description: "Message everyone you already know — past shoot clients, warm leads, people who've engaged with your content. Includes the past-client DM, warm reactivation script, and follow-up sequence.", circleUrl: CIRCLE_PILLAR_URLS.traffic },
-      { id: 'traffic-4', name: 'The 5 Ps Content Framework', tier: 'growth', description: 'Problem → Plan → Proof → Philosophy → Proposition. Rotate through these to build trust and authority with your audience before you ever pitch. The system that turns followers into leads.', circleUrl: CIRCLE_PILLAR_URLS.traffic },
-      { id: 'traffic-5', name: 'Story Sequences + Content Repurposing', tier: 'growth', description: "Build a story sequence that runs alongside your feed — this is where conversations actually happen. Plus: how to get more from every shoot. One job = multiple pieces of content.", circleUrl: CIRCLE_PILLAR_URLS.traffic },
-      { id: 'traffic-6', name: 'Full Content Rhythm', tier: 'scale', description: '4 posts a week. 3 weeks of trust-building using the 5 Ps, 1 push week with direct offer. Planned a month ahead, batched in a day, consistent every week without scrambling.', circleUrl: CIRCLE_PILLAR_URLS.traffic },
-    ],
-  },
-  {
-    id: 'sales',
-    name: 'Sales',
-    description: 'Converting conversations into signed retainers — without being salesy.',
-    color: '#9933dd',
-    modules: [
-      { id: 'sales-1', name: 'Proposal Doc + Meeting Flow', tier: 'onramp', description: "A proposal that converts — problem, solution, proof, clear next step. Plus the discovery call structure: what to ask, how to uncover pain, when to bring in proof, and how to close without pressure.", circleUrl: CIRCLE_PILLAR_URLS.sales },
-      { id: 'sales-2', name: 'DM Scripts', tier: 'onramp', description: 'The full outreach sequence for DMs — opener, problem question, curiosity hook, booking ask. Includes voice note guidance, tonality principles, and what to say at each stage of the conversation.', circleUrl: CIRCLE_PILLAR_URLS.sales },
-      { id: 'sales-3', name: 'Lead Tracking + CRM', tier: 'growth', description: "Start with a simple spreadsheet — every lead, their source, stage, and last follow-up. Then graduate to a CRM. Most deals are lost because of zero follow-up. This fixes that permanently.", circleUrl: CIRCLE_PILLAR_URLS.sales },
-      { id: 'sales-4', name: 'Case Studies & Results', tier: 'growth', description: "Turn every client result into a sales asset. One-page case study format: situation before, what you did, the result. These replace persuasion — you show, not tell. Includes objection handling scripts.", circleUrl: CIRCLE_PILLAR_URLS.sales },
-    ],
-  },
-  {
-    id: 'scale',
-    name: 'Scale',
-    description: "Building a business that doesn't fully depend on you — team, systems, and leverage.",
-    color: '#7722cc',
-    modules: [
-      { id: 'scale-1', name: 'First Hire + Delegation Mindset', tier: 'scale', description: "Editor, VA, or setter — who first and why the order matters. The mindset shift from doing everything to directing everything. What to delegate first and how to stop being the bottleneck.", circleUrl: CIRCLE_PILLAR_URLS.scale },
-      { id: 'scale-2', name: 'Watching the P&L', tier: 'scale', description: "When you have a team, the numbers change. How to read your P&L with payroll in the mix, where margins get squeezed as you grow, and what levers to pull to protect profit while scaling.", circleUrl: CIRCLE_PILLAR_URLS.scale },
-      { id: 'scale-3', name: 'Training Rhythm', tier: 'scale', description: "How to manage without micromanaging. Weekly check-ins, EOD reports, feedback loops, and KPIs for each role. The system that keeps your team performing without you being in everything.", circleUrl: CIRCLE_PILLAR_URLS.scale },
-      { id: 'scale-4', name: 'Premium Client Experience', tier: 'scale', description: "At scale, your competitive advantage is experience as much as output. Monthly reporting, quarterly strategy reviews, proactive communication, and the client portal that makes them stay for years.", circleUrl: CIRCLE_PILLAR_URLS.scale },
-    ],
-  },
+const ALL_MODULES = [
+  { id: 'b1', pillar: 'BUILD',   tier: 'onramp' as Tier, name: 'Design Retainer Offer + Delivery Roadmap', description: 'Package your offer, set pricing, and map out exactly what clients get.', circleUrl: '' },
+  { id: 'b2', pillar: 'BUILD',   tier: 'onramp' as Tier, name: 'Client Onboarding & Strategy Sessions',    description: 'Build a repeatable onboarding flow that sets expectations from day one.', circleUrl: '' },
+  { id: 'b3', pillar: 'BUILD',   tier: 'growth' as Tier, name: 'P&L and Margins',                          description: 'Understand your numbers — what you keep after costs.', circleUrl: '' },
+  { id: 'b4', pillar: 'BUILD',   tier: 'growth' as Tier, name: 'Upsell Architecture',                      description: 'Create logical next steps so clients naturally spend more.', circleUrl: '' },
+  { id: 'b5', pillar: 'BUILD',   tier: 'scale'  as Tier, name: 'SOP Library',                              description: 'Document every process so your business runs without you.', circleUrl: '' },
+  { id: 'b6', pillar: 'BUILD',   tier: 'scale'  as Tier, name: 'Full Funnel Paid Ads',                     description: 'Run ads that bring in qualified leads at scale.', circleUrl: '' },
+  { id: 't1', pillar: 'TRAFFIC', tier: 'onramp' as Tier, name: 'Optimise Your Profile',                    description: 'Turn your IG/LinkedIn into a lead generation machine.', circleUrl: '' },
+  { id: 't2', pillar: 'TRAFFIC', tier: 'onramp' as Tier, name: 'Stupidly Simple Ad',                       description: '$20/day for 5 days — the fastest way to get warm leads in.', circleUrl: '' },
+  { id: 't3', pillar: 'TRAFFIC', tier: 'onramp' as Tier, name: 'Warm Outreach',                            description: 'DM scripts and sequences to reactivate your existing network.', circleUrl: '' },
+  { id: 't4', pillar: 'TRAFFIC', tier: 'growth' as Tier, name: '5 Ps Framework',                           description: 'A content framework that positions you as the go-to expert.', circleUrl: '' },
+  { id: 't5', pillar: 'TRAFFIC', tier: 'growth' as Tier, name: 'Story Sequences + Repurposing',             description: 'Multiply your content output without extra filming time.', circleUrl: '' },
+  { id: 't6', pillar: 'TRAFFIC', tier: 'scale'  as Tier, name: 'Full Content Rhythm',                      description: 'A full weekly content system that runs consistently.', circleUrl: '' },
+  { id: 's1', pillar: 'SALES',   tier: 'onramp' as Tier, name: 'Proposal Doc + Meeting Flow',              description: 'A proposal template and call structure that closes deals.', circleUrl: '' },
+  { id: 's2', pillar: 'SALES',   tier: 'onramp' as Tier, name: 'DM Scripts',                               description: 'Word-for-word scripts for turning DMs into booked calls.', circleUrl: '' },
+  { id: 's3', pillar: 'SALES',   tier: 'growth' as Tier, name: 'Lead Tracking + CRM',                      description: 'Track every lead so nothing slips through the cracks.', circleUrl: '' },
+  { id: 's4', pillar: 'SALES',   tier: 'growth' as Tier, name: 'Case Studies & Results',                   description: 'Build proof assets that do your selling for you.', circleUrl: '' },
+  { id: 'sc1', pillar: 'SCALE',  tier: 'scale'  as Tier, name: 'First Hire + Delegation Mindset',          description: 'Who to hire first and how to hand off without losing quality.', circleUrl: '' },
+  { id: 'sc2', pillar: 'SCALE',  tier: 'scale'  as Tier, name: 'Watching the P&L',                         description: 'Weekly financial review habits that keep you profitable.', circleUrl: '' },
+  { id: 'sc3', pillar: 'SCALE',  tier: 'scale'  as Tier, name: 'Training Rhythm',                          description: 'How to train your team so standards never slip.', circleUrl: '' },
+  { id: 'sc4', pillar: 'SCALE',  tier: 'scale'  as Tier, name: 'Premium Client Experience',                description: 'The touches that turn clients into long-term advocates.', circleUrl: '' },
 ];
 
-const TIER_ORDER = ['onramp', 'growth', 'scale'];
+const PILLARS = ['BUILD', 'TRAFFIC', 'SALES', 'SCALE'];
 
-// Helper to extract module number from id like "build-3" → 3
-function moduleNumber(id: string): number {
-  return parseInt(id.split('-')[1], 10);
+const PILLAR_COLORS: Record<string, string> = {
+  BUILD:   'text-pillar-build',
+  TRAFFIC: 'text-pillar-traffic',
+  SALES:   'text-pillar-sales',
+  SCALE:   'text-pillar-scale',
+};
+
+const TIER_BADGE: Record<Tier, string> = {
+  onramp: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+  growth: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+  scale:  'bg-violet-500/10 text-violet-400 border border-violet-500/20',
+};
+
+function statusDot(isLocked: boolean, isComplete: boolean) {
+  if (isComplete) return <span title="Complete" className="text-base">🟢</span>;
+  if (isLocked)   return <span title="Locked"   className="text-base">🔴</span>;
+  return               <span title="Available" className="text-base">🟡</span>;
 }
 
 export default function Roadmap() {
-  const { user } = useRequireAuth();
-  const { data: profile } = useProfile();
+  const { user, loading } = useRequireAuth();
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState('build');
+  const [view, setView] = useState<ViewMode>('modules');
+  const [pillarFilter, setPillarFilter] = useState<string>('ALL');
 
-  const clientTier = profile?.tier ?? 'onramp';
-  const tierIndex = TIER_ORDER.indexOf(clientTier);
-  const isUnlocked = (moduleTier: string) => TIER_ORDER.indexOf(moduleTier) <= tierIndex;
-
-  const { data: scores } = useQuery({
-    queryKey: ['roadmap-scores', user?.id],
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase
-        .from('roadmap_scores')
-        .select('*')
-        .eq('user_id', user!.id);
-      const map: Record<string, string> = {};
-      data?.forEach((row: any) => { map[`${row.pillar}-${row.module_number}`] = row.score; });
-      return map;
+        .from('profiles')
+        .select('tier, full_name')
+        .eq('id', user!.id)
+        .single();
+      return data;
     },
   });
 
-  const updateScore = useMutation({
-    mutationFn: async ({ pillar, module_number, score }: { pillar: string; module_number: number; score: string }) => {
-      const { error } = await supabase.from('roadmap_scores').upsert(
-        { user_id: user!.id, pillar, module_number, score },
-        { onConflict: 'user_id,pillar,module_number' }
+  const userTier: Tier = (profile?.tier as Tier) ?? 'onramp';
+
+  const { data: progress = [] } = useQuery({
+    queryKey: ['checklist-progress', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('checklist_progress')
+        .select('task_key, completed')
+        .eq('user_id', user!.id);
+      return data ?? [];
+    },
+  });
+
+  const completedMap: Record<string, boolean> = Object.fromEntries(
+    progress.map((p: any) => [p.task_key, p.completed])
+  );
+
+  const toggleComplete = useMutation({
+    mutationFn: async ({ moduleId, completed }: { moduleId: string; completed: boolean }) => {
+      const { error } = await supabase.from('checklist_progress').upsert(
+        { user_id: user!.id, task_key: moduleId, completed, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,task_key' }
       );
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roadmap-scores'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['checklist-progress', user?.id] });
+    },
   });
 
-  const pillar = PILLARS.find((p) => p.id === activeTab)!;
+  if (loading) return null;
 
-  // Pillar tab colors as tailwind-compatible inline styles
-  const pillarStyle = (p: Pillar, active: boolean) => active
-    ? { backgroundColor: `${p.color}15`, borderColor: `${p.color}50`, color: p.color }
-    : {};
+  const isLocked = (tier: Tier) => TIER_ORDER[tier] > TIER_ORDER[userTier];
+  const isComplete = (id: string) => !!completedMap[id];
+
+  const filteredModules = pillarFilter === 'ALL'
+    ? ALL_MODULES
+    : ALL_MODULES.filter((m) => m.pillar === pillarFilter);
+
+  const modulesByPillar = PILLARS.reduce((acc, pillar) => {
+    acc[pillar] = filteredModules.filter((m) => m.pillar === pillar);
+    return acc;
+  }, {} as Record<string, typeof ALL_MODULES>);
+
+  const completedCount = ALL_MODULES.filter((m) => isComplete(m.id)).length;
+  const availableCount = ALL_MODULES.filter((m) => !isLocked(m.tier)).length;
 
   return (
     <PageLayout>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl">Roadmap</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Your tier: <span className="text-primary font-semibold capitalize">{clientTier}</span>
+          <h1 className="text-2xl font-bold text-foreground mb-1">Roadmap</h1>
+          <p className="text-sm text-muted-foreground">
+            {completedCount} of {availableCount} available modules completed
+            {userTier !== 'scale' && (
+              <span className="ml-2 text-xs text-muted-foreground/60">
+                · Unlock more by progressing to the next tier
+              </span>
+            )}
           </p>
         </div>
-        <a
-          href={CIRCLE_PILLAR_URLS[activeTab]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
-        >
-          Open {pillar.name} in Circle <ExternalLink className="w-3.5 h-3.5" />
-        </a>
+        <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
+          <button
+            onClick={() => setView('modules')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              view === 'modules'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Modules
+          </button>
+          <button
+            onClick={() => setView('table')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              view === 'table'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            Checklist
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-        {PILLARS.map((p) => (
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {['ALL', ...PILLARS].map((p) => (
           <button
-            key={p.id}
-            onClick={() => setActiveTab(p.id)}
-            style={pillarStyle(p, activeTab === p.id)}
-            className={cn(
-              'flex flex-col items-start px-4 py-3 rounded-xl border text-left shrink-0 transition-all',
-              activeTab === p.id
-                ? 'border-current'
-                : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted/50'
-            )}
+            key={p}
+            onClick={() => setPillarFilter(p)}
+            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+              pillarFilter === p
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'border-border text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <span className="text-sm font-bold">{p.name}</span>
-            <span className="text-xs opacity-70 mt-0.5 line-clamp-1 max-w-[160px]">{p.description}</span>
+            {p}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {pillar.modules.map((mod) => {
-          const unlocked = isUnlocked(mod.tier);
-          const n = moduleNumber(mod.id);
-          const score = scores?.[`${pillar.id}-${n}`] ?? 'red';
-          return (
-            <div
-              key={mod.id}
-              className={cn(
-                'bg-card border rounded-xl p-4 transition-all',
-                unlocked ? 'border-border hover:border-primary/30' : 'border-border opacity-50'
-              )}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
-                    style={{ backgroundColor: `${pillar.color}15`, color: pillar.color }}
-                  >
-                    {mod.tier}
-                  </span>
-                  <span className="text-xs text-muted-foreground">M{n}</span>
+      {view === 'modules' && (
+        <div className="space-y-8">
+          {PILLARS.filter((p) => pillarFilter === 'ALL' || p === pillarFilter).map((pillar) => {
+            const mods = modulesByPillar[pillar];
+            if (!mods?.length) return null;
+            return (
+              <div key={pillar}>
+                <h2 className={`text-xs font-bold tracking-widest uppercase mb-3 ${PILLAR_COLORS[pillar]}`}>
+                  {pillar}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {mods.map((mod) => {
+                    const locked = isLocked(mod.tier);
+                    const complete = isComplete(mod.id);
+                    return (
+                      <div
+                        key={mod.id}
+                        className={`relative rounded-xl border p-4 transition-all ${
+                          locked
+                            ? 'border-border opacity-50 cursor-not-allowed'
+                            : complete
+                            ? 'border-success/30 bg-success/5'
+                            : 'border-border hover:border-primary/30'
+                        }`}
+                      >
+                        <div className="absolute top-3 right-3">
+                          {statusDot(locked, complete)}
+                        </div>
+                        <div className="flex items-start gap-3 mb-2 pr-8">
+                          {!locked && (
+                            <input
+                              type="checkbox"
+                              checked={complete}
+                              onChange={(e) =>
+                                toggleComplete.mutate({ moduleId: mod.id, completed: e.target.checked })
+                              }
+                              className="mt-0.5 h-4 w-4 rounded border-border accent-primary flex-shrink-0"
+                            />
+                          )}
+                          {locked && (
+                            <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          )}
+                          <p className={`text-sm font-semibold leading-snug ${complete ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                            {mod.name}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed pl-7 mb-3">
+                          {mod.description}
+                        </p>
+                        <div className="flex items-center justify-between pl-7">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TIER_BADGE[mod.tier]}`}>
+                            {mod.tier}
+                          </span>
+                          {!locked && mod.circleUrl && (
+                            <a
+                              href={mod.circleUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs text-primary hover:underline"
+                            >
+                              Watch <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                {unlocked && (
-                  <div className="flex gap-1">
-                    {['red', 'amber', 'green'].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => updateScore.mutate({ pillar: pillar.id, module_number: n, score: s })}
-                        className={cn(
-                          'w-5 h-5 rounded-full border-2 transition-all',
-                          score === s
-                            ? s === 'red' ? 'bg-destructive border-destructive' : s === 'amber' ? 'bg-warning border-warning' : 'bg-success border-success'
-                            : 'bg-transparent border-border hover:border-primary/40'
-                        )}
-                        title={s.charAt(0).toUpperCase() + s.slice(1)}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
-              <h3 className={cn('text-sm font-bold mb-1', unlocked ? 'text-foreground' : 'text-muted-foreground')}>
-                {mod.name}
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-3">{mod.description}</p>
-              {unlocked ? (
-                <a
-                  href={mod.circleUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-semibold transition-colors hover:opacity-80"
-                  style={{ color: pillar.color }}
-                >
-                  Open module <ExternalLink className="w-3 h-3" />
-                </a>
-              ) : (
-                <p className="text-xs text-muted-foreground italic">🔒 Unlocks at {mod.tier} tier</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
+
+      {view === 'table' && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-secondary/30">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-8"></th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Module</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground hidden sm:table-cell">Pillar</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground hidden sm:table-cell">Tier</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredModules.map((mod, i) => {
+                const locked = isLocked(mod.tier);
+                const complete = isComplete(mod.id);
+                return (
+                  <tr
+                    key={mod.id}
+                    className={`border-b border-border/50 transition-colors ${
+                      locked ? 'opacity-40' : 'hover:bg-secondary/20'
+                    } ${i === filteredModules.length - 1 ? 'border-b-0' : ''}`}
+                  >
+                    <td className="px-4 py-3">
+                      {locked ? (
+                        <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={complete}
+                          onChange={(e) =>
+                            toggleComplete.mutate({ moduleId: mod.id, completed: e.target.checked })
+                          }
+                          className="h-4 w-4 rounded border-border accent-primary"
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium leading-snug ${complete ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                          {mod.name}
+                        </span>
+                        {!locked && mod.circleUrl && (
+                          <a href={mod.circleUrl} target="_blank" rel="noopener noreferrer" className="text-primary flex-shrink-0">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span className={`text-xs font-bold ${PILLAR_COLORS[mod.pillar]}`}>
+                        {mod.pillar}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TIER_BADGE[mod.tier]}`}>
+                        {mod.tier}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {statusDot(locked, complete)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </PageLayout>
   );
 }

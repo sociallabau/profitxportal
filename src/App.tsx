@@ -10,7 +10,7 @@ import ContentTracker from "./pages/ContentTracker";
 import WeeklyWins from "./pages/submissions/WeeklyWins";
 import NewClients from "./pages/submissions/NewClients";
 import MonthlyTotals from "./pages/submissions/MonthlyTotals";
-import Checklist from "./pages/submissions/Checklist";
+
 import Financials from "./pages/Financials";
 import AIToolkit from "./pages/AIToolkit";
 import SettingsPage from "./pages/SettingsPage";
@@ -37,7 +37,7 @@ const App = () => (
           <Route path="/submissions/wins" element={<WeeklyWins />} />
           <Route path="/submissions/clients" element={<NewClients />} />
           <Route path="/submissions/monthly" element={<MonthlyTotals />} />
-          <Route path="/submissions/checklist" element={<Checklist />} />
+          
           <Route path="/financials" element={<Financials />} />
           <Route path="/ai-tools" element={<AIToolkit />} />
           <Route path="/settings" element={<SettingsPage />} />
