@@ -253,6 +253,7 @@ After 5 days:
 
 export default function CashMenu() {
   const { completed, markDone } = useCashMenu();
+  usePageTracking('cash-menu');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
