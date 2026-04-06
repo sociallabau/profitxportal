@@ -164,8 +164,8 @@ export default function Financials() {
           {[
             { label: 'Content Posts', value: content || '—', subValue: revenuePerPost ? `$${Math.round(revenuePerPost).toLocaleString()}/post` : null, color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
             { label: 'Ad Spend', value: adSpend > 0 ? `$${adSpend.toLocaleString()}` : '—', subValue: null, color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-            { label: 'Leads', value: leads || '—', subValue: revenuePerLead ? `$${Math.round(revenuePerLead).toLocaleString()}/lead` : null, color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
-            { label: 'Meetings', value: meetings || '—', subValue: revenuePerMeeting ? `$${Math.round(revenuePerMeeting).toLocaleString()}/meeting` : null, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+            { label: 'Leads', value: leads || '—', subValue: null, color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
+            { label: 'Meetings', value: meetings || '—', subValue: null, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
             { label: 'New Clients', value: newClients || '—', subValue: revenuePerClient ? `$${Math.round(revenuePerClient).toLocaleString()}/client` : null, color: 'bg-green-500/20 text-green-300 border-green-500/30' },
           ].map(({ label, value, subValue, color }, i, arr) => (
             <div key={label} className="flex items-center gap-2">

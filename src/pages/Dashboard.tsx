@@ -123,10 +123,10 @@ export default function Dashboard() {
         <StatCard icon={DollarSign} label="Profit" value={latestRevenue > 0 ? `$${latestProfit.toLocaleString()}` : '—'} sub={latestRevenue > 0 ? `${Math.round((latestProfit / latestRevenue) * 100)}% margin` : ''} color={latestProfit >= 0 ? 'text-green-400' : 'text-destructive'} sparkData={graphData.map((d: any) => ({ ...d, profit: d.revenue - d.expenses }))} sparkKey="profit" sparkColor="#4ade80" />
       </div>
 
-      {graphData.length > 1 ? (
+      {graphData.length >= 1 ? (
         <div className="bg-card border border-border rounded-xl p-5 mb-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Revenue Trend</h2>
-          <p className="text-xs text-muted-foreground mb-4">Last {graphData.length} months</p>
+          <p className="text-xs text-muted-foreground mb-4">Last {graphData.length} month{graphData.length > 1 ? 's' : ''}</p>
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={graphData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
