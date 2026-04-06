@@ -173,6 +173,27 @@ export default function MonthlyTotals() {
           </div>
         </div>
 
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-4">New Client Value</h3>
+          <p className="text-xs text-muted-foreground mb-4">If you signed new clients this month, what's the total value? This powers your growth funnel analysis.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">New clients total value ($)</label>
+              <input type="number" value={form.new_clients_total_value} onChange={e => set('new_clients_total_value', e.target.value)} placeholder="6000" className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+              <p className="text-xs text-muted-foreground mt-1">e.g. 3 clients at $2k each = $6,000</p>
+            </div>
+            <div className="flex flex-col justify-center">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.new_clients_is_mrr === 'true'} onChange={e => set('new_clients_is_mrr', String(e.target.checked))} className="w-4 h-4 accent-primary mt-0.5" />
+                <div>
+                  <span className="text-sm font-semibold text-foreground">These are retainer clients (MRR)</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">Check this if they pay monthly — their actual LTV will be much higher</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Wins & Focus</h3>
           <div>
