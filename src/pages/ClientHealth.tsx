@@ -9,6 +9,13 @@ import { useRequireAuth } from '@/hooks/useAuth';
 
 const TIERS = ['on-ramp', 'growth', 'scale'] as const;
 
+// On-ramp module IDs — must match Roadmap.tsx
+const ON_RAMP_MODULE_IDS = [
+  'design-retainer-offer', 'client-onboarding',
+  'optimise-profile', 'stupidly-simple-ad', 'warm-outreach',
+  'discovery-call', 'follow-up-system',
+];
+
 function calcHealthScore(client: any) {
   let financial = 0, wellbeing = 0, funnel = 0, roadmap = 0;
 
