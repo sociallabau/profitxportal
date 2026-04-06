@@ -32,7 +32,8 @@ export default function MonthlyTotals() {
   const [form, setForm] = useState({
     oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '',
     ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
-    new_clients: '', business_confidence: '5', nps: '5',
+    new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
+    business_confidence: '5', nps: '5',
     biggest_win: '', needs_this_month: '',
   });
   const [saved, setSaved] = useState(false);
