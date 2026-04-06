@@ -1,13 +1,20 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock
+  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle
 } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 
 const TIERS = ['on-ramp', 'growth', 'scale'] as const;
+
+// On-ramp module IDs — must match Roadmap.tsx
+const ON_RAMP_MODULE_IDS = [
+  'design-retainer-offer', 'client-onboarding',
+  'optimise-profile', 'stupidly-simple-ad', 'warm-outreach',
+  'discovery-call', 'follow-up-system',
+];
 
 function calcHealthScore(client: any) {
   let financial = 0, wellbeing = 0, funnel = 0, roadmap = 0;
@@ -141,15 +148,40 @@ export default function ClientHealth() {
     },
   });
 
+  // Fetch all checklist completions to detect on-ramp graduates
+  const { data: allCompletions = [] } = useQuery({
+    queryKey: ['all-checklist-completions'],
+    enabled: !!selfProfile?.is_admin,
+    queryFn: async () => {
+      const { data } = await supabase.from('checklist_progress').select('user_id, task_key, completed').eq('completed', true);
+      return data ?? [];
+    },
+  });
+
   const clientsWithHealth = useMemo(() =>
-    clients.map((c: any) => ({ ...c, health: calcHealthScore(c), conclusion: generateConclusion(c) }))
-      .sort((a: any, b: any) => b.health.score - a.health.score),
-    [clients]
+    clients.map((c: any) => {
+      // Check if this on-ramp client has completed all on-ramp modules
+      const clientCompletedKeys = allCompletions
+        .filter((cp: any) => cp.user_id === c.id)
+        .map((cp: any) => cp.task_key);
+      const allOnRampDone = ON_RAMP_MODULE_IDS.every(id => clientCompletedKeys.includes(id));
+      const isOnRamp = !c.tier || c.tier === 'onramp' || c.tier === 'on-ramp';
+      const readyForGrowth = isOnRamp && allOnRampDone;
+
+      return {
+        ...c,
+        health: calcHealthScore(c),
+        conclusion: generateConclusion(c),
+        readyForGrowth,
+      };
+    }).sort((a: any, b: any) => b.health.score - a.health.score),
+    [clients, allCompletions]
   );
 
   const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
   const redCount   = clientsWithHealth.filter((c: any) => c.health.band === 'red').length;
+  const readyToUnlock = clientsWithHealth.filter((c: any) => c.readyForGrowth);
 
   const { data: pageViewAgg = [] } = useQuery({
     queryKey: ['page-view-agg'],
@@ -193,6 +225,32 @@ export default function ClientHealth() {
           );
         })}
       </div>
+
+      {/* Unlock Growth notification */}
+      {readyToUnlock.length > 0 && (
+        <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowUpCircle className="w-5 h-5 text-purple-400" />
+            <h2 className="text-sm font-bold text-purple-400">Ready to Unlock Growth Tier</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            {readyToUnlock.length === 1 ? 'This client has' : `${readyToUnlock.length} clients have`} completed all On-Ramp modules and {readyToUnlock.length === 1 ? 'is' : 'are'} ready to move to Growth.
+          </p>
+          <div className="space-y-2">
+            {readyToUnlock.map((client: any) => (
+              <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
+                <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
+                <button
+                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'growth' })}
+                  className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition"
+                >
+                  Unlock Growth →
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {pageCounts.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5 mb-6">
