@@ -32,7 +32,8 @@ export default function MonthlyTotals() {
   const [form, setForm] = useState({
     oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '',
     ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
-    new_clients: '', business_confidence: '5', nps: '5',
+    new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
+    business_confidence: '5', nps: '5',
     biggest_win: '', needs_this_month: '',
   });
   const [saved, setSaved] = useState(false);
@@ -66,6 +67,8 @@ export default function MonthlyTotals() {
         leads_generated: parseInt(form.leads_generated) || 0,
         meetings: parseInt(form.meetings) || 0,
         new_clients: parseInt(form.new_clients) || 0,
+        new_clients_total_value: parseFloat(form.new_clients_total_value) || 0,
+        new_clients_is_mrr: form.new_clients_is_mrr === 'true',
         business_confidence: parseInt(form.business_confidence),
         nps: parseInt(form.nps),
         biggest_win: form.biggest_win || null,
@@ -89,7 +92,8 @@ export default function MonthlyTotals() {
       setForm({
         oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '',
         ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
-        new_clients: '', business_confidence: '5', nps: '5',
+        new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
+        business_confidence: '5', nps: '5',
         biggest_win: '', needs_this_month: '',
       });
       setSaved(true);
@@ -166,6 +170,27 @@ export default function MonthlyTotals() {
                   className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-4">New Client Value</h3>
+          <p className="text-xs text-muted-foreground mb-4">If you signed new clients this month, what's the total value? This powers your growth funnel analysis.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">New clients total value ($)</label>
+              <input type="number" value={form.new_clients_total_value} onChange={e => set('new_clients_total_value', e.target.value)} placeholder="6000" className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+              <p className="text-xs text-muted-foreground mt-1">e.g. 3 clients at $2k each = $6,000</p>
+            </div>
+            <div className="flex flex-col justify-center">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.new_clients_is_mrr === 'true'} onChange={e => set('new_clients_is_mrr', String(e.target.checked))} className="w-4 h-4 accent-primary mt-0.5" />
+                <div>
+                  <span className="text-sm font-semibold text-foreground">These are retainer clients (MRR)</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">Check this if they pay monthly — their actual LTV will be much higher</p>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
 
