@@ -1,36 +1,91 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import {
+  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock
+} from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 
-type HealthStatus = 'green' | 'amber' | 'red';
+const TIERS = ['on-ramp', 'growth', 'scale'] as const;
 
-function autoStatus(row: any): HealthStatus {
-  const daysSince = row.days_since_submission ?? 999;
-  const nps = row.last_nps ?? 5;
-  const conf = row.last_confidence ?? 5;
-  if (daysSince > 45 || nps <= 3 || conf <= 3) return 'red';
-  if (daysSince > 25 || nps <= 5 || conf <= 5) return 'amber';
-  return 'green';
+function calcHealthScore(client: any) {
+  let financial = 0, wellbeing = 0, funnel = 0, roadmap = 0;
+
+  const revenue    = Number(client.last_total_revenue || 0);
+  const mrr        = Number(client.last_mrr || 0);
+  const expenses   = Number(client.last_expenses || 0);
+  const netMargin  = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : -1;
+  const mrrPct     = revenue > 0 ? (mrr / revenue) * 100 : 0;
+  const confidence = Number(client.last_confidence || 0);
+  const nps        = Number(client.last_nps || 0);
+  const daysSub    = Number(client.days_since_submission ?? 999);
+  const daysLogin  = Number(client.days_since_last_login ?? 999);
+  const content    = Number(client.last_content_posts || 0);
+  const leads      = Number(client.last_leads || 0);
+  const meetings   = Number(client.last_meetings || 0);
+  const completed  = Number(client.modules_completed || 0);
+
+  if (revenue > 0)    financial += 10;
+  if (netMargin >= 20) financial += 15; else if (netMargin >= 10) financial += 7;
+  if (mrrPct >= 40)   financial += 10; else if (mrrPct >= 20) financial += 5;
+  if (Number(client.last_new_clients) >= 1) financial += 5;
+
+  if (confidence >= 7) wellbeing += 8; else if (confidence >= 5) wellbeing += 4;
+  if (nps >= 7)        wellbeing += 8; else if (nps >= 5) wellbeing += 4;
+  if (daysSub <= 35)   wellbeing += 5;
+  if (daysLogin <= 14) wellbeing += 4; else if (daysLogin <= 30) wellbeing += 2;
+
+  if (content >= 10)  funnel += 6; else if (content >= 4) funnel += 3;
+  if (leads >= 5)     funnel += 7; else if (leads >= 1) funnel += 3;
+  if (meetings >= 2)  funnel += 4; else if (meetings >= 1) funnel += 2;
+  if (Number(client.last_new_clients) >= 1) funnel += 3;
+
+  if (completed >= 10) roadmap += 15; else if (completed >= 6) roadmap += 10;
+  else if (completed >= 3) roadmap += 5; else if (completed >= 1) roadmap += 2;
+
+  const score = financial + wellbeing + funnel + roadmap;
+  const band  = score >= 70 ? 'green' : score >= 40 ? 'amber' : 'red';
+  return { score, band, financial, wellbeing, funnel, roadmap };
 }
 
-function StatusDot({ status }: { status: HealthStatus }) {
-  const map = { green: 'bg-green-500', amber: 'bg-amber-400', red: 'bg-red-500' };
-  return <span className={`inline-block w-3 h-3 rounded-full ${map[status]} flex-shrink-0`} />;
+function generateConclusion(client: any) {
+  const name      = client.full_name?.split(' ')[0] || 'This client';
+  const parts: string[] = [];
+  const daysLogin  = Number(client.days_since_last_login ?? 999);
+  const daysSub    = Number(client.days_since_submission ?? 999);
+  const newClients = Number(client.last_new_clients || 0);
+  const content    = Number(client.last_content_posts || 0);
+  const leads      = Number(client.last_leads || 0);
+  const confidence = Number(client.last_confidence || 0);
+  const completed  = Number(client.modules_completed || 0);
+
+  if (daysLogin > 30) parts.push(`hasn't logged in for ${daysLogin} days — re-engagement needed`);
+  if (daysSub > 45) parts.push(`overdue on monthly submission (${daysSub} days)`);
+  if (newClients >= 2) parts.push(`signed ${newClients} new clients — strong momentum`);
+  if (content >= 8 && leads >= 5 && newClients >= 1) parts.push(`content → leads → clients funnel is working`);
+  if (content === 0) parts.push(`not posting content — zero top-of-funnel activity`);
+  if (content >= 8 && newClients === 0) parts.push(`posting content but not converting — check DMs and discovery calls`);
+  if (confidence <= 4) parts.push(`low confidence (${confidence}/10) — worth a check-in`);
+  if (completed < 3) parts.push(`minimal roadmap progress (${completed} modules)`);
+
+  if (parts.length === 0) return `${name} appears on track — keep monitoring monthly submissions.`;
+  return `${name} ${parts.join('; ')}.`;
 }
+
+const BAND = {
+  green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', dot: 'bg-green-400', label: 'On Track' },
+  amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', dot: 'bg-yellow-400', label: 'Watch' },
+  red:   { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', dot: 'bg-red-400', label: 'Needs Help' },
+};
 
 export default function ClientHealth() {
-  const { user, loading } = useRequireAuth();
-  const navigate = useNavigate();
+  const { user } = useRequireAuth();
   const qc = useQueryClient();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [noteText, setNoteText] = useState('');
-  const [statusOverride, setStatusOverride] = useState<HealthStatus | 'auto'>('auto');
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile', user?.id],
+  const { data: selfProfile } = useQuery({
+    queryKey: ['self-profile', user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('is_admin').eq('id', user!.id).single();
@@ -40,160 +95,412 @@ export default function ClientHealth() {
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['admin-client-overview'],
-    enabled: !!user && !!profile?.is_admin,
+    enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
-      const { data } = await supabase.from('admin_client_overview').select('*').order('full_name');
+      const { data, error } = await supabase.from('admin_client_overview').select('*').order('full_name');
+      if (error) throw error;
       return data ?? [];
     },
   });
 
-  const saveHealth = useMutation({
-    mutationFn: async ({ clientId, status, notes }: { clientId: string; status: HealthStatus | 'auto'; notes: string }) => {
-      const finalStatus = status === 'auto' ? autoStatus(clients.find((c: any) => c.id === clientId)) : status;
-      const { error } = await supabase.from('client_health').upsert(
-        { client_user_id: clientId, health_status: finalStatus, notes, updated_at: new Date().toISOString() },
-        { onConflict: 'client_user_id' }
-      );
+  const changeTier = useMutation({
+    mutationFn: async ({ clientId, tier }: { clientId: string; tier: string }) => {
+      const { error } = await supabase.from('profiles').update({ tier }).eq('id', clientId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, { tier }) => {
       qc.invalidateQueries({ queryKey: ['admin-client-overview'] });
-      setEditingId(null);
+      setSelectedClient((prev: any) => prev ? { ...prev, tier } : prev);
     },
   });
 
-  if (loading || profileLoading) return null;
-  if (!profile?.is_admin) {
-    navigate('/dashboard');
-    return null;
-  }
+  const { data: clientHistory = [] } = useQuery({
+    queryKey: ['client-monthly-history', selectedClient?.id],
+    enabled: !!selectedClient,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_totals')
+        .select('month, mrr_manual, mrr, oneoff_revenue, total_revenue, expenses, business_confidence, nps, content_posts, leads_generated, new_clients')
+        .eq('user_id', selectedClient!.id)
+        .order('month', { ascending: false })
+        .limit(6);
+      return data ?? [];
+    },
+  });
 
-  const green  = (clients as any[]).filter(c => (c.manual_status ?? autoStatus(c)) === 'green').length;
-  const amber  = (clients as any[]).filter(c => (c.manual_status ?? autoStatus(c)) === 'amber').length;
-  const red    = (clients as any[]).filter(c => (c.manual_status ?? autoStatus(c)) === 'red').length;
+  const { data: clientCompletions = [] } = useQuery({
+    queryKey: ['client-completions', selectedClient?.id],
+    enabled: !!selectedClient,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('checklist_progress')
+        .select('task_key, completed')
+        .eq('user_id', selectedClient!.id)
+        .eq('completed', true);
+      return data ?? [];
+    },
+  });
+
+  const clientsWithHealth = useMemo(() =>
+    clients.map((c: any) => ({ ...c, health: calcHealthScore(c), conclusion: generateConclusion(c) }))
+      .sort((a: any, b: any) => b.health.score - a.health.score),
+    [clients]
+  );
+
+  const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
+  const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
+  const redCount   = clientsWithHealth.filter((c: any) => c.health.band === 'red').length;
+
+  const { data: pageViewAgg = [] } = useQuery({
+    queryKey: ['page-view-agg'],
+    enabled: !!selfProfile?.is_admin,
+    queryFn: async () => {
+      const { data } = await supabase.from('page_views').select('page').limit(500);
+      return data ?? [];
+    },
+  });
+  const pageCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    pageViewAgg.forEach((v: any) => { counts[v.page] = (counts[v.page] || 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [pageViewAgg]);
+
+  if (!selfProfile?.is_admin) {
+    return <PageLayout><p className="text-muted-foreground">Admin access required.</p></PageLayout>;
+  }
 
   return (
     <PageLayout>
-      <h1 className="text-2xl font-bold mb-1">Client Health</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Auto-calculated from monthly submissions, NPS, and confidence scores. Override manually where needed.
-      </p>
-
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-card border border-green-500/20 rounded-xl p-4 text-center">
-          <p className="text-xs text-muted-foreground mb-1">On Track</p>
-          <p className="text-2xl font-bold text-green-500">{green}</p>
-        </div>
-        <div className="bg-card border border-amber-400/20 rounded-xl p-4 text-center">
-          <p className="text-xs text-muted-foreground mb-1">Check In</p>
-          <p className="text-2xl font-bold text-amber-400">{amber}</p>
-        </div>
-        <div className="bg-card border border-red-500/20 rounded-xl p-4 text-center">
-          <p className="text-xs text-muted-foreground mb-1">At Risk</p>
-          <p className="text-2xl font-bold text-red-500">{red}</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <HeartPulse className="w-6 h-6 text-primary" /> Client Health
+        </h1>
+        <p className="text-sm text-muted-foreground">Click any client to view their full profile and manage their tier.</p>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="bg-card border border-border rounded-xl h-20 animate-pulse" />)}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {(clients as any[]).map((client: any) => {
-            const computed = autoStatus(client);
-            const display: HealthStatus = (client.manual_status as HealthStatus) ?? computed;
-            const isEditing = editingId === client.id;
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { label: 'On Track',   count: greenCount, band: 'green' as const },
+          { label: 'Watch',      count: amberCount, band: 'amber' as const },
+          { label: 'Needs Help', count: redCount,   band: 'red'   as const },
+        ].map(({ label, count, band }) => {
+          const s = BAND[band];
+          return (
+            <div key={band} className={`${s.bg} border ${s.border} rounded-xl p-4 text-center`}>
+              <p className={`text-3xl font-bold ${s.text}`}>{count}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+            </div>
+          );
+        })}
+      </div>
 
-            return (
-              <div key={client.id} className={`bg-card border rounded-xl p-4 transition-all ${
-                display === 'red' ? 'border-red-500/30' : display === 'amber' ? 'border-amber-400/30' : 'border-green-500/20'
-              }`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <StatusDot status={display} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{client.full_name ?? 'Unnamed'}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{client.tier ?? 'onramp'}</p>
-                    </div>
+      {pageCounts.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Eye className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Where Clients Spend Time</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Total page visits across all clients — tells you where to focus your coaching.</p>
+          <div className="space-y-2">
+            {pageCounts.slice(0, 6).map(([page, count]) => {
+              const pct = Math.round((count / (pageCounts[0]?.[1] || 1)) * 100);
+              return (
+                <div key={page} className="flex items-center gap-3">
+                  <span className="text-sm text-foreground capitalize w-28 shrink-0">{page.replace('-', ' ')}</span>
+                  <div className="flex-1 bg-muted rounded-full h-2">
+                    <div className="bg-primary rounded-full h-2" style={{ width: `${pct}%` }} />
                   </div>
+                  <span className="text-xs text-muted-foreground w-14 text-right">{count} visits</span>
+                </div>
+              );
+            })}
+          </div>
+          {pageCounts[0] && (
+            <p className="text-xs text-primary mt-3">
+              💡 Most visited: <strong className="capitalize">{pageCounts[0][0].replace('-', ' ')}</strong> — focus coaching effort here.
+            </p>
+          )}
+        </div>
+      )}
 
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground flex-shrink-0">
-                    <div className="text-center hidden sm:block">
-                      <p className="font-semibold text-foreground">{client.days_since_submission != null ? `${client.days_since_submission}d` : '—'}</p>
-                      <p>last sub</p>
-                    </div>
-                    <div className="text-center hidden sm:block">
-                      <p className="font-semibold text-foreground">{client.last_nps ?? '—'}</p>
-                      <p>NPS</p>
-                    </div>
-                    <div className="text-center hidden sm:block">
-                      <p className="font-semibold text-foreground">{client.last_confidence ?? '—'}</p>
-                      <p>conf</p>
-                    </div>
-                    <div className="text-center hidden sm:block">
-                      <p className="font-semibold text-foreground">{client.last_mrr ? `$${Number(client.last_mrr).toLocaleString()}` : '—'}</p>
-                      <p>MRR</p>
-                    </div>
-                    <button onClick={() => {
-                      setEditingId(isEditing ? null : client.id);
-                      setNoteText(client.health_notes ?? '');
-                      setStatusOverride((client.manual_status as HealthStatus) ?? 'auto');
-                    }}
-                      className="text-xs text-primary hover:underline flex-shrink-0">
-                      {isEditing ? 'Cancel' : 'Edit'}
-                    </button>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading clients...</p>
+      ) : clientsWithHealth.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No clients have submitted data yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {clientsWithHealth.map((client: any) => {
+            const { health, conclusion } = client;
+            const s = BAND[health.band as keyof typeof BAND];
+            return (
+              <button
+                key={client.id}
+                onClick={() => setSelectedClient(client)}
+                className={`w-full text-left bg-card border ${s.border} rounded-xl p-4 hover:border-primary/50 transition-all flex items-center gap-4`}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={`w-3 h-3 rounded-full shrink-0 ${s.dot}`} />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground truncate">{client.full_name || 'Unnamed Client'}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{client.tier || 'on-ramp'} tier</p>
                   </div>
                 </div>
 
-                {(client.last_needs || client.last_biggest_win) && (
-                  <div className="mt-3 pl-6 space-y-1">
-                    {client.last_biggest_win && (
-                      <p className="text-xs text-foreground"><span className="text-muted-foreground">Win: </span>{client.last_biggest_win}</p>
-                    )}
-                    {client.last_needs && (
-                      <p className="text-xs text-amber-400"><span className="text-muted-foreground">Needs: </span>{client.last_needs}</p>
-                    )}
-                  </div>
-                )}
+                <div className="hidden sm:flex items-center gap-6 text-xs text-muted-foreground shrink-0">
+                  <span>Score: <strong className={s.text}>{health.score}/100</strong></span>
+                  {client.last_total_revenue > 0 && <span>Rev: ${Number(client.last_total_revenue).toLocaleString()}</span>}
+                  {client.modules_completed > 0 && <span>{client.modules_completed} modules</span>}
+                  {client.days_since_last_login !== null && (
+                    <span className={Number(client.days_since_last_login) > 14 ? 'text-orange-400' : ''}>
+                      Login: {client.days_since_last_login}d ago
+                    </span>
+                  )}
+                </div>
 
-                {client.health_notes && !isEditing && (
-                  <p className="mt-2 pl-6 text-xs text-muted-foreground italic">"{client.health_notes}"</p>
-                )}
+                <span className={`hidden sm:inline-block px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${s.bg} ${s.text}`}>
+                  {s.label}
+                </span>
 
-                {isEditing && (
-                  <div className="mt-4 pl-6 space-y-3 border-t border-border pt-4">
-                    <div>
-                      <label className="text-xs font-semibold text-foreground mb-1 block">Override status</label>
-                      <div className="flex gap-2">
-                        {(['auto', 'green', 'amber', 'red'] as const).map(s => (
-                          <button key={s} onClick={() => setStatusOverride(s)}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${statusOverride === s ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}>
-                            {s === 'auto' ? `Auto (${computed})` : s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-foreground mb-1 block">Your notes</label>
-                      <textarea value={noteText} onChange={e => setNoteText(e.target.value)} rows={2}
-                        placeholder="e.g. Needs push on outreach, great momentum this month..."
-                        className="w-full px-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition resize-none" />
-                    </div>
-                    <button
-                      onClick={() => saveHealth.mutate({ clientId: client.id, status: statusOverride, notes: noteText })}
-                      disabled={saveHealth.isPending}
-                      className="px-4 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
-                    >
-                      {saveHealth.isPending ? 'Saving...' : 'Save'}
-                    </button>
-                  </div>
-                )}
-              </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
             );
           })}
         </div>
       )}
+
+      {/* SLIDE-OVER PANEL */}
+      {selectedClient && (() => {
+        const c = clientsWithHealth.find((x: any) => x.id === selectedClient.id) || selectedClient;
+        const h = c.health || calcHealthScore(c);
+        const s = BAND[h.band as keyof typeof BAND];
+        const daysLogin = Number(c.days_since_last_login ?? null);
+        const daysSub   = Number(c.days_since_submission ?? null);
+
+        return (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+              onClick={() => setSelectedClient(null)}
+            />
+
+            <div className="fixed top-0 right-0 z-50 h-full w-full max-w-xl bg-card border-l border-border shadow-2xl overflow-y-auto">
+              <div className={`sticky top-0 z-10 ${s.bg} border-b ${s.border} px-6 py-4 flex items-center justify-between`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${s.dot}`} />
+                  <div>
+                    <h2 className="font-bold text-foreground text-lg">{c.full_name}</h2>
+                    <p className={`text-xs font-semibold ${s.text}`}>
+                      Health Score: {h.score}/100 — {s.label}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedClient(null)} className="p-2 rounded-lg hover:bg-muted/50 transition">
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {/* Tier change */}
+                <div className="bg-muted/30 border border-border rounded-xl p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tier</p>
+                  <div className="flex gap-2">
+                    {TIERS.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => changeTier.mutate({ clientId: c.id, tier: t })}
+                        disabled={changeTier.isPending}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold capitalize transition
+                          ${(selectedClient.tier === t || c.tier === t)
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                          }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Changing tier unlocks different roadmap modules for this client.
+                  </p>
+                </div>
+
+                {/* Health score breakdown */}
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Health Breakdown</p>
+                  <div className="space-y-2.5">
+                    {[
+                      { label: 'Financial',  val: h.financial, max: 40, color: 'bg-green-400'  },
+                      { label: 'Wellbeing',  val: h.wellbeing, max: 25, color: 'bg-blue-400'   },
+                      { label: 'Funnel',     val: h.funnel,    max: 20, color: 'bg-purple-400' },
+                      { label: 'Roadmap',    val: h.roadmap,   max: 15, color: 'bg-orange-400' },
+                    ].map(({ label, val, max, color }) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-foreground">{label}</span>
+                          <span className="text-muted-foreground">{val}/{max}</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${(val/max)*100}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Login & submission recency */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`p-3 rounded-xl border ${!isNaN(daysLogin) && daysLogin > 14 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-card border-border'}`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Last login</p>
+                    </div>
+                    <p className={`text-sm font-semibold ${!isNaN(daysLogin) && daysLogin > 14 ? 'text-orange-400' : 'text-foreground'}`}>
+                      {!isNaN(daysLogin) ? `${daysLogin} days ago` : 'No data'}
+                    </p>
+                  </div>
+                  <div className={`p-3 rounded-xl border ${!isNaN(daysSub) && daysSub > 40 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-card border-border'}`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Last submission</p>
+                    </div>
+                    <p className={`text-sm font-semibold ${!isNaN(daysSub) && daysSub > 40 ? 'text-orange-400' : 'text-foreground'}`}>
+                      {!isNaN(daysSub) ? `${daysSub} days ago` : 'Never'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Latest month snapshot */}
+                {c.last_total_revenue > 0 && (
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                      Latest Month Snapshot
+                      {c.last_submission_month && (
+                        <span className="ml-2 font-normal normal-case">
+                          ({new Date(c.last_submission_month).toLocaleString('default', { month: 'short', year: 'numeric' })})
+                        </span>
+                      )}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {[
+                        { label: 'Revenue',    value: `$${Number(c.last_total_revenue).toLocaleString()}`,    color: 'text-foreground' },
+                        { label: 'MRR',        value: `$${Number(c.last_mrr || 0).toLocaleString()}`,         color: 'text-primary' },
+                        { label: 'Expenses',   value: `$${Number(c.last_expenses || 0).toLocaleString()}`,    color: 'text-orange-400' },
+                        { label: 'Ad Spend',   value: Number(c.last_ad_spend) > 0 ? `$${Number(c.last_ad_spend).toLocaleString()}` : '—', color: 'text-blue-400' },
+                        { label: 'Content',    value: `${c.last_content_posts ?? '—'} posts`,                color: 'text-foreground' },
+                        { label: 'Leads',      value: `${c.last_leads ?? '—'}`,                              color: 'text-foreground' },
+                        { label: 'Meetings',   value: `${c.last_meetings ?? '—'}`,                           color: 'text-foreground' },
+                        { label: 'New Clients',value: `${c.last_new_clients ?? '—'}`,                        color: 'text-green-400'  },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className="flex justify-between">
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className={`font-semibold ${color}`}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Wellbeing scores */}
+                {(c.last_confidence || c.last_nps) && (
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Wellbeing</p>
+                    <div className="space-y-2">
+                      {c.last_confidence && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">Business confidence</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-muted rounded-full h-1.5">
+                              <div className="h-1.5 rounded-full bg-blue-400" style={{ width: `${(c.last_confidence/10)*100}%` }} />
+                            </div>
+                            <span className={`text-sm font-bold ${c.last_confidence >= 7 ? 'text-green-400' : c.last_confidence >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {c.last_confidence}/10
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {c.last_nps && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">Coaching satisfaction</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-muted rounded-full h-1.5">
+                              <div className="h-1.5 rounded-full bg-purple-400" style={{ width: `${(c.last_nps/10)*100}%` }} />
+                            </div>
+                            <span className={`text-sm font-bold ${c.last_nps >= 7 ? 'text-green-400' : c.last_nps >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {c.last_nps}/10
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Roadmap progress */}
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Roadmap Progress</p>
+                    <span className="text-sm font-bold text-primary">{c.modules_completed || 0} modules</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2 mb-2">
+                    <div
+                      className="bg-primary rounded-full h-2 transition-all"
+                      style={{ width: `${Math.min(100, ((c.modules_completed || 0) / 18) * 100)}%` }}
+                    />
+                  </div>
+                  {clientCompletions.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {clientCompletions.map((comp: any) => (
+                        <span key={comp.task_key} className="px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded-full capitalize">
+                          {comp.task_key.replace(/-/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* What they need */}
+                {c.last_needs && (
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                    <p className="text-xs text-primary font-semibold mb-1">They need from you:</p>
+                    <p className="text-sm text-foreground italic">"{c.last_needs}"</p>
+                  </div>
+                )}
+
+                {/* Insight */}
+                <div className="p-4 bg-muted/20 border border-border rounded-xl">
+                  <p className="text-xs text-muted-foreground mb-1">Insight</p>
+                  <p className="text-sm text-foreground italic">{c.conclusion}</p>
+                </div>
+
+                {/* Submission history */}
+                {clientHistory.length > 0 && (
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Submission History</p>
+                    <div className="space-y-2">
+                      {clientHistory.map((row: any) => {
+                        const r = Number(row.total_revenue) || (Number(row.mrr_manual || row.mrr || 0) + Number(row.oneoff_revenue || 0));
+                        return (
+                          <div key={row.month} className="flex items-center justify-between text-xs border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                            <span className="text-muted-foreground">
+                              {new Date(row.month).toLocaleString('default', { month: 'short', year: 'numeric' })}
+                            </span>
+                            <span className="text-foreground">${r.toLocaleString()} rev</span>
+                            <span className="text-foreground">{row.content_posts ?? '—'} posts</span>
+                            <span className="text-green-400">{row.new_clients ?? '—'} clients</span>
+                            <span className={`font-semibold ${(row.business_confidence || 0) >= 7 ? 'text-green-400' : 'text-yellow-400'}`}>
+                              {row.business_confidence ? `${row.business_confidence}/10` : '—'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </PageLayout>
   );
 }
