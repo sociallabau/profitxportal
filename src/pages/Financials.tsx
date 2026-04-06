@@ -8,6 +8,7 @@ import { usePageTracking } from '@/hooks/usePageTracking';
 
 const MARGIN_TARGETS: Record<string, { grossMin: number; grossMax: number; netMin: number; netMax: number; label: string }> = {
   'on-ramp': { grossMin: 65, grossMax: 80, netMin: 35, netMax: 50, label: 'On-Ramp' },
+  'onramp':  { grossMin: 65, grossMax: 80, netMin: 35, netMax: 50, label: 'On-Ramp' },
   'growth':  { grossMin: 60, grossMax: 75, netMin: 30, netMax: 45, label: 'Growth' },
   'scale':   { grossMin: 50, grossMax: 60, netMin: 20, netMax: 30, label: 'Scale' },
 };
