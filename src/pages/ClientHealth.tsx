@@ -148,15 +148,40 @@ export default function ClientHealth() {
     },
   });
 
+  // Fetch all checklist completions to detect on-ramp graduates
+  const { data: allCompletions = [] } = useQuery({
+    queryKey: ['all-checklist-completions'],
+    enabled: !!selfProfile?.is_admin,
+    queryFn: async () => {
+      const { data } = await supabase.from('checklist_progress').select('user_id, task_key, completed').eq('completed', true);
+      return data ?? [];
+    },
+  });
+
   const clientsWithHealth = useMemo(() =>
-    clients.map((c: any) => ({ ...c, health: calcHealthScore(c), conclusion: generateConclusion(c) }))
-      .sort((a: any, b: any) => b.health.score - a.health.score),
-    [clients]
+    clients.map((c: any) => {
+      // Check if this on-ramp client has completed all on-ramp modules
+      const clientCompletedKeys = allCompletions
+        .filter((cp: any) => cp.user_id === c.id)
+        .map((cp: any) => cp.task_key);
+      const allOnRampDone = ON_RAMP_MODULE_IDS.every(id => clientCompletedKeys.includes(id));
+      const isOnRamp = !c.tier || c.tier === 'onramp' || c.tier === 'on-ramp';
+      const readyForGrowth = isOnRamp && allOnRampDone;
+
+      return {
+        ...c,
+        health: calcHealthScore(c),
+        conclusion: generateConclusion(c),
+        readyForGrowth,
+      };
+    }).sort((a: any, b: any) => b.health.score - a.health.score),
+    [clients, allCompletions]
   );
 
   const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
   const redCount   = clientsWithHealth.filter((c: any) => c.health.band === 'red').length;
+  const readyToUnlock = clientsWithHealth.filter((c: any) => c.readyForGrowth);
 
   const { data: pageViewAgg = [] } = useQuery({
     queryKey: ['page-view-agg'],
