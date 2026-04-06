@@ -45,7 +45,23 @@ const PILLARS = [
   },
 ];
 
-const TIER_ORDER = ['on-ramp', 'growth', 'scale'];
+const TIER_ORDER = ['on-ramp', 'onramp', 'growth', 'scale'];
+
+function normalizeTier(tier: string): string {
+  if (tier === 'on-ramp') return 'onramp';
+  return tier;
+}
+
+function getTierUnlocked(clientTier: string): string[] {
+  const normalized = normalizeTier(clientTier);
+  const canonical = ['onramp', 'growth', 'scale'];
+  return canonical.slice(0, canonical.indexOf(normalized) + 1);
+}
+
+function moduleMatchesTier(moduleTier: string, unlockedTiers: string[]): boolean {
+  const normalized = normalizeTier(moduleTier);
+  return unlockedTiers.includes(normalized);
+}
 
 export default function Roadmap() {
   const { user } = useRequireAuth();
@@ -61,8 +77,8 @@ export default function Roadmap() {
     },
   });
 
-  const clientTier = profile?.tier || 'on-ramp';
-  const unlockedTiers = TIER_ORDER.slice(0, TIER_ORDER.indexOf(clientTier) + 1);
+  const clientTier = profile?.tier || 'onramp';
+  const unlockedTiers = getTierUnlocked(clientTier);
 
   const { data: completions = [] } = useQuery({
     queryKey: ['module-completions', user?.id],
@@ -87,7 +103,7 @@ export default function Roadmap() {
   });
 
   const allModules = PILLARS.flatMap(p => p.modules);
-  const totalUnlocked = allModules.filter(m => unlockedTiers.includes(m.tier)).length;
+  const totalUnlocked = allModules.filter(m => moduleMatchesTier(m.tier, unlockedTiers)).length;
   const completedCount = Object.values(completionMap).filter(Boolean).length;
   const progressPct = totalUnlocked > 0 ? Math.round((completedCount / totalUnlocked) * 100) : 0;
 
@@ -115,7 +131,7 @@ export default function Roadmap() {
             <h2 className={`text-xs font-bold tracking-widest uppercase mb-3 ${pillar.color}`}>{pillar.name}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {pillar.modules.map((module) => {
-                const isUnlocked = unlockedTiers.includes(module.tier);
+                const isUnlocked = moduleMatchesTier(module.tier, unlockedTiers);
                 const isComplete = !!completionMap[module.id];
 
                 if (!isUnlocked) {
