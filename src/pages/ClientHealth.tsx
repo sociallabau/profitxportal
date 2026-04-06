@@ -7,7 +7,20 @@ import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 
-const TIERS = ['on-ramp', 'growth', 'scale'] as const;
+const TIER_OPTIONS = [
+  { value: 'onramp', label: 'On-Ramp' },
+  { value: 'growth', label: 'Growth' },
+  { value: 'scale', label: 'Scale' },
+] as const;
+
+function normalizeTier(tier?: string | null) {
+  if (!tier || tier === 'on-ramp') return 'onramp';
+  return tier;
+}
+
+function formatTierLabel(tier?: string | null) {
+  return TIER_OPTIONS.find((option) => option.value === normalizeTier(tier))?.label ?? 'On-Ramp';
+}
 
 // On-ramp module IDs — must match Roadmap.tsx
 const ON_RAMP_MODULE_IDS = [
