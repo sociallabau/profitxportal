@@ -67,6 +67,8 @@ export default function MonthlyTotals() {
         leads_generated: parseInt(form.leads_generated) || 0,
         meetings: parseInt(form.meetings) || 0,
         new_clients: parseInt(form.new_clients) || 0,
+        new_clients_total_value: parseFloat(form.new_clients_total_value) || 0,
+        new_clients_is_mrr: form.new_clients_is_mrr === 'true',
         business_confidence: parseInt(form.business_confidence),
         nps: parseInt(form.nps),
         biggest_win: form.biggest_win || null,
@@ -90,7 +92,8 @@ export default function MonthlyTotals() {
       setForm({
         oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '',
         ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
-        new_clients: '', business_confidence: '5', nps: '5',
+        new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
+        business_confidence: '5', nps: '5',
         biggest_win: '', needs_this_month: '',
       });
       setSaved(true);
