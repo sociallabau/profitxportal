@@ -7,7 +7,20 @@ import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 
-const TIERS = ['on-ramp', 'growth', 'scale'] as const;
+const TIER_OPTIONS = [
+  { value: 'onramp', label: 'On-Ramp' },
+  { value: 'growth', label: 'Growth' },
+  { value: 'scale', label: 'Scale' },
+] as const;
+
+function normalizeTier(tier?: string | null) {
+  if (!tier || tier === 'on-ramp') return 'onramp';
+  return tier;
+}
+
+function formatTierLabel(tier?: string | null) {
+  return TIER_OPTIONS.find((option) => option.value === normalizeTier(tier))?.label ?? 'On-Ramp';
+}
 
 // On-ramp module IDs — must match Roadmap.tsx
 const ON_RAMP_MODULE_IDS = [
@@ -112,12 +125,14 @@ export default function ClientHealth() {
 
   const changeTier = useMutation({
     mutationFn: async ({ clientId, tier }: { clientId: string; tier: string }) => {
-      const { error } = await supabase.from('profiles').update({ tier }).eq('id', clientId);
+      const nextTier = normalizeTier(tier);
+      const { error } = await supabase.from('profiles').update({ tier: nextTier }).eq('id', clientId);
       if (error) throw error;
+      return nextTier;
     },
-    onSuccess: (_, { tier }) => {
+    onSuccess: (nextTier) => {
       qc.invalidateQueries({ queryKey: ['admin-client-overview'] });
-      setSelectedClient((prev: any) => prev ? { ...prev, tier } : prev);
+      setSelectedClient((prev: any) => prev ? { ...prev, tier: nextTier } : prev);
     },
   });
 
@@ -300,7 +315,7 @@ export default function ClientHealth() {
                   <div className={`w-3 h-3 rounded-full shrink-0 ${s.dot}`} />
                   <div className="min-w-0">
                     <p className="font-semibold text-foreground truncate">{client.full_name || 'Unnamed Client'}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{client.tier || 'on-ramp'} tier</p>
+                    <p className="text-xs text-muted-foreground">{formatTierLabel(client.tier)} tier</p>
                   </div>
                 </div>
 
@@ -362,20 +377,24 @@ export default function ClientHealth() {
                 <div className="bg-muted/30 border border-border rounded-xl p-4">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tier</p>
                   <div className="flex gap-2">
-                    {TIERS.map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => changeTier.mutate({ clientId: c.id, tier: t })}
-                        disabled={changeTier.isPending}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold capitalize transition
-                          ${(selectedClient.tier === t || c.tier === t)
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    {TIER_OPTIONS.map((option) => {
+                      const isActive = normalizeTier(selectedClient.tier ?? c.tier) === option.value;
+
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => changeTier.mutate({ clientId: c.id, tier: option.value })}
+                          disabled={changeTier.isPending}
+                          className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition ${
+                            isActive
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-muted-foreground hover:bg-muted/70'
                           }`}
-                      >
-                        {t}
-                      </button>
-                    ))}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     Changing tier unlocks different roadmap modules for this client.
