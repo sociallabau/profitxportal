@@ -266,6 +266,8 @@ export type Database = {
           mrr_manual: number | null
           needs_this_month: string | null
           new_clients: number | null
+          new_clients_is_mrr: boolean | null
+          new_clients_total_value: number | null
           nps: number | null
           offers_made: number | null
           oneoff_revenue: number | null
@@ -289,6 +291,8 @@ export type Database = {
           mrr_manual?: number | null
           needs_this_month?: string | null
           new_clients?: number | null
+          new_clients_is_mrr?: boolean | null
+          new_clients_total_value?: number | null
           nps?: number | null
           offers_made?: number | null
           oneoff_revenue?: number | null
@@ -312,6 +316,8 @@ export type Database = {
           mrr_manual?: number | null
           needs_this_month?: string | null
           new_clients?: number | null
+          new_clients_is_mrr?: boolean | null
+          new_clients_total_value?: number | null
           nps?: number | null
           offers_made?: number | null
           oneoff_revenue?: number | null
@@ -582,7 +588,7 @@ export type Database = {
     Views: {
       admin_client_overview: {
         Row: {
-          cash_views: number | null
+          days_since_last_login: number | null
           days_since_last_win: number | null
           days_since_submission: number | null
           financials_views: number | null
@@ -600,6 +606,8 @@ export type Database = {
           last_mrr: number | null
           last_needs: string | null
           last_new_clients: number | null
+          last_new_clients_is_mrr: boolean | null
+          last_new_clients_value: number | null
           last_nps: number | null
           last_oneoffs: number | null
           last_submission_at: string | null
