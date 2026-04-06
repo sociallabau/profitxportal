@@ -125,12 +125,14 @@ export default function ClientHealth() {
 
   const changeTier = useMutation({
     mutationFn: async ({ clientId, tier }: { clientId: string; tier: string }) => {
-      const { error } = await supabase.from('profiles').update({ tier }).eq('id', clientId);
+      const nextTier = normalizeTier(tier);
+      const { error } = await supabase.from('profiles').update({ tier: nextTier }).eq('id', clientId);
       if (error) throw error;
+      return nextTier;
     },
-    onSuccess: (_, { tier }) => {
+    onSuccess: (nextTier) => {
       qc.invalidateQueries({ queryKey: ['admin-client-overview'] });
-      setSelectedClient((prev: any) => prev ? { ...prev, tier } : prev);
+      setSelectedClient((prev: any) => prev ? { ...prev, tier: nextTier } : prev);
     },
   });
 
