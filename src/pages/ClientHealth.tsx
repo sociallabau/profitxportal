@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock
+  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle
 } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
