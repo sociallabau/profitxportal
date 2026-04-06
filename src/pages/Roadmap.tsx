@@ -142,7 +142,7 @@ export default function Roadmap() {
                 ? `${t.bg} ${t.border}`
                 : 'bg-muted/20 border-border opacity-50'
             }`}
-            style={t.isActive ? { ringColor: 'hsl(var(--primary))' } : {}}
+            
           >
             <p className={`text-xs font-bold uppercase tracking-wider ${t.isUnlocked ? t.color : 'text-muted-foreground'}`}>
               {t.label}
