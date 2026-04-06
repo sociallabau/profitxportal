@@ -226,6 +226,32 @@ export default function ClientHealth() {
         })}
       </div>
 
+      {/* Unlock Growth notification */}
+      {readyToUnlock.length > 0 && (
+        <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowUpCircle className="w-5 h-5 text-purple-400" />
+            <h2 className="text-sm font-bold text-purple-400">Ready to Unlock Growth Tier</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            {readyToUnlock.length === 1 ? 'This client has' : `${readyToUnlock.length} clients have`} completed all On-Ramp modules and {readyToUnlock.length === 1 ? 'is' : 'are'} ready to move to Growth.
+          </p>
+          <div className="space-y-2">
+            {readyToUnlock.map((client: any) => (
+              <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
+                <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
+                <button
+                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'growth' })}
+                  className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition"
+                >
+                  Unlock Growth →
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {pageCounts.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-2">
