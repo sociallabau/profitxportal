@@ -6,7 +6,7 @@ export default function Index() {
   const navigate = useNavigate();
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      navigate(session ? '/dashboard' : '/', { replace: true });
+      navigate(session ? '/dashboard' : '/auth', { replace: true });
     });
   }, [navigate]);
   return null;
