@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, Lock, ExternalLink } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
