@@ -252,11 +252,21 @@ export default function Roadmap() {
                         )}
                       </div>
                       <p className={`text-xs mt-0.5 ${isComplete ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>{module.desc}</p>
-                      <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs capitalize ${
-                        module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-400'
-                        : module.tier === 'growth' ? 'bg-purple-500/10 text-purple-400'
-                        : 'bg-orange-500/10 text-orange-400'
-                      }`}>{module.tier}</span>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
+                          module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-400'
+                          : module.tier === 'growth' ? 'bg-purple-500/10 text-purple-400'
+                          : 'bg-orange-500/10 text-orange-400'
+                        }`}>{module.tier}</span>
+                        {hasPage(module.id) && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/module/${module.id}`); }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary hover:bg-primary/20 transition"
+                          >
+                            <BookOpen className="w-3 h-3" /> View Module
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
