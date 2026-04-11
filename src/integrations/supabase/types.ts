@@ -215,6 +215,39 @@ export type Database = {
           },
         ]
       }
+      module_pages: {
+        Row: {
+          created_at: string | null
+          id: string
+          module_id: string
+          pillar: string
+          sections: Json
+          subtitle: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          module_id: string
+          pillar: string
+          sections?: Json
+          subtitle?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          module_id?: string
+          pillar?: string
+          sections?: Json
+          subtitle?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       monday_wins: {
         Row: {
           cash_collected: number | null
