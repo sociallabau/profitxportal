@@ -75,6 +75,7 @@ export default function Roadmap() {
   const { user } = useRequireAuth();
   usePageTracking('roadmap');
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: profile } = useQuery({
     queryKey: ['profile-tier', user?.id],
@@ -109,6 +110,15 @@ export default function Roadmap() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['module-completions'] }),
   });
+
+  const { data: modulePages = [] } = useQuery({
+    queryKey: ['module-pages-list'],
+    queryFn: async () => {
+      const { data } = await supabase.from('module_pages').select('module_id');
+      return data?.map((d: any) => d.module_id) ?? [];
+    },
+  });
+  const hasPage = (id: string) => modulePages.includes(id);
 
   const allModules = PILLARS.flatMap(p => p.modules);
   const totalUnlocked = allModules.filter(m => moduleMatchesTier(m.tier, unlockedTiers)).length;
