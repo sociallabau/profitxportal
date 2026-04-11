@@ -10,7 +10,8 @@ const PILLARS = [
   {
     id: 'build', name: 'BUILD', color: 'text-blue-400', borderColor: 'border-blue-400/20',
     modules: [
-      { id: 'design-retainer-offer', name: 'Design Retainer Offer + Delivery Roadmap', desc: 'Package your offer, set pricing, and map out exactly what clients get.', tier: 'on-ramp', circleUrl: '' },
+      { id: 'design-retainer-offer', name: 'Design Retainer Offer', desc: 'Package your offer, set pricing, and map out exactly what clients get.', tier: 'on-ramp', circleUrl: '' },
+      { id: 'delivery-roadmap', name: 'Delivery Roadmap', desc: 'Build a step-by-step operating system for delivering your retainer from sign to published post.', tier: 'on-ramp', circleUrl: '' },
       { id: 'client-onboarding', name: 'Client Onboarding & Strategy Sessions', desc: 'Build a repeatable onboarding flow that sets expectations from day one.', tier: 'on-ramp', circleUrl: '' },
       { id: 'pl-margins', name: 'P&L and Margins', desc: 'Understand your numbers — what you keep after costs.', tier: 'growth', circleUrl: '' },
       { id: 'upsell-architecture', name: 'Upsell Architecture', desc: 'Create logical next steps so clients naturally spend more.', tier: 'growth', circleUrl: '' },
