@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, Lock, ExternalLink } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
@@ -74,6 +75,7 @@ export default function Roadmap() {
   const { user } = useRequireAuth();
   usePageTracking('roadmap');
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: profile } = useQuery({
     queryKey: ['profile-tier', user?.id],
@@ -108,6 +110,15 @@ export default function Roadmap() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['module-completions'] }),
   });
+
+  const { data: modulePages = [] } = useQuery({
+    queryKey: ['module-pages-list'],
+    queryFn: async () => {
+      const { data } = await supabase.from('module_pages').select('module_id');
+      return data?.map((d: any) => d.module_id) ?? [];
+    },
+  });
+  const hasPage = (id: string) => modulePages.includes(id);
 
   const allModules = PILLARS.flatMap(p => p.modules);
   const totalUnlocked = allModules.filter(m => moduleMatchesTier(m.tier, unlockedTiers)).length;
@@ -241,11 +252,21 @@ export default function Roadmap() {
                         )}
                       </div>
                       <p className={`text-xs mt-0.5 ${isComplete ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>{module.desc}</p>
-                      <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs capitalize ${
-                        module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-400'
-                        : module.tier === 'growth' ? 'bg-purple-500/10 text-purple-400'
-                        : 'bg-orange-500/10 text-orange-400'
-                      }`}>{module.tier}</span>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
+                          module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-400'
+                          : module.tier === 'growth' ? 'bg-purple-500/10 text-purple-400'
+                          : 'bg-orange-500/10 text-orange-400'
+                        }`}>{module.tier}</span>
+                        {hasPage(module.id) && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/module/${module.id}`); }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary hover:bg-primary/20 transition"
+                          >
+                            <BookOpen className="w-3 h-3" /> View Module
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

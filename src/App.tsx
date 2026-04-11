@@ -13,6 +13,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ClientHealth from "./pages/ClientHealth";
 import CashMenu from "./pages/CashMenu";
 import WinsWall from "./pages/WinsWall";
+import ModulePage from "./pages/ModulePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/client-health" element={<ClientHealth />} />
           <Route path="/admin/clients" element={<ClientHealth />} />
           <Route path="/admin/health" element={<ClientHealth />} />
+          <Route path="/module/:moduleId" element={<ModulePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
