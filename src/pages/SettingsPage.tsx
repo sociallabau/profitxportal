@@ -13,14 +13,17 @@ export default function SettingsPage() {
   const { data: profile } = useProfile();
   const { goal: { data: goalData }, setGoal } = useGoal();
   const [fullName, setFullName] = useState('');
+  const [businessOverview, setBusinessOverview] = useState('');
   const [saving, setSaving] = useState(false);
+  const [savingBiz, setSavingBiz] = useState(false);
   const [targetMrr, setTargetMrr] = useState('');
   const [startingMrr, setStartingMrr] = useState('');
   const [targetDate, setTargetDate] = useState('');
 
   useEffect(() => {
     if (profile?.full_name) setFullName(profile.full_name);
-  }, [profile?.full_name]);
+    if ((profile as any)?.business_overview) setBusinessOverview((profile as any).business_overview);
+  }, [profile?.full_name, (profile as any)?.business_overview]);
 
   useEffect(() => {
     if (goalData) {
@@ -67,6 +70,39 @@ export default function SettingsPage() {
 
       {activeTab === "Profile" && (
         <>
+          {/* About My Business */}
+          <div className="bg-card border border-border rounded-xl p-5 mb-4">
+            <h2 className="text-base font-semibold mb-1">About My Business</h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              This helps personalise your Content Studio suggestions. Tell us what you do, who you help, and what makes you different from others in your space.
+            </p>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Business Overview</label>
+            <textarea
+              value={businessOverview}
+              onChange={e => setBusinessOverview(e.target.value)}
+              rows={6}
+              placeholder="e.g. I run a construction company in Sydney specialising in residential renovations. We help homeowners transform their properties with high-quality builds delivered on time. Our edge is transparent pricing and weekly progress updates that keep clients confident throughout the build."
+              className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+            />
+            <button
+              onClick={async () => {
+                if (!user) return;
+                setSavingBiz(true);
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ business_overview: businessOverview } as any)
+                  .eq('id', user.id);
+                setSavingBiz(false);
+                if (error) toast.error('Failed to save');
+                else toast.success('Business overview saved!');
+              }}
+              disabled={savingBiz}
+              className="mt-3 h-10 px-5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+            >
+              {savingBiz ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
