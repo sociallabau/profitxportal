@@ -31,10 +31,8 @@ const PILLARS = [
   {
     id: 'sales', name: 'SALES', color: 'text-green-400', borderColor: 'border-green-400/20',
     modules: [
-      { id: 'discovery-call', name: 'Discovery Call Framework', desc: 'A repeatable process for turning cold leads into paying clients.', tier: 'on-ramp', circleUrl: '' },
-      { id: 'follow-up-system', name: 'Follow-Up System', desc: 'Never lose a warm lead again with a structured follow-up sequence.', tier: 'on-ramp', circleUrl: '' },
-      { id: 'proposals-closing', name: 'Proposals & Closing', desc: 'Send proposals that close — structure, pricing, and urgency.', tier: 'growth', circleUrl: '' },
-      { id: 'objection-handling', name: 'Objection Handling', desc: 'Turn "I need to think about it" into a signed contract.', tier: 'growth', circleUrl: '' },
+      { id: 'proposal-doc', name: 'Proposal Doc', desc: 'Build a proposal doc that does the selling for you, sent before the meeting and used during it.', tier: 'on-ramp', circleUrl: '' },
+      { id: 'sales-meeting-flow', name: 'Sales Meeting Flow', desc: 'Walk into every sales meeting with conviction, diagnose what the client needs, and close.', tier: 'on-ramp', circleUrl: '' },
     ],
   },
   {
