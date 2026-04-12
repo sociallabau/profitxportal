@@ -118,38 +118,62 @@ export type Database = {
       }
       content_posts: {
         Row: {
+          category: string | null
           content_type: string | null
           created_at: string | null
+          date: string | null
+          hook: string | null
           id: string
           leads: number | null
           likes: number | null
           notes: string | null
           platform: string
+          post_type: string | null
           posted_at: string
+          script: string | null
+          status: string | null
+          thumbnail_url: string | null
+          title: string | null
           user_id: string | null
           views: number | null
         }
         Insert: {
+          category?: string | null
           content_type?: string | null
           created_at?: string | null
+          date?: string | null
+          hook?: string | null
           id?: string
           leads?: number | null
           likes?: number | null
           notes?: string | null
           platform: string
+          post_type?: string | null
           posted_at: string
+          script?: string | null
+          status?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
           user_id?: string | null
           views?: number | null
         }
         Update: {
+          category?: string | null
           content_type?: string | null
           created_at?: string | null
+          date?: string | null
+          hook?: string | null
           id?: string
           leads?: number | null
           likes?: number | null
           notes?: string | null
           platform?: string
+          post_type?: string | null
           posted_at?: string
+          script?: string | null
+          status?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
           user_id?: string | null
           views?: number | null
         }
@@ -457,6 +481,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          business_overview: string | null
           circle_url: string | null
           coach_notes: string | null
           created_at: string | null
@@ -469,6 +494,7 @@ export type Database = {
           tier: string | null
         }
         Insert: {
+          business_overview?: string | null
           circle_url?: string | null
           coach_notes?: string | null
           created_at?: string | null
@@ -481,6 +507,7 @@ export type Database = {
           tier?: string | null
         }
         Update: {
+          business_overview?: string | null
           circle_url?: string | null
           coach_notes?: string | null
           created_at?: string | null
@@ -571,6 +598,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      saved_ideas: {
+        Row: {
+          ai_script: string | null
+          id: string
+          is_boosted: boolean | null
+          outlier_score: number | null
+          saved_at: string | null
+          source_caption: string | null
+          source_handle: string | null
+          source_thumbnail_url: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_script?: string | null
+          id?: string
+          is_boosted?: boolean | null
+          outlier_score?: number | null
+          saved_at?: string | null
+          source_caption?: string | null
+          source_handle?: string | null
+          source_thumbnail_url?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_script?: string | null
+          id?: string
+          is_boosted?: boolean | null
+          outlier_score?: number | null
+          saved_at?: string | null
+          source_caption?: string | null
+          source_handle?: string | null
+          source_thumbnail_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       weekly_wins: {
         Row: {
