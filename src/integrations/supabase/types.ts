@@ -604,34 +604,46 @@ export type Database = {
           ai_script: string | null
           id: string
           is_boosted: boolean | null
+          likes: number | null
+          outlier_label: string | null
           outlier_score: number | null
           saved_at: string | null
           source_caption: string | null
           source_handle: string | null
           source_thumbnail_url: string | null
+          source_url: string | null
           user_id: string
+          views: number | null
         }
         Insert: {
           ai_script?: string | null
           id?: string
           is_boosted?: boolean | null
+          likes?: number | null
+          outlier_label?: string | null
           outlier_score?: number | null
           saved_at?: string | null
           source_caption?: string | null
           source_handle?: string | null
           source_thumbnail_url?: string | null
+          source_url?: string | null
           user_id: string
+          views?: number | null
         }
         Update: {
           ai_script?: string | null
           id?: string
           is_boosted?: boolean | null
+          likes?: number | null
+          outlier_label?: string | null
           outlier_score?: number | null
           saved_at?: string | null
           source_caption?: string | null
           source_handle?: string | null
           source_thumbnail_url?: string | null
+          source_url?: string | null
           user_id?: string
+          views?: number | null
         }
         Relationships: []
       }
