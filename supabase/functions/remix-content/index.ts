@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")
+// Uses Lovable's built-in AI Gateway via SUPABASE_URL/functions/v1/ai-completions
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
@@ -16,12 +16,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (!LOVABLE_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY is not configured." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
+    // AI Gateway is built-in, no API key check needed
 
     // Auth check
     const authHeader = req.headers.get("Authorization")
@@ -57,19 +52,18 @@ Deno.serve(async (req) => {
 
     const userMessage = `Instagram post caption: "${postCaption || "(no caption)"}"\n\nGenerate 3 content remix ideas I can use for my business.`
 
-    const aiResponse = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-        temperature: 0.8,
         max_tokens: 400,
       }),
     })

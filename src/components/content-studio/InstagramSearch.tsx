@@ -40,6 +40,12 @@ const getOutlierBadge = (score: number) => {
   return 'bg-muted text-muted-foreground';
 };
 
+const proxyImage = (url: string): string => {
+  if (!url) return '/placeholder.svg';
+  const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-image`;
+  return `${base}?url=${encodeURIComponent(url)}`;
+};
+
 export default function InstagramSearch() {
   const { user } = useRequireAuth();
   const navigate = useNavigate();
@@ -227,7 +233,7 @@ export default function InstagramSearch() {
               <a href={post.postUrl} target="_blank" rel="noopener noreferrer" className="relative block aspect-video bg-muted group">
                 {post.thumbnail ? (
                   <img
-                    src={post.thumbnail}
+                    src={proxyImage(post.thumbnail)}
                     alt={post.caption?.substring(0, 50)}
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
