@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
 
     const userMessage = `Instagram post caption: "${postCaption || "(no caption)"}"\n\nGenerate 3 content remix ideas I can use for my business.`
 
-    const aiResponse = await fetch(`https://api.lovable.dev/v1/chat/completions`, {
+    const aiResponse = await fetch(`https://ai.gateway.lovable.dev/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
