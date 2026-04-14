@@ -19,6 +19,7 @@ import CashMenu from "./pages/CashMenu";
 import WinsWall from "./pages/WinsWall";
 import ModulePage from "./pages/ModulePage";
 import ContentStudio from "./pages/ContentStudio";
+import HotList from "./pages/HotList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
           <Route path="/content-studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
+          <Route path="/hot-list" element={<ProtectedRoute><HotList /></ProtectedRoute>} />
           <Route path="/financials" element={<ProtectedRoute><Financials /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/cash-menu" element={<ProtectedRoute><CashMenu /></ProtectedRoute>} />

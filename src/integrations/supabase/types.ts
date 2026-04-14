@@ -239,6 +239,48 @@ export type Database = {
           },
         ]
       }
+      hot_list: {
+        Row: {
+          column_id: string
+          created_at: string | null
+          email: string | null
+          id: string
+          instagram_handle: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          position: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          column_id?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          instagram_handle?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          position?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          instagram_handle?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          position?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       module_pages: {
         Row: {
           created_at: string | null

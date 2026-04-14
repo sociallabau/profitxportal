@@ -1,8 +1,10 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
@@ -21,76 +23,40 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Auth check
     const authHeader = req.headers.get("Authorization")
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
-    let businessOverview = ""
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "")
-      const { data: { user } } = await supabase.auth.getUser(token)
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_overview")
-          .eq("id", user.id)
-          .single()
-        businessOverview = profile?.business_overview || ""
-      }
-    }
-
-    const { caption, hashtags, views, likes, comments, username } = await req.json()
-
-    if (!businessOverview) {
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "NO_BUSINESS_OVERVIEW" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    const hashtagList = Array.isArray(hashtags) ? hashtags.slice(0, 15).join(" ") : ""
-    const stats = `${(views || 0).toLocaleString()} views, ${(likes || 0).toLocaleString()} likes, ${(comments || 0).toLocaleString()} comments`
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    const token = authHeader.replace("Bearer ", "")
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
 
-    const systemPrompt = `You are a social media content strategist specialising in video content for service-based businesses (construction, real estate, mortgage brokers, trades, and similar industries).
+    // Get business overview from profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("business_overview")
+      .eq("id", user.id)
+      .single()
 
-A business owner has found a top-performing Instagram video and wants to create their own inspired version, adapted entirely to their business, clients, and unique style.
+    const businessOverview = profile?.business_overview || "a coaching or service business"
 
-Your job is to:
-1. Identify the core hook, structure, and angle that made the original video perform well
-2. Write a practical dot-point script they can follow to film their own version, using their specific business context so every line feels natural and personal
+    const { postCaption, postUrl, platform } = await req.json()
 
-Rules:
-- Keep the script short, aim for a 30 to 60 second Reel
-- Write conversationally, not like a corporate ad
-- Every point must connect to their specific niche, clients, and advantage
-- Do not reference or mention the original creator or video
-- Sound like a real person talking, not a marketing script
+    const systemPrompt = `You are a content strategist for ${businessOverview}. Generate 3 short punchy content remix ideas based on the Instagram post provided. Each idea should be a 1–2 sentence hook or angle. Format as a numbered list.`
 
-Format your response exactly like this, use these exact headings:
+    const userMessage = `Instagram post caption: "${postCaption || "(no caption)"}"\n\nGenerate 3 content remix ideas I can use for my business.`
 
-**Hook (first 3 seconds):**
-[One punchy, curiosity-driving opening line that will stop the scroll]
-
-**Main Points:**
-- [Point 1]
-- [Point 2]
-- [Point 3]
-
-**Call to Action:**
-[One natural, low-pressure closing line]
-
-**Why this angle works for your business:**
-[2-3 sentences explaining the content strategy and why this angle resonates with their specific audience]`
-
-    const userMessage = `Original video context:
-Account: @${username || "unknown"}
-Caption: ${caption || "(no caption)"}
-Hashtags: ${hashtagList || "(none)"}
-Performance: ${stats}
-
-My business:
-${businessOverview}`
-
-    // Use Lovable AI Gateway
     const aiResponse = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -104,7 +70,7 @@ ${businessOverview}`
           { role: "user", content: userMessage },
         ],
         temperature: 0.8,
-        max_tokens: 600,
+        max_tokens: 400,
       }),
     })
 
@@ -117,10 +83,10 @@ ${businessOverview}`
     }
 
     const aiData = await aiResponse.json()
-    const script = aiData.choices?.[0]?.message?.content || ""
+    const remix = aiData.choices?.[0]?.message?.content || ""
 
     return new Response(
-      JSON.stringify({ script }),
+      JSON.stringify({ remix }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
 

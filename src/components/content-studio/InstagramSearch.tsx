@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Loader2, ExternalLink, Sparkles, Bookmark, AlertTriangle, X, Copy, RefreshCw } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Sparkles, Bookmark, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -8,24 +8,17 @@ import { useNavigate } from 'react-router-dom';
 interface InstagramPost {
   id: string;
   shortCode: string;
-  url: string;
-  thumbnailUrl: string;
-  videoUrl: string;
+  thumbnail: string;
+  videoUrl: string | null;
+  postUrl: string;
   caption: string;
-  hashtags: string[];
-  views: number;
   likes: number;
   comments: number;
-  saves: number;
-  shares: number;
+  views: number;
   timestamp: string;
   ownerUsername: string;
-  ownerFullName: string;
-  ownerProfilePicUrl: string;
-  ownerFollowersCount: number;
+  type: string;
   outlierScore: number;
-  outlierLabel: string;
-  isBoosted: boolean;
 }
 
 const QUICK_FILTERS = ['Construction', 'Real Estate', 'Mortgage Brokers'];
@@ -35,26 +28,16 @@ const MODES = [
   { id: 'keyword', label: 'Search by Niche / Keyword' },
 ] as const;
 
-const SORT_OPTIONS = [
-  { id: 'outlier_score', label: 'Outlier Score' },
-  { id: 'most_views', label: 'Most Views' },
-  { id: 'most_recent', label: 'Most Recent' },
-] as const;
-
-const getBadgeStyle = (label: string) => {
-  const base: Record<string, string> = {
-    "Normal": "bg-muted text-muted-foreground border border-border",
-    "Strong": "bg-blue-500/20 text-blue-300 border border-blue-500/30",
-    "Viral": "bg-orange-500/20 text-orange-300 border border-orange-500/30",
-    "Mega Viral": "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.4)]",
-  };
-  return base[label] || base["Normal"];
-};
-
 const formatNumber = (n: number) => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
+};
+
+const getOutlierBadge = (score: number) => {
+  if (score >= 3) return 'bg-green-500 text-white';
+  if (score >= 1.5) return 'bg-amber-400 text-black';
+  return 'bg-muted text-muted-foreground';
 };
 
 export default function InstagramSearch() {
@@ -62,17 +45,15 @@ export default function InstagramSearch() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<'handle' | 'keyword'>('handle');
   const [query, setQuery] = useState('');
-  const [sortBy, setSortBy] = useState('outlier_score');
   const [results, setResults] = useState<InstagramPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Remix panel state
-  const [remixOpen, setRemixOpen] = useState(false);
-  const [remixPost, setRemixPost] = useState<InstagramPost | null>(null);
-  const [remixLoading, setRemixLoading] = useState(false);
-  const [remixScript, setRemixScript] = useState('');
-  const [remixError, setRemixError] = useState<string | null>(null);
+  // Inline remix state per post
+  const [remixingId, setRemixingId] = useState<string | null>(null);
+  const [remixResults, setRemixResults] = useState<Record<string, string>>({});
+  const [remixErrors, setRemixErrors] = useState<Record<string, string>>({});
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const searchInstagram = async () => {
     if (!query.trim()) return;
@@ -82,7 +63,7 @@ export default function InstagramSearch() {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("fetch-instagram-content", {
-        body: { mode, query: query.trim(), sort_by: sortBy },
+        body: { mode, query: query.trim(), limit: 20 },
       });
       if (fnError) throw fnError;
       if (data?.error) {
@@ -93,8 +74,9 @@ export default function InstagramSearch() {
         }
         return;
       }
-      setResults(data?.results || []);
-      if ((data?.results || []).length === 0) {
+      const posts = data?.posts || [];
+      setResults(posts);
+      if (posts.length === 0) {
         setError("No results found. Try a different handle or keyword.");
       }
     } catch (err: any) {
@@ -106,42 +88,34 @@ export default function InstagramSearch() {
 
   const handleQuickFilter = (filter: string) => {
     setQuery(filter.toLowerCase());
-    // Trigger search after setting
     setTimeout(() => {
-      const btn = document.getElementById('ig-search-btn');
-      btn?.click();
+      document.getElementById('ig-search-btn')?.click();
     }, 50);
   };
 
   const remixContent = async (post: InstagramPost) => {
-    setRemixPost(post);
-    setRemixOpen(true);
-    setRemixLoading(true);
-    setRemixScript('');
-    setRemixError(null);
+    setRemixingId(post.id);
+    setExpandedId(post.id);
+    setRemixErrors(prev => ({ ...prev, [post.id]: '' }));
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("remix-content", {
         body: {
-          caption: post.caption,
-          hashtags: post.hashtags,
-          views: post.views,
-          likes: post.likes,
-          comments: post.comments,
-          username: post.ownerUsername,
+          postCaption: post.caption,
+          postUrl: post.postUrl,
+          platform: 'instagram',
         },
       });
       if (fnError) throw fnError;
-      if (data?.error === "NO_BUSINESS_OVERVIEW") {
-        setRemixError("NO_BUSINESS_OVERVIEW");
-        return;
+      if (data?.error) {
+        if (data.error === 'Unauthorized') throw new Error('Please log in again.');
+        throw new Error(data.error);
       }
-      if (data?.error) throw new Error(data.error);
-      setRemixScript(data?.script || "");
+      setRemixResults(prev => ({ ...prev, [post.id]: data?.remix || '' }));
     } catch (err: any) {
-      setRemixError(err.message || "Something went wrong.");
+      setRemixErrors(prev => ({ ...prev, [post.id]: err.message || 'Something went wrong.' }));
     } finally {
-      setRemixLoading(false);
+      setRemixingId(null);
     }
   };
 
@@ -150,14 +124,13 @@ export default function InstagramSearch() {
     const { error } = await supabase.from("saved_ideas").insert({
       user_id: user.id,
       source_handle: post.ownerUsername,
-      source_url: post.url,
-      source_thumbnail_url: post.thumbnailUrl,
+      source_url: post.postUrl,
+      source_thumbnail_url: post.thumbnail,
       source_caption: post.caption,
       views: post.views,
       likes: post.likes,
       outlier_score: post.outlierScore,
-      outlier_label: post.outlierLabel,
-      is_boosted: post.isBoosted,
+      outlier_label: post.outlierScore >= 3 ? 'High' : post.outlierScore >= 1.5 ? 'Medium' : 'Low',
       ai_script: script || null,
     });
     if (error) {
@@ -165,11 +138,6 @@ export default function InstagramSearch() {
     } else {
       toast.success("Idea saved!");
     }
-  };
-
-  const copyScript = () => {
-    navigator.clipboard.writeText(remixScript);
-    toast.success("Script copied!");
   };
 
   return (
@@ -234,24 +202,6 @@ export default function InstagramSearch() {
         </div>
       )}
 
-      {/* Sort (when results exist) */}
-      {results.length > 0 && (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xs text-muted-foreground">Sort:</span>
-          {SORT_OPTIONS.map(s => (
-            <button
-              key={s.id}
-              onClick={() => setSortBy(s.id)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                sortBy === s.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Loading Skeletons */}
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -262,11 +212,6 @@ export default function InstagramSearch() {
                 <div className="h-4 bg-muted rounded w-1/3" />
                 <div className="h-3 bg-muted rounded w-full" />
                 <div className="h-3 bg-muted rounded w-2/3" />
-                <div className="flex gap-2 mt-3">
-                  <div className="h-5 bg-muted rounded-full w-16" />
-                  <div className="h-5 bg-muted rounded-full w-12" />
-                  <div className="h-5 bg-muted rounded-full w-14" />
-                </div>
               </div>
             </div>
           ))}
@@ -279,9 +224,14 @@ export default function InstagramSearch() {
           {results.map(post => (
             <div key={post.id} className="bg-card border border-border rounded-xl overflow-hidden flex flex-col">
               {/* Thumbnail */}
-              <a href={post.url} target="_blank" rel="noopener noreferrer" className="relative block aspect-video bg-muted group">
-                {post.thumbnailUrl ? (
-                  <img src={post.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+              <a href={post.postUrl} target="_blank" rel="noopener noreferrer" className="relative block aspect-video bg-muted group">
+                {post.thumbnail ? (
+                  <img
+                    src={post.thumbnail}
+                    alt={post.caption?.substring(0, 50)}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">No thumbnail</div>
                 )}
@@ -293,15 +243,9 @@ export default function InstagramSearch() {
               <div className="p-4 flex-1 flex flex-col">
                 {/* Username + Badge */}
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {post.ownerProfilePicUrl && (
-                      <img src={post.ownerProfilePicUrl} alt="" className="w-6 h-6 rounded-full" />
-                    )}
-                    <span className="text-sm font-medium text-foreground">@{post.ownerUsername}</span>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getBadgeStyle(post.outlierLabel)}`}>
-                    {post.outlierScore}x · {post.outlierLabel}
-                    {post.isBoosted && ' ⚠️'}
+                  <span className="text-sm font-medium text-foreground">@{post.ownerUsername}</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${getOutlierBadge(post.outlierScore)}`}>
+                    {post.outlierScore}x
                   </span>
                 </div>
 
@@ -312,7 +256,7 @@ export default function InstagramSearch() {
 
                 {/* Stats */}
                 <div className="flex gap-3 text-[10px] text-muted-foreground mb-4">
-                  <span>👁 {formatNumber(post.views)}</span>
+                  {post.views > 0 && <span>👁 {formatNumber(post.views)}</span>}
                   <span>❤️ {formatNumber(post.likes)}</span>
                   <span>💬 {formatNumber(post.comments)}</span>
                 </div>
@@ -321,17 +265,41 @@ export default function InstagramSearch() {
                 <div className="mt-auto flex gap-2">
                   <button
                     onClick={() => remixContent(post)}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors"
+                    disabled={remixingId === post.id}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
                   >
-                    <Sparkles className="w-3.5 h-3.5" /> Remix
+                    {remixingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    Remix
                   </button>
                   <button
-                    onClick={() => saveIdea(post)}
+                    onClick={() => saveIdea(post, remixResults[post.id])}
                     className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-medium hover:text-foreground transition-colors"
                   >
                     <Bookmark className="w-3.5 h-3.5" /> Save
                   </button>
                 </div>
+
+                {/* Inline Remix Result */}
+                {(remixResults[post.id] || remixErrors[post.id]) && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <button
+                      onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
+                      className="flex items-center gap-1 text-xs font-medium text-primary mb-2"
+                    >
+                      {expandedId === post.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      Remix Ideas
+                    </button>
+                    {expandedId === post.id && (
+                      <>
+                        {remixErrors[post.id] ? (
+                          <p className="text-xs text-destructive">{remixErrors[post.id]}</p>
+                        ) : (
+                          <p className="text-xs text-foreground/80 whitespace-pre-wrap">{remixResults[post.id]}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -353,95 +321,6 @@ export default function InstagramSearch() {
             </p>
           )}
         </div>
-      )}
-
-      {/* Remix Panel */}
-      {remixOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-background/70" onClick={() => setRemixOpen(false)} />
-          <div className="fixed right-0 top-0 z-50 w-full max-w-md h-screen bg-card border-l border-border overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-foreground">✨ Remix for My Business</h2>
-              <button onClick={() => setRemixOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {remixPost && (
-              <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-                <span>Original: @{remixPost.ownerUsername}</span>
-                <span className={`px-2 py-0.5 rounded-full ${getBadgeStyle(remixPost.outlierLabel)}`}>
-                  {remixPost.outlierScore}x
-                </span>
-              </div>
-            )}
-
-            {remixLoading && (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Analysing content and writing your script...</p>
-              </div>
-            )}
-
-            {remixError === "NO_BUSINESS_OVERVIEW" && (
-              <div className="text-center py-12">
-                <AlertTriangle className="w-10 h-10 text-orange-400 mx-auto mb-4" />
-                <p className="text-sm font-semibold text-foreground mb-2">Add your Business Overview first</p>
-                <p className="text-xs text-muted-foreground mb-6">
-                  To get a personalised script, tell us about your business in Settings.
-                </p>
-                <button
-                  onClick={() => navigate('/settings')}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90"
-                >
-                  Go to Settings →
-                </button>
-              </div>
-            )}
-
-            {remixError && remixError !== "NO_BUSINESS_OVERVIEW" && (
-              <div className="text-center py-12">
-                <p className="text-sm text-muted-foreground mb-4">Something went wrong generating your script.</p>
-                <button
-                  onClick={() => remixPost && remixContent(remixPost)}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold"
-                >
-                  Try Again
-                </button>
-              </div>
-            )}
-
-            {!remixLoading && !remixError && remixScript && (
-              <div>
-                <div className="prose prose-invert prose-sm max-w-none text-foreground whitespace-pre-wrap text-sm leading-relaxed">
-                  {remixScript}
-                </div>
-
-                <div className="flex gap-2 mt-6">
-                  <button onClick={copyScript} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-muted text-foreground rounded-lg text-xs font-semibold hover:bg-muted/80">
-                    <Copy className="w-3.5 h-3.5" /> Copy Script
-                  </button>
-                  <button
-                    onClick={() => remixPost && remixContent(remixPost)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-muted text-muted-foreground rounded-lg text-xs font-medium hover:text-foreground"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" /> Regenerate
-                  </button>
-                  <button
-                    onClick={() => { if (remixPost) saveIdea(remixPost, remixScript); }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90"
-                  >
-                    <Bookmark className="w-3.5 h-3.5" /> Save
-                  </button>
-                </div>
-
-                <p className="text-[10px] text-muted-foreground text-center mt-4">
-                  AI-generated inspiration — make it your own.
-                </p>
-              </div>
-            )}
-          </div>
-        </>
       )}
     </div>
   );
