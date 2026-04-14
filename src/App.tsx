@@ -19,6 +19,7 @@ import CashMenu from "./pages/CashMenu";
 import WinsWall from "./pages/WinsWall";
 import ModulePage from "./pages/ModulePage";
 import ContentStudio from "./pages/ContentStudio";
+import HotList from "./pages/HotList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
