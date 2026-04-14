@@ -52,14 +52,14 @@ Deno.serve(async (req) => {
 
     const userMessage = `Instagram post caption: "${postCaption || "(no caption)"}"\n\nGenerate 3 content remix ideas I can use for my business.`
 
-    const aiResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-completions`, {
+    const aiResponse = await fetch(`https://api.lovable.dev/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+        "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
