@@ -65,12 +65,14 @@ Deno.serve(async (req) => {
       }
     } else {
       const keyword = query.replace(/^#/, "").trim().replace(/\s+/g, "")
-      // Use directUrls for hashtag search — more reliable than `hashtags` param
-      // onlyPostsNewerThan + searchType helps target reels
+      // Hashtag "tags" page rarely returns reels. Hit the explore reels search instead.
       apifyInput = {
-        directUrls: [`https://www.instagram.com/explore/tags/${keyword}/`],
+        directUrls: [
+          `https://www.instagram.com/explore/search/keyword/?q=%23${keyword}`,
+          `https://www.instagram.com/explore/tags/${keyword}/`,
+        ],
         resultsType: "posts",
-        resultsLimit: 60, // pull more so we can filter down to reels + 5k+ accounts
+        resultsLimit: 80,
         addParentData: false,
         searchType: "hashtag",
         searchLimit: 1,
@@ -145,14 +147,16 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Keyword mode: only Reels (videos), then enrich with follower counts and filter to 5k+
+    // Keyword mode: prefer Reels (videos), then enrich with follower counts and filter to 5k+
     if (mode === "keyword") {
       const beforeReels = posts.length
-      posts = posts.filter((p: any) => p.isReel)
-      console.log(`Reels filter: ${beforeReels} -> ${posts.length}`)
+      const reelsOnly = posts.filter((p: any) => p.isReel)
+      console.log(`Reels filter: ${beforeReels} -> ${reelsOnly.length}`)
+      // If reel detection wiped everything, fall back to all posts (better than 0 results)
+      if (reelsOnly.length > 0) posts = reelsOnly
 
-      // Enrich top candidates with follower count (parallel profile lookups, capped to 12)
-      const candidates = posts.slice(0, 12).filter((p: any) => p.ownerUsername)
+      // Enrich top candidates with follower count (parallel profile lookups, capped to 15)
+      const candidates = posts.slice(0, 15).filter((p: any) => p.ownerUsername)
       const uniqueHandles = [...new Set(candidates.map((p: any) => p.ownerUsername))]
       console.log(`Enriching ${uniqueHandles.length} unique profiles for follower counts`)
 
@@ -172,10 +176,13 @@ Deno.serve(async (req) => {
         } catch (_) { /* swallow */ }
       }))
 
-      posts = posts
+      const enriched = posts
         .map((p: any) => ({ ...p, ownerFollowers: followerMap.get(p.ownerUsername) || p.ownerFollowers || 0 }))
-        .filter((p: any) => p.ownerFollowers >= 5000)
-      console.log(`After 5k+ follower filter: ${posts.length}`)
+      const filtered = enriched.filter((p: any) => p.ownerFollowers >= 5000)
+      console.log(`After 5k+ follower filter: ${filtered.length}`)
+      // If follower enrichment failed for everyone (all 0), don't drop everything
+      const anyFollowerData = enriched.some((p: any) => p.ownerFollowers > 0)
+      posts = anyFollowerData ? filtered : enriched
     }
 
     posts = posts.slice(0, 24)
