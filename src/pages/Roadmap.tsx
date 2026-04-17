@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -187,93 +188,141 @@ export default function Roadmap() {
         <p className="text-xs text-muted-foreground mt-1.5">{progressPct}% complete</p>
       </div>
 
-      {/* Pillars */}
-      <div className="space-y-8">
-        {PILLARS.map((pillar) => (
-          <div key={pillar.id}>
-            <h2 className={`text-xs font-bold tracking-widest uppercase mb-3 ${pillar.color}`}>{pillar.name}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {pillar.modules.map((module) => {
-                const isUnlocked = moduleMatchesTier(module.tier, unlockedTiers);
-                const isComplete = !!completionMap[module.id];
-
-                if (!isUnlocked) {
-                  return (
-                    <div key={module.id} className="flex items-start gap-3 p-4 bg-card border border-border/50 rounded-xl opacity-40">
-                      <Lock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-muted-foreground">{module.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{module.desc}</p>
-                        <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-muted/50 text-xs text-muted-foreground capitalize">{module.tier}</span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={module.id}
-                    className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
-                      isComplete ? 'bg-green-500/5 border-green-500/30' : 'bg-card border-border hover:bg-muted/20'
-                    }`}
-                  >
-                    {/* Clickable checkbox area */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleModule.mutate({ moduleId: module.id, current: isComplete });
-                      }}
-                      className="shrink-0 mt-0.5 hover:scale-110 transition-transform"
-                      aria-label={isComplete ? 'Mark incomplete' : 'Mark complete'}
-                    >
-                      {isComplete
-                        ? <CheckCircle2 className="w-5 h-5 text-green-400" />
-                        : <Circle className="w-5 h-5 text-muted-foreground/40 hover:text-primary/60" />
-                      }
-                    </button>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className={`text-sm font-semibold ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                          {module.name}
-                        </p>
-                        {module.circleUrl && (
-                          <a
-                            href={module.circleUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="shrink-0 p-1 rounded hover:bg-muted/50 transition"
-                            title="Watch module video"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-primary" />
-                          </a>
-                        )}
-                      </div>
-                      <p className={`text-xs mt-0.5 ${isComplete ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>{module.desc}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
-                          module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-400'
-                          : module.tier === 'growth' ? 'bg-purple-500/10 text-purple-400'
-                          : 'bg-orange-500/10 text-orange-400'
-                        }`}>{module.tier}</span>
-                        {hasPage(module.id) && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/module/${module.id}`); }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary hover:bg-primary/20 transition"
-                          >
-                            <BookOpen className="w-3 h-3" /> View Module
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+      <PillarRoadmap
+        completionMap={completionMap}
+        unlockedTiers={unlockedTiers}
+        toggleModule={toggleModule}
+        navigate={navigate}
+        hasPage={hasPage}
+      />
     </PageLayout>
+  );
+}
+
+function PillarRoadmap({
+  completionMap,
+  unlockedTiers,
+  toggleModule,
+  navigate,
+  hasPage,
+}: {
+  completionMap: Record<string, boolean>;
+  unlockedTiers: string[];
+  toggleModule: any;
+  navigate: (path: string) => void;
+  hasPage: (id: string) => boolean;
+}) {
+  const [activePillarId, setActivePillarId] = useState<string>(PILLARS[0].id);
+  const activePillar = PILLARS.find(p => p.id === activePillarId)!;
+
+  return (
+    <>
+      {/* Pillar tab toggle */}
+      <div className="flex gap-2 flex-wrap mb-6 border-b border-border pb-3">
+        {PILLARS.map(p => {
+          const isActive = p.id === activePillarId;
+          const completed = p.modules.filter(m => moduleMatchesTier(m.tier, unlockedTiers) && completionMap[m.id]).length;
+          const total = p.modules.filter(m => moduleMatchesTier(m.tier, unlockedTiers)).length;
+          return (
+            <button
+              key={p.id}
+              onClick={() => setActivePillarId(p.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold tracking-wider uppercase transition-all ${
+                isActive
+                  ? `bg-card border border-border ${p.color}`
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {p.name}
+              <span className="ml-2 text-xs font-medium text-muted-foreground normal-case tracking-normal">
+                {completed}/{total}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div>
+        <h2 className={`text-xs font-bold tracking-widest uppercase mb-3 ${activePillar.color}`}>{activePillar.name}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {activePillar.modules.map((module) => {
+            const isUnlocked = moduleMatchesTier(module.tier, unlockedTiers);
+            const isComplete = !!completionMap[module.id];
+
+            if (!isUnlocked) {
+              return (
+                <div key={module.id} className="flex items-start gap-3 p-4 bg-card border border-border/50 rounded-xl opacity-40">
+                  <Lock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-muted-foreground">{module.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{module.desc}</p>
+                    <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-muted/50 text-xs text-muted-foreground capitalize">{module.tier}</span>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={module.id}
+                className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
+                  isComplete ? 'bg-green-500/5 border-green-500/30' : 'bg-card border-border hover:bg-muted/20'
+                }`}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleModule.mutate({ moduleId: module.id, current: isComplete });
+                  }}
+                  className="shrink-0 mt-0.5 hover:scale-110 transition-transform"
+                  aria-label={isComplete ? 'Mark incomplete' : 'Mark complete'}
+                >
+                  {isComplete
+                    ? <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    : <Circle className="w-5 h-5 text-muted-foreground/40 hover:text-primary/60" />
+                  }
+                </button>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={`text-sm font-semibold ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                      {module.name}
+                    </p>
+                    {module.circleUrl && (
+                      <a
+                        href={module.circleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="shrink-0 p-1 rounded hover:bg-muted/50 transition"
+                        title="Watch module video"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                      </a>
+                    )}
+                  </div>
+                  <p className={`text-xs mt-0.5 ${isComplete ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>{module.desc}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
+                      module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-400'
+                      : module.tier === 'growth' ? 'bg-purple-500/10 text-purple-400'
+                      : 'bg-orange-500/10 text-orange-400'
+                    }`}>{module.tier}</span>
+                    {hasPage(module.id) && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate(`/module/${module.id}`); }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary hover:bg-primary/20 transition"
+                      >
+                        <BookOpen className="w-3 h-3" /> View Module
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
