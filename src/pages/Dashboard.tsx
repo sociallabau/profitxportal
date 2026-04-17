@@ -117,11 +117,19 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard icon={TrendingUp} label="Revenue" value={latestRevenue > 0 ? `$${latestRevenue.toLocaleString()}` : '—'} sub={revenueGrowth !== null ? `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth}% vs last month` : 'Submit your first month to track'} sparkData={graphData} sparkKey="revenue" sparkColor="hsl(var(--primary))" />
-        <StatCard icon={Receipt} label="Expenses" value={latestExpenses > 0 ? `$${latestExpenses.toLocaleString()}` : '—'} color="text-orange-400" sparkData={graphData} sparkKey="expenses" sparkColor="#f97316" />
-        <StatCard icon={DollarSign} label="Profit" value={latestRevenue > 0 ? `$${latestProfit.toLocaleString()}` : '—'} sub={latestRevenue > 0 ? `${Math.round((latestProfit / latestRevenue) * 100)}% margin` : ''} color={latestProfit >= 0 ? 'text-green-400' : 'text-destructive'} sparkData={graphData.map((d: any) => ({ ...d, profit: d.revenue - d.expenses }))} sparkKey="profit" sparkColor="#4ade80" />
-      </div>
+      {(() => {
+        const margin = latestRevenue > 0 ? (latestProfit / latestRevenue) * 100 : 0;
+        const marginColor = margin >= 30 ? 'text-green-400' : margin >= 15 ? 'text-yellow-400' : margin >= 0 ? 'text-orange-400' : 'text-destructive';
+        const marginLabel = margin >= 30 ? 'Healthy' : margin >= 15 ? 'OK' : margin >= 0 ? 'Tight' : 'Loss';
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <StatCard icon={TrendingUp} label="Revenue" value={latestRevenue > 0 ? `$${latestRevenue.toLocaleString()}` : '—'} sub={revenueGrowth !== null ? `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth}% vs last month` : 'Submit your first month to track'} sparkData={graphData} sparkKey="revenue" sparkColor="hsl(var(--primary))" />
+            <StatCard icon={Receipt} label="Expenses" value={latestExpenses > 0 ? `$${latestExpenses.toLocaleString()}` : '—'} color="text-orange-400" sparkData={graphData} sparkKey="expenses" sparkColor="#f97316" />
+            <StatCard icon={DollarSign} label="Profit" value={latestRevenue > 0 ? `$${latestProfit.toLocaleString()}` : '—'} color={latestProfit >= 0 ? 'text-green-400' : 'text-destructive'} sparkData={graphData.map((d: any) => ({ ...d, profit: d.revenue - d.expenses }))} sparkKey="profit" sparkColor="#4ade80" />
+            <StatCard icon={DollarSign} label="Net Margin" value={latestRevenue > 0 ? `${Math.round(margin)}%` : '—'} sub={latestRevenue > 0 ? marginLabel : ''} color={marginColor} sparkData={graphData.map((d: any) => ({ ...d, marginPct: d.revenue > 0 ? Math.round(((d.revenue - d.expenses) / d.revenue) * 100) : 0 }))} sparkKey="marginPct" sparkColor={margin >= 30 ? '#4ade80' : margin >= 15 ? '#facc15' : margin >= 0 ? '#f97316' : '#ef4444'} />
+          </div>
+        );
+      })()}
 
       {graphData.length >= 1 ? (
         <div className="bg-card border border-border rounded-xl p-5 mb-6">
