@@ -65,12 +65,14 @@ Deno.serve(async (req) => {
       }
     } else {
       const keyword = query.replace(/^#/, "").trim().replace(/\s+/g, "")
-      // Use directUrls for hashtag search — more reliable than `hashtags` param
-      // onlyPostsNewerThan + searchType helps target reels
+      // Hashtag "tags" page rarely returns reels. Hit the explore reels search instead.
       apifyInput = {
-        directUrls: [`https://www.instagram.com/explore/tags/${keyword}/`],
+        directUrls: [
+          `https://www.instagram.com/explore/search/keyword/?q=%23${keyword}`,
+          `https://www.instagram.com/explore/tags/${keyword}/`,
+        ],
         resultsType: "posts",
-        resultsLimit: 60, // pull more so we can filter down to reels + 5k+ accounts
+        resultsLimit: 80,
         addParentData: false,
         searchType: "hashtag",
         searchLimit: 1,
