@@ -248,12 +248,9 @@ function PreLaunchView({ onLaunch }: { onLaunch: () => void }) {
       <p className="text-sm text-muted-foreground mb-4">Tick these off in your head, then hit launch.</p>
       <div className="space-y-3">
         {checklist.map((c) => (
-          <div key={c.t} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-            <div className="w-6 h-6 rounded-full border-2 border-primary/50 shrink-0 mt-0.5" />
-            <div>
-              <div className="font-medium">{c.t}</div>
-              <div className="text-sm text-muted-foreground">{c.d}</div>
-            </div>
+          <div key={c} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border items-center">
+            <div className="w-6 h-6 rounded-full border-2 border-primary/50 shrink-0" />
+            <div className="font-medium">{c}</div>
           </div>
         ))}
       </div>
