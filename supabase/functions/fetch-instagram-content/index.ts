@@ -147,14 +147,16 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Keyword mode: only Reels (videos), then enrich with follower counts and filter to 5k+
+    // Keyword mode: prefer Reels (videos), then enrich with follower counts and filter to 5k+
     if (mode === "keyword") {
       const beforeReels = posts.length
-      posts = posts.filter((p: any) => p.isReel)
-      console.log(`Reels filter: ${beforeReels} -> ${posts.length}`)
+      const reelsOnly = posts.filter((p: any) => p.isReel)
+      console.log(`Reels filter: ${beforeReels} -> ${reelsOnly.length}`)
+      // If reel detection wiped everything, fall back to all posts (better than 0 results)
+      if (reelsOnly.length > 0) posts = reelsOnly
 
-      // Enrich top candidates with follower count (parallel profile lookups, capped to 12)
-      const candidates = posts.slice(0, 12).filter((p: any) => p.ownerUsername)
+      // Enrich top candidates with follower count (parallel profile lookups, capped to 15)
+      const candidates = posts.slice(0, 15).filter((p: any) => p.ownerUsername)
       const uniqueHandles = [...new Set(candidates.map((p: any) => p.ownerUsername))]
       console.log(`Enriching ${uniqueHandles.length} unique profiles for follower counts`)
 
@@ -174,10 +176,13 @@ Deno.serve(async (req) => {
         } catch (_) { /* swallow */ }
       }))
 
-      posts = posts
+      const enriched = posts
         .map((p: any) => ({ ...p, ownerFollowers: followerMap.get(p.ownerUsername) || p.ownerFollowers || 0 }))
-        .filter((p: any) => p.ownerFollowers >= 5000)
-      console.log(`After 5k+ follower filter: ${posts.length}`)
+      const filtered = enriched.filter((p: any) => p.ownerFollowers >= 5000)
+      console.log(`After 5k+ follower filter: ${filtered.length}`)
+      // If follower enrichment failed for everyone (all 0), don't drop everything
+      const anyFollowerData = enriched.some((p: any) => p.ownerFollowers > 0)
+      posts = anyFollowerData ? filtered : enriched
     }
 
     posts = posts.slice(0, 24)
