@@ -293,8 +293,41 @@ export default function InstagramSearch() {
                   </button>
                 </div>
 
+                {/* Progress while remixing */}
+                {remixingId === post.id && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-foreground/80 flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        {remixStage}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{remixProgress}%</span>
+                    </div>
+                    <Progress value={remixProgress} className="h-1.5" />
+                  </div>
+                )}
+
+                {/* Transcript Summary */}
+                {remixSummaries[post.id] && remixingId !== post.id && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <button
+                      onClick={() => setShowSummaryId(showSummaryId === post.id ? null : post.id)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-primary mb-2"
+                    >
+                      <FileText className="w-3 h-3" />
+                      {showSummaryId === post.id ? 'Hide' : 'What this video is about'}
+                      {showSummaryId === post.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+                    {showSummaryId === post.id && (
+                      <div className="text-xs text-foreground/80 whitespace-pre-wrap bg-muted/40 rounded-md p-3 leading-relaxed">
+                        {remixSummaries[post.id]}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Inline Remix Result */}
-                {(remixResults[post.id] || remixErrors[post.id]) && (
+                {(remixResults[post.id] || remixErrors[post.id]) && remixingId !== post.id && (
                   <div className="mt-3 border-t border-border pt-3">
                     <button
                       onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
