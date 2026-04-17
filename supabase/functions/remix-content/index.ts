@@ -8,14 +8,27 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")
 
-// Whisper has a 25MB file limit. Cap the download to avoid runaway memory.
-const MAX_VIDEO_BYTES = 24 * 1024 * 1024
+// Gemini multimodal cap — keep videos small to avoid timeouts/oversize payloads
+const MAX_VIDEO_BYTES = 18 * 1024 * 1024
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ""
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)) as any)
+  }
+  return btoa(binary)
+}
+
+/**
+ * Use Lovable AI (Gemini 2.5 Pro multimodal) to transcribe the video.
+ * Returns transcript text or null on any failure.
+ */
 async function transcribeVideo(videoUrl: string): Promise<string | null> {
-  if (!OPENAI_API_KEY) {
-    console.log("No OPENAI_API_KEY — skipping transcription")
+  if (!LOVABLE_API_KEY) {
+    console.log("No LOVABLE_API_KEY — skipping transcription")
     return null
   }
   try {
@@ -25,30 +38,53 @@ async function transcribeVideo(videoUrl: string): Promise<string | null> {
       console.log("Video fetch failed:", videoRes.status)
       return null
     }
-    const buf = await videoRes.arrayBuffer()
+    const buf = new Uint8Array(await videoRes.arrayBuffer())
     if (buf.byteLength > MAX_VIDEO_BYTES) {
       console.log(`Video too large (${buf.byteLength} bytes), skipping`)
       return null
     }
-    const blob = new Blob([buf], { type: "video/mp4" })
-    const fd = new FormData()
-    fd.append("file", blob, "video.mp4")
-    fd.append("model", "whisper-1")
-    fd.append("response_format", "text")
+    const base64 = bytesToBase64(buf)
+    const mime = videoRes.headers.get("content-type") || "video/mp4"
+    const dataUrl = `data:${mime};base64,${base64}`
 
-    const wr = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-      body: fd,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You transcribe short-form videos. Return ONLY the spoken words from the video, verbatim, with no commentary, no timestamps, no speaker labels, no markdown. If the video has no speech, return the single word: NONE.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcribe the spoken audio in this video." },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
     })
-    if (!wr.ok) {
-      const errTxt = await wr.text()
-      console.log("Whisper error:", wr.status, errTxt.substring(0, 200))
+
+    if (!r.ok) {
+      const errTxt = await r.text()
+      console.log("Lovable AI transcription error:", r.status, errTxt.substring(0, 300))
       return null
     }
-    const text = (await wr.text()).trim()
+    const data = await r.json()
+    const text = (data.choices?.[0]?.message?.content || "").trim()
+    if (!text || text.toUpperCase() === "NONE") {
+      console.log("Transcript empty / NONE")
+      return null
+    }
     console.log(`Transcript length: ${text.length}`)
-    return text || null
+    return text
   } catch (e: any) {
     console.log("Transcription exception:", e?.message)
     return null
