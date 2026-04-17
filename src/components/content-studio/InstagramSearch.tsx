@@ -99,7 +99,7 @@ export default function InstagramSearch() {
     }, 50);
   };
 
-  const remixContent = async (post: InstagramPost) => {
+  const remixContent = async (post: InstagramPost, format: 'reel' | 'carousel') => {
     setRemixingId(post.id);
     setExpandedId(post.id);
     setRemixErrors(prev => ({ ...prev, [post.id]: '' }));
@@ -110,6 +110,7 @@ export default function InstagramSearch() {
           postCaption: post.caption,
           postUrl: post.postUrl,
           platform: 'instagram',
+          format,
         },
       });
       if (fnError) throw fnError;
@@ -195,17 +196,20 @@ export default function InstagramSearch() {
 
       {/* Quick Filters (keyword mode) */}
       {mode === 'keyword' && (
-        <div className="flex gap-2 flex-wrap mb-4">
-          {QUICK_FILTERS.map(f => (
-            <button
-              key={f}
-              onClick={() => handleQuickFilter(f)}
-              className="px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <>
+          <p className="text-xs text-muted-foreground mb-2">Showing Reels only from accounts with 5,000+ followers.</p>
+          <div className="flex gap-2 flex-wrap mb-4">
+            {QUICK_FILTERS.map(f => (
+              <button
+                key={f}
+                onClick={() => handleQuickFilter(f)}
+                className="px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Loading Skeletons */}
@@ -268,18 +272,28 @@ export default function InstagramSearch() {
                 </div>
 
                 {/* Actions */}
-                <div className="mt-auto flex gap-2">
-                  <button
-                    onClick={() => remixContent(post)}
-                    disabled={remixingId === post.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
-                    {remixingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    Remix
-                  </button>
+                <div className="mt-auto space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => remixContent(post, 'reel')}
+                      disabled={remixingId === post.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      {remixingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Remix as Reel
+                    </button>
+                    <button
+                      onClick={() => remixContent(post, 'carousel')}
+                      disabled={remixingId === post.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary/80 text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/70 transition-colors disabled:opacity-50"
+                    >
+                      {remixingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Remix as Carousel
+                    </button>
+                  </div>
                   <button
                     onClick={() => saveIdea(post, remixResults[post.id])}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-medium hover:text-foreground transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-medium hover:text-foreground transition-colors"
                   >
                     <Bookmark className="w-3.5 h-3.5" /> Save
                   </button>

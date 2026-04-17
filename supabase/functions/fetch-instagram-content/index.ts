@@ -66,13 +66,15 @@ Deno.serve(async (req) => {
     } else {
       const keyword = query.replace(/^#/, "").trim().replace(/\s+/g, "")
       // Use directUrls for hashtag search — more reliable than `hashtags` param
+      // onlyPostsNewerThan + searchType helps target reels
       apifyInput = {
         directUrls: [`https://www.instagram.com/explore/tags/${keyword}/`],
         resultsType: "posts",
-        resultsLimit: 24,
+        resultsLimit: 60, // pull more so we can filter down to reels + 5k+ accounts
         addParentData: false,
         searchType: "hashtag",
         searchLimit: 1,
+        enhanceUserSearchWithFacebookPage: false,
       }
     }
 
@@ -119,21 +121,50 @@ Deno.serve(async (req) => {
     items = items.filter((p: any) => p && (p.shortCode || p.shortcode || p.id))
 
     // Map to consistent shape
-    const posts = items.map((p: any) => ({
-      id: p.id || p.shortCode || p.shortcode,
-      shortCode: p.shortCode || p.shortcode || "",
-      thumbnail: p.displayUrl || p.imageUrl || p.thumbnailUrl || p.thumbnail_src || p.thumbnailSrc || "",
-      videoUrl: p.videoUrl || p.videoPlayUrl || p.video_url || null,
-      postUrl: p.url || `https://www.instagram.com/p/${p.shortCode || p.shortcode}/`,
-      caption: p.caption || p.alt || p.edge_media_to_caption?.edges?.[0]?.node?.text || "",
-      likes: p.likesCount || p.likes || p.edge_liked_by?.count || p.edge_media_preview_like?.count || 0,
-      comments: p.commentsCount || p.comments || p.edge_media_to_comment?.count || 0,
-      views: p.videoViewCount || p.views || p.playsCount || p.video_view_count || 0,
-      timestamp: p.timestamp || p.takenAt || p.taken_at_timestamp || "",
-      ownerUsername: p.ownerUsername || p.username || p.owner?.username || "",
-      type: p.type || (p.isVideo || p.is_video ? "Video" : "Image"),
-      outlierScore: 1.0,
-    }))
+    let posts = items.map((p: any) => {
+      const productType = (p.productType || p.product_type || "").toString().toLowerCase()
+      const typeStr = (p.type || "").toString().toLowerCase()
+      const isVideo = !!(p.videoUrl || p.videoPlayUrl || p.video_url || p.isVideo || p.is_video)
+      const isReel = productType.includes("clips") || productType === "reel" || typeStr === "video" || typeStr === "reel" || (isVideo && (p.videoDuration || p.video_duration || 0) <= 90)
+      return {
+        id: p.id || p.shortCode || p.shortcode,
+        shortCode: p.shortCode || p.shortcode || "",
+        thumbnail: p.displayUrl || p.imageUrl || p.thumbnailUrl || p.thumbnail_src || p.thumbnailSrc || "",
+        videoUrl: p.videoUrl || p.videoPlayUrl || p.video_url || null,
+        postUrl: p.url || `https://www.instagram.com/${(productType.includes("clips") || typeStr === "reel") ? "reel" : "p"}/${p.shortCode || p.shortcode}/`,
+        caption: p.caption || p.alt || p.edge_media_to_caption?.edges?.[0]?.node?.text || "",
+        likes: p.likesCount || p.likes || p.edge_liked_by?.count || p.edge_media_preview_like?.count || 0,
+        comments: p.commentsCount || p.comments || p.edge_media_to_comment?.count || 0,
+        views: p.videoViewCount || p.views || p.playsCount || p.video_view_count || 0,
+        timestamp: p.timestamp || p.takenAt || p.taken_at_timestamp || "",
+        ownerUsername: p.ownerUsername || p.username || p.owner?.username || "",
+        ownerFollowers: p.ownerFollowersCount || p.followersCount || p.owner?.followers_count || p.owner?.edge_followed_by?.count || 0,
+        type: isReel ? "Reel" : (isVideo ? "Video" : "Image"),
+        isReel,
+        outlierScore: 1.0,
+      }
+    })
+
+    // Keyword mode: only Reels + accounts with >= 5000 followers (when follower count is known)
+    if (mode === "keyword") {
+      const before = posts.length
+      posts = posts.filter((p: any) => p.isReel && (p.ownerFollowers === 0 || p.ownerFollowers >= 5000))
+      // If we have follower data on some posts, drop the ones with 0 (unknown)
+      const hasFollowerData = posts.some((p: any) => p.ownerFollowers > 0)
+      if (hasFollowerData) {
+        posts = posts.filter((p: any) => p.ownerFollowers >= 5000)
+      }
+      console.log(`Keyword filter: ${before} -> ${posts.length} (reels + 5k+ followers)`)
+    }
+
+    posts = posts.slice(0, 24)
+
+    if (posts.length === 0) {
+      return new Response(
+        JSON.stringify({ posts: [], count: 0, avgLikes: 0, avgViews: 0 }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
 
     // Calculate outlier scores
     const avgLikes = posts.reduce((sum: number, p: any) => sum + p.likes, 0) / posts.length
