@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_campaigns: {
+        Row: {
+          ad_hook: string | null
+          created_at: string
+          current_followers: number | null
+          daily_budget: number
+          duration_days: number
+          ended_at: string | null
+          id: string
+          launched_at: string
+          notes: string | null
+          offer_summary: string | null
+          starting_followers: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ad_hook?: string | null
+          created_at?: string
+          current_followers?: number | null
+          daily_budget?: number
+          duration_days?: number
+          ended_at?: string | null
+          id?: string
+          launched_at?: string
+          notes?: string | null
+          offer_summary?: string | null
+          starting_followers?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ad_hook?: string | null
+          created_at?: string
+          current_followers?: number | null
+          daily_budget?: number
+          duration_days?: number
+          ended_at?: string | null
+          id?: string
+          launched_at?: string
+          notes?: string | null
+          offer_summary?: string | null
+          starting_followers?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      campaign_followers: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          dm_history: Json
+          handle: string
+          hot_list_id: string | null
+          id: string
+          notes: string | null
+          qualified: boolean | null
+          stage: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          dm_history?: Json
+          handle: string
+          hot_list_id?: string | null
+          id?: string
+          notes?: string | null
+          qualified?: boolean | null
+          stage?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          dm_history?: Json
+          handle?: string
+          hot_list_id?: string | null
+          id?: string
+          notes?: string | null
+          qualified?: boolean | null
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_followers_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_menu_actions: {
         Row: {
           action_key: string
@@ -193,6 +294,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dm_templates: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number | null
+          stage_key: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number | null
+          stage_key: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number | null
+          stage_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       goals: {
         Row: {
