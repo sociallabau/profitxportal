@@ -99,6 +99,7 @@ export default function InstagramSearch() {
         body: {
           postCaption: post.caption,
           postUrl: post.postUrl,
+          videoUrl: post.videoUrl,
           platform: 'instagram',
           format,
         },
