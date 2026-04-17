@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Search, Loader2, ExternalLink, Sparkles, Bookmark, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Loader2, ExternalLink, Sparkles, Bookmark, AlertTriangle, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { Progress } from '@/components/ui/progress';
 
 interface InstagramPost {
   id: string;
@@ -53,8 +54,21 @@ export default function InstagramSearch() {
   // Inline remix state per post
   const [remixingId, setRemixingId] = useState<string | null>(null);
   const [remixResults, setRemixResults] = useState<Record<string, string>>({});
+  const [remixSummaries, setRemixSummaries] = useState<Record<string, string>>({});
   const [remixErrors, setRemixErrors] = useState<Record<string, string>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showSummaryId, setShowSummaryId] = useState<string | null>(null);
+
+  // Fake-progress bar while remixing (gives perceived progress for the 5-15s call)
+  const [remixProgress, setRemixProgress] = useState(0);
+  const [remixStage, setRemixStage] = useState<string>('');
+  const progressTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (progressTimer.current) window.clearInterval(progressTimer.current);
+    };
+  }, []);
 
   const searchInstagram = async () => {
     if (!query.trim()) return;
@@ -94,6 +108,19 @@ export default function InstagramSearch() {
     setExpandedId(post.id);
     setRemixErrors(prev => ({ ...prev, [post.id]: '' }));
 
+    // Drive a believable progress bar while the function runs (~5-18s)
+    setRemixProgress(2);
+    setRemixStage(post.videoUrl ? 'Transcribing video…' : 'Reading caption…');
+    if (progressTimer.current) window.clearInterval(progressTimer.current);
+    const start = Date.now();
+    progressTimer.current = window.setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const pct = Math.min(92, Math.round((1 - Math.exp(-elapsed / 6)) * 100));
+      setRemixProgress(pct);
+      if (elapsed > 4 && elapsed < 12) setRemixStage('Understanding the video…');
+      else if (elapsed >= 12) setRemixStage('Writing your remix…');
+    }, 250);
+
     try {
       const { data, error: fnError } = await supabase.functions.invoke("remix-content", {
         body: {
@@ -110,10 +137,25 @@ export default function InstagramSearch() {
         throw new Error(data.error);
       }
       setRemixResults(prev => ({ ...prev, [post.id]: data?.remix || '' }));
+      if (data?.transcriptSummary) {
+        setRemixSummaries(prev => ({ ...prev, [post.id]: data.transcriptSummary }));
+      }
+      setRemixProgress(100);
+      setRemixStage('Done');
+      toast.success(data?.transcribed ? 'Remix ready — transcribed from video' : 'Remix ready');
     } catch (err: any) {
       setRemixErrors(prev => ({ ...prev, [post.id]: err.message || 'Something went wrong.' }));
+      toast.error('Remix failed');
     } finally {
-      setRemixingId(null);
+      if (progressTimer.current) {
+        window.clearInterval(progressTimer.current);
+        progressTimer.current = null;
+      }
+      window.setTimeout(() => {
+        setRemixingId(null);
+        setRemixProgress(0);
+        setRemixStage('');
+      }, 600);
     }
   };
 
@@ -251,8 +293,41 @@ export default function InstagramSearch() {
                   </button>
                 </div>
 
+                {/* Progress while remixing */}
+                {remixingId === post.id && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-foreground/80 flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        {remixStage}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{remixProgress}%</span>
+                    </div>
+                    <Progress value={remixProgress} className="h-1.5" />
+                  </div>
+                )}
+
+                {/* Transcript Summary */}
+                {remixSummaries[post.id] && remixingId !== post.id && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <button
+                      onClick={() => setShowSummaryId(showSummaryId === post.id ? null : post.id)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-primary mb-2"
+                    >
+                      <FileText className="w-3 h-3" />
+                      {showSummaryId === post.id ? 'Hide' : 'What this video is about'}
+                      {showSummaryId === post.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+                    {showSummaryId === post.id && (
+                      <div className="text-xs text-foreground/80 whitespace-pre-wrap bg-muted/40 rounded-md p-3 leading-relaxed">
+                        {remixSummaries[post.id]}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Inline Remix Result */}
-                {(remixResults[post.id] || remixErrors[post.id]) && (
+                {(remixResults[post.id] || remixErrors[post.id]) && remixingId !== post.id && (
                   <div className="mt-3 border-t border-border pt-3">
                     <button
                       onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
