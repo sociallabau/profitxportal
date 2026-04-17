@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { Trophy } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trophy, Plus, X } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
+import { toast } from 'sonner';
 
 function timeAgo(date: string) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -17,9 +19,23 @@ function timeAgo(date: string) {
   return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
+function weekEnding(): string {
+  const d = new Date();
+  const day = d.getDay(); // 0 Sun..6 Sat
+  const diff = (7 - day) % 7; // days until Sunday
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function WinsWall() {
-  useRequireAuth();
+  const { user } = useRequireAuth();
   usePageTracking('wins-wall');
+  const qc = useQueryClient();
+
+  const [open, setOpen] = useState(false);
+  const [winText, setWinText] = useState('');
+  const [cash, setCash] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['wins-wall'],
@@ -35,23 +51,52 @@ export default function WinsWall() {
     refetchInterval: 30000,
   });
 
+  const submitWin = async () => {
+    if (!user) return;
+    if (!winText.trim()) { toast.error('Add a win first'); return; }
+    setSaving(true);
+    const cashNum = cash.trim() ? Number(cash) : 0;
+    const { error } = await supabase.from('weekly_wins').insert({
+      user_id: user.id,
+      win_text: winText.trim(),
+      cash_amount: Number.isFinite(cashNum) ? cashNum : 0,
+      week_ending: weekEnding(),
+      source: 'wins_wall',
+    });
+    setSaving(false);
+    if (error) { toast.error('Failed to post'); return; }
+    toast.success('Win posted 🎉');
+    setWinText(''); setCash(''); setOpen(false);
+    qc.invalidateQueries({ queryKey: ['wins-wall'] });
+  };
+
+  const inputCls = "w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
+
   return (
     <PageLayout>
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-primary" />
-            <span className="text-xs font-medium text-primary uppercase tracking-wider">Community</span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-primary" />
+              <span className="text-xs font-medium text-primary uppercase tracking-wider">Community</span>
+            </div>
+            <h1 className="text-3xl font-bold italic text-foreground">Wins Wall</h1>
+            <p className="text-muted-foreground text-sm">
+              Every win submitted by the group — yours and everyone else's. Keep moving.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold italic text-foreground">Wins Wall</h1>
-          <p className="text-muted-foreground text-sm">
-            Every win submitted in a weekly check-in — yours and everyone else's. Keep moving.
-          </p>
+          <button
+            onClick={() => setOpen(true)}
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add a Win
+          </button>
         </div>
 
         {/* Count */}
-        {!isLoading && (
+        {!isLoading && submissions.length > 0 && (
           <p className="text-xs text-muted-foreground">{submissions.length} wins from the group</p>
         )}
 
@@ -74,8 +119,8 @@ export default function WinsWall() {
         ) : submissions.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <Trophy className="w-8 h-8 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No wins submitted yet.</p>
-            <p className="text-xs mt-1">Complete your weekly check-in to appear here.</p>
+            <p className="text-sm">No wins yet.</p>
+            <p className="text-xs mt-1">Be the first — hit "Add a Win" up top.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -104,6 +149,56 @@ export default function WinsWall() {
           </div>
         )}
       </div>
+
+      {/* Add Win Modal */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40 bg-background/70" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-card border border-border rounded-xl w-full max-w-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-foreground">Add a Win</h2>
+                <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <textarea
+                  placeholder="What's the win? Keep it short and real."
+                  rows={4}
+                  value={winText}
+                  onChange={e => setWinText(e.target.value)}
+                  className={`${inputCls} resize-none`}
+                  maxLength={500}
+                />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="$ Cash collected (optional)"
+                  value={cash}
+                  onChange={e => setCash(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={() => setOpen(false)}
+                  className="flex-1 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitWin}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Posting...' : 'Post Win'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </PageLayout>
   );
 }
