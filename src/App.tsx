@@ -23,7 +23,14 @@ import ContentStudio from "./pages/ContentStudio";
 import HotList from "./pages/HotList";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function AuthListener() {
   const navigate = useNavigate();
