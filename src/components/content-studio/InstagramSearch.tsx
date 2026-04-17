@@ -108,6 +108,19 @@ export default function InstagramSearch() {
     setExpandedId(post.id);
     setRemixErrors(prev => ({ ...prev, [post.id]: '' }));
 
+    // Drive a believable progress bar while the function runs (~5-18s)
+    setRemixProgress(2);
+    setRemixStage(post.videoUrl ? 'Transcribing video…' : 'Reading caption…');
+    if (progressTimer.current) window.clearInterval(progressTimer.current);
+    const start = Date.now();
+    progressTimer.current = window.setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const pct = Math.min(92, Math.round((1 - Math.exp(-elapsed / 6)) * 100));
+      setRemixProgress(pct);
+      if (elapsed > 4 && elapsed < 12) setRemixStage('Understanding the video…');
+      else if (elapsed >= 12) setRemixStage('Writing your remix…');
+    }, 250);
+
     try {
       const { data, error: fnError } = await supabase.functions.invoke("remix-content", {
         body: {
@@ -124,10 +137,25 @@ export default function InstagramSearch() {
         throw new Error(data.error);
       }
       setRemixResults(prev => ({ ...prev, [post.id]: data?.remix || '' }));
+      if (data?.transcriptSummary) {
+        setRemixSummaries(prev => ({ ...prev, [post.id]: data.transcriptSummary }));
+      }
+      setRemixProgress(100);
+      setRemixStage('Done');
+      toast.success(data?.transcribed ? 'Remix ready — transcribed from video' : 'Remix ready');
     } catch (err: any) {
       setRemixErrors(prev => ({ ...prev, [post.id]: err.message || 'Something went wrong.' }));
+      toast.error('Remix failed');
     } finally {
-      setRemixingId(null);
+      if (progressTimer.current) {
+        window.clearInterval(progressTimer.current);
+        progressTimer.current = null;
+      }
+      window.setTimeout(() => {
+        setRemixingId(null);
+        setRemixProgress(0);
+        setRemixStage('');
+      }, 600);
     }
   };
 
