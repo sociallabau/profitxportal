@@ -269,18 +269,28 @@ export default function InstagramSearch() {
                 </div>
 
                 {/* Actions */}
-                <div className="mt-auto flex gap-2">
-                  <button
-                    onClick={() => remixContent(post)}
-                    disabled={remixingId === post.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
-                    {remixingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    Remix
-                  </button>
+                <div className="mt-auto space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => remixContent(post, 'reel')}
+                      disabled={remixingId === post.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      {remixingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Remix as Reel
+                    </button>
+                    <button
+                      onClick={() => remixContent(post, 'carousel')}
+                      disabled={remixingId === post.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary/80 text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/70 transition-colors disabled:opacity-50"
+                    >
+                      {remixingId === post.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Remix as Carousel
+                    </button>
+                  </div>
                   <button
                     onClick={() => saveIdea(post, remixResults[post.id])}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-medium hover:text-foreground transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-medium hover:text-foreground transition-colors"
                   >
                     <Bookmark className="w-3.5 h-3.5" /> Save
                   </button>
