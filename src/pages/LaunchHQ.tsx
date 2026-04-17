@@ -32,8 +32,8 @@ const STAGES: { key: string; label: string; color: string }[] = [
   { key: 'qualified', label: 'Qualified', color: 'bg-blue-500/15 text-blue-400' },
   { key: 'dmd', label: "DM'd", color: 'bg-amber-500/15 text-amber-400' },
   { key: 'replied', label: 'Replied', color: 'bg-purple-500/15 text-purple-400' },
-  { key: 'positive', label: 'Positive 🔥', color: 'bg-orange-500/15 text-orange-400' },
-  { key: 'booked', label: 'Booked', color: 'bg-emerald-500/15 text-emerald-400' },
+  { key: 'positive', label: 'Positive Reply 🔥', color: 'bg-orange-500/15 text-orange-400' },
+  { key: 'booked', label: 'Booked Call', color: 'bg-emerald-500/15 text-emerald-400' },
   { key: 'passed', label: 'Passed', color: 'bg-destructive/15 text-destructive' },
 ];
 
