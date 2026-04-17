@@ -64,9 +64,15 @@ export default function InstagramSearch() {
   const [remixStage, setRemixStage] = useState<string>('');
   const progressTimer = useRef<number | null>(null);
 
+  // Search progress bar
+  const [searchProgress, setSearchProgress] = useState(0);
+  const [searchStage, setSearchStage] = useState<string>('');
+  const searchTimer = useRef<number | null>(null);
+
   useEffect(() => {
     return () => {
       if (progressTimer.current) window.clearInterval(progressTimer.current);
+      if (searchTimer.current) window.clearInterval(searchTimer.current);
     };
   }, []);
 
@@ -75,6 +81,20 @@ export default function InstagramSearch() {
     setIsLoading(true);
     setResults([]);
     setError(null);
+
+    // Drive a believable progress bar while Apify scrapes (~10-25s)
+    setSearchProgress(2);
+    setSearchStage('Looking up @' + query.trim().replace(/^@/, '') + '…');
+    if (searchTimer.current) window.clearInterval(searchTimer.current);
+    const start = Date.now();
+    searchTimer.current = window.setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const pct = Math.min(94, Math.round((1 - Math.exp(-elapsed / 8)) * 100));
+      setSearchProgress(pct);
+      if (elapsed > 4 && elapsed < 12) setSearchStage('Pulling recent posts…');
+      else if (elapsed >= 12 && elapsed < 20) setSearchStage('Scoring outliers…');
+      else if (elapsed >= 20) setSearchStage('Almost there…');
+    }, 250);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("fetch-instagram-content", {
@@ -97,7 +117,16 @@ export default function InstagramSearch() {
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
-      setIsLoading(false);
+      if (searchTimer.current) {
+        window.clearInterval(searchTimer.current);
+        searchTimer.current = null;
+      }
+      setSearchProgress(100);
+      window.setTimeout(() => {
+        setIsLoading(false);
+        setSearchProgress(0);
+        setSearchStage('');
+      }, 400);
     }
   };
 
@@ -206,20 +235,32 @@ export default function InstagramSearch() {
         </button>
       </div>
 
-      {/* Loading Skeletons */}
+      {/* Search progress + Loading Skeletons */}
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
-              <div className="aspect-video bg-muted" />
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-muted rounded w-1/3" />
-                <div className="h-3 bg-muted rounded w-full" />
-                <div className="h-3 bg-muted rounded w-2/3" />
-              </div>
+        <>
+          <div className="mb-4 bg-card border border-border rounded-lg p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-foreground/80 flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {searchStage}
+              </span>
+              <span className="text-[10px] text-muted-foreground">{searchProgress}%</span>
             </div>
-          ))}
-        </div>
+            <Progress value={searchProgress} className="h-1.5" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
+                <div className="aspect-video bg-muted" />
+                <div className="p-4 space-y-2">
+                  <div className="h-4 bg-muted rounded w-1/3" />
+                  <div className="h-3 bg-muted rounded w-full" />
+                  <div className="h-3 bg-muted rounded w-2/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Results Grid */}
