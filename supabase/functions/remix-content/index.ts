@@ -191,8 +191,55 @@ Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write
     const aiData = await aiResponse.json()
     const remix = aiData.choices?.[0]?.message?.content || ""
 
+    // Generate a short summary of what the source video was actually about
+    let transcriptSummary: string | null = null
+    if (transcript) {
+      try {
+        const sumRes = await fetch(`https://ai.gateway.lovable.dev/v1/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-lite",
+            messages: [
+              {
+                role: "system",
+                content: `You summarise short-form videos for a business owner who wants to remix them. Output STRICT markdown with these sections and nothing else:
+
+**What the video is about:** 1 sentence.
+
+**Tone & vibe:** 1 short phrase (e.g. "blunt and contrarian", "warm storytelling", "punchy listicle").
+
+**Key points:**
+- 2 to 4 short bullets covering the actual ideas/claims made.
+
+**Why it works:** 1 sentence on the hook or angle that made it land.
+
+**How it maps to your business:** 1 sentence connecting the idea to: ${businessOverview}.
+
+Keep it tight. No fluff, no preamble.`,
+              },
+              {
+                role: "user",
+                content: `Transcript:\n"""\n${transcript}\n"""\n\nOriginal caption: "${postCaption || "(none)"}"`,
+              },
+            ],
+            max_tokens: 400,
+          }),
+        })
+        if (sumRes.ok) {
+          const sumData = await sumRes.json()
+          transcriptSummary = sumData.choices?.[0]?.message?.content || null
+        }
+      } catch (e: any) {
+        console.log("Summary generation failed:", e?.message)
+      }
+    }
+
     return new Response(
-      JSON.stringify({ remix, transcribed: !!transcript }),
+      JSON.stringify({ remix, transcribed: !!transcript, transcriptSummary }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
 
