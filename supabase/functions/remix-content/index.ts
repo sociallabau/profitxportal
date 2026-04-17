@@ -6,9 +6,54 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 
-// Uses Lovable's built-in AI Gateway via SUPABASE_URL/functions/v1/ai-completions
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")
+
+// Whisper has a 25MB file limit. Cap the download to avoid runaway memory.
+const MAX_VIDEO_BYTES = 24 * 1024 * 1024
+
+async function transcribeVideo(videoUrl: string): Promise<string | null> {
+  if (!OPENAI_API_KEY) {
+    console.log("No OPENAI_API_KEY — skipping transcription")
+    return null
+  }
+  try {
+    console.log("Downloading video for transcription:", videoUrl.substring(0, 80))
+    const videoRes = await fetch(videoUrl)
+    if (!videoRes.ok) {
+      console.log("Video fetch failed:", videoRes.status)
+      return null
+    }
+    const buf = await videoRes.arrayBuffer()
+    if (buf.byteLength > MAX_VIDEO_BYTES) {
+      console.log(`Video too large (${buf.byteLength} bytes), skipping`)
+      return null
+    }
+    const blob = new Blob([buf], { type: "video/mp4" })
+    const fd = new FormData()
+    fd.append("file", blob, "video.mp4")
+    fd.append("model", "whisper-1")
+    fd.append("response_format", "text")
+
+    const wr = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: fd,
+    })
+    if (!wr.ok) {
+      const errTxt = await wr.text()
+      console.log("Whisper error:", wr.status, errTxt.substring(0, 200))
+      return null
+    }
+    const text = (await wr.text()).trim()
+    console.log(`Transcript length: ${text.length}`)
+    return text || null
+  } catch (e: any) {
+    console.log("Transcription exception:", e?.message)
+    return null
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -16,9 +61,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // AI Gateway is built-in, no API key check needed
-
-    // Auth check
     const authHeader = req.headers.get("Authorization")
     if (!authHeader) {
       return new Response(
@@ -37,7 +79,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get business overview from profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("business_overview")
@@ -46,8 +87,35 @@ Deno.serve(async (req) => {
 
     const businessOverview = profile?.business_overview || "a coaching or service business"
 
-    const { postCaption, postUrl, platform, format } = await req.json()
+    const { postCaption, postUrl, videoUrl, format } = await req.json()
     const chosenFormat: "reel" | "carousel" = format === "carousel" ? "carousel" : "reel"
+
+    // Try to use cached transcript if this post is already saved by this user
+    let transcript: string | null = null
+    if (postUrl) {
+      const { data: saved } = await supabase
+        .from("saved_ideas")
+        .select("id, transcript, source_video_url")
+        .eq("user_id", user.id)
+        .eq("source_url", postUrl)
+        .maybeSingle()
+
+      if (saved?.transcript) {
+        transcript = saved.transcript
+        console.log("Using cached transcript")
+      } else if (videoUrl) {
+        transcript = await transcribeVideo(videoUrl)
+        // Cache it on the saved row if it exists, so next remix is instant
+        if (transcript && saved?.id) {
+          await supabase
+            .from("saved_ideas")
+            .update({ transcript, source_video_url: videoUrl })
+            .eq("id", saved.id)
+        }
+      }
+    } else if (videoUrl) {
+      transcript = await transcribeVideo(videoUrl)
+    }
 
     const reelFramework = `SHORT REEL — 5 BEATS (write like a real person texting a mate, not a marketer):
 1. HOOK (0–3s): A punchy line that stops the scroll. Call out who it's for or the pain. No jargon, no "in this video".
@@ -75,7 +143,7 @@ ABOUT THEIR BUSINESS:
 ${businessOverview}
 
 YOUR JOB:
-Take the original post (caption below) and rewrite the idea as a NEW ${chosenFormat === "carousel" ? "CAROUSEL" : "SHORT REEL"} script for the business above.
+Take the original post (transcript and/or caption below) and rewrite the IDEA as a NEW ${chosenFormat === "carousel" ? "CAROUSEL" : "SHORT REEL"} script for the business above. The transcript is the SOURCE OF TRUTH for what was actually said in the video — use it to understand the real angle, hook structure, and value points. Don't copy it word-for-word; extract the underlying idea and rewrite it for this business.
 
 FOLLOW THIS FRAMEWORK:
 ${framework}
@@ -90,7 +158,11 @@ HOW TO WRITE:
 OUTPUT:
 Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write the actual words to say/show — ready to film or post. No commentary, no explanations, just the script.`
 
-    const userMessage = `Original Instagram ${chosenFormat === "carousel" ? "post" : "reel"} caption:\n"${postCaption || "(no caption — use the post URL context)"}"\n\nPost URL: ${postUrl}\n\nRemix this into a ${chosenFormat === "carousel" ? "carousel" : "reel"} for my business following the framework exactly.`
+    const sourceBlock = transcript
+      ? `VIDEO TRANSCRIPT (what they actually said):\n"""\n${transcript}\n"""\n\nOriginal caption (for extra context):\n"${postCaption || "(no caption)"}"`
+      : `Original Instagram ${chosenFormat === "carousel" ? "post" : "reel"} caption:\n"${postCaption || "(no caption — use the post URL context)"}"`
+
+    const userMessage = `${sourceBlock}\n\nPost URL: ${postUrl}\n\nRemix this into a ${chosenFormat === "carousel" ? "carousel" : "reel"} for my business following the framework exactly.`
 
     const aiResponse = await fetch(`https://ai.gateway.lovable.dev/v1/chat/completions`, {
       method: "POST",
@@ -120,7 +192,7 @@ Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write
     const remix = aiData.choices?.[0]?.message?.content || ""
 
     return new Response(
-      JSON.stringify({ remix }),
+      JSON.stringify({ remix, transcribed: !!transcript }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
 

@@ -194,14 +194,23 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Calculate outlier scores
+    // Calculate outlier scores using MEDIAN (more robust against viral outliers)
+    const median = (arr: number[]) => {
+      const sorted = arr.filter(n => n > 0).sort((a, b) => a - b)
+      if (sorted.length === 0) return 0
+      const mid = Math.floor(sorted.length / 2)
+      return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+    }
+    const medianViews = median(posts.map((p: any) => p.views))
+    const medianLikes = median(posts.map((p: any) => p.likes))
     const avgLikes = posts.reduce((sum: number, p: any) => sum + p.likes, 0) / posts.length
     const avgViews = posts.reduce((sum: number, p: any) => sum + p.views, 0) / posts.length
 
     posts.forEach((p: any) => {
-      const metric = p.views > 0 ? p.views : p.likes
-      const avg = p.views > 0 ? avgViews : avgLikes
-      p.outlierScore = avg > 0 ? parseFloat((metric / avg).toFixed(2)) : 1.0
+      const useViews = p.views > 0 && medianViews > 0
+      const metric = useViews ? p.views : p.likes
+      const baseline = useViews ? medianViews : medianLikes
+      p.outlierScore = baseline > 0 ? parseFloat((metric / baseline).toFixed(2)) : 1.0
     })
 
     // Sort by outlier score descending
