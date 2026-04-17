@@ -83,8 +83,8 @@ export default function Onboarding() {
     { icon: Compass, label: 'Baseline' },
   ];
 
-  const next = () => setStep((s) => Math.min(3, (s + 1) as Step));
-  const back = () => setStep((s) => Math.max(0, (s - 1) as Step));
+  const next = () => setStep((s) => (Math.min(3, s + 1) as Step));
+  const back = () => setStep((s) => (Math.max(0, s - 1) as Step));
 
   const finishStep1 = async () => {
     if (!fullName.trim()) { setError('Please enter your full name.'); return; }
