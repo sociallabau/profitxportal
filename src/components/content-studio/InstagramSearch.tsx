@@ -99,7 +99,7 @@ export default function InstagramSearch() {
     }, 50);
   };
 
-  const remixContent = async (post: InstagramPost) => {
+  const remixContent = async (post: InstagramPost, format: 'reel' | 'carousel') => {
     setRemixingId(post.id);
     setExpandedId(post.id);
     setRemixErrors(prev => ({ ...prev, [post.id]: '' }));
@@ -110,6 +110,7 @@ export default function InstagramSearch() {
           postCaption: post.caption,
           postUrl: post.postUrl,
           platform: 'instagram',
+          format,
         },
       });
       if (fnError) throw fnError;
