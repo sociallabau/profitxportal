@@ -241,8 +241,10 @@ export type Database = {
       }
       hot_list: {
         Row: {
+          business_name: string | null
           column_id: string
           created_at: string | null
+          deal_value: number | null
           email: string | null
           id: string
           instagram_handle: string | null
@@ -250,12 +252,15 @@ export type Database = {
           notes: string | null
           phone: string | null
           position: number
+          source: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          business_name?: string | null
           column_id?: string
           created_at?: string | null
+          deal_value?: number | null
           email?: string | null
           id?: string
           instagram_handle?: string | null
@@ -263,12 +268,15 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           position?: number
+          source?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          business_name?: string | null
           column_id?: string
           created_at?: string | null
+          deal_value?: number | null
           email?: string | null
           id?: string
           instagram_handle?: string | null
@@ -276,6 +284,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           position?: number
+          source?: string | null
           updated_at?: string | null
           user_id?: string
         }
