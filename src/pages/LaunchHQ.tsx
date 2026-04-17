@@ -44,6 +44,16 @@ export default function LaunchHQ() {
   const [bulkHandles, setBulkHandles] = useState('');
   const [openFollower, setOpenFollower] = useState<Follower | null>(null);
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile-tier-launch', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('tier').eq('id', user!.id).single();
+      return data;
+    },
+    enabled: !!user,
+  });
+  const isUnlocked = profile?.tier && profile.tier !== 'onramp';
+
   const { data: campaign } = useQuery({
     queryKey: ['active-campaign', user?.id],
     queryFn: async () => {
@@ -52,7 +62,7 @@ export default function LaunchHQ() {
         .eq('user_id', user.id).eq('status', 'active').maybeSingle();
       return data as Campaign | null;
     },
-    enabled: !!user,
+    enabled: !!user && !!isUnlocked,
   });
 
   const { data: followers = [] } = useQuery({
