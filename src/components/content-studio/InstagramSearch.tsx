@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Search, Loader2, ExternalLink, Sparkles, Bookmark, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-// keyword/niche search removed — handle-only search
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
