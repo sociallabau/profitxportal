@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Rocket, Plus, Copy, Check, Sparkles, Trash2, ArrowRight, Flame, X, Users, Target } from 'lucide-react';
+import { Rocket, Plus, Copy, Check, Sparkles, Trash2, ArrowRight, Flame, X, Users, Target, Lock } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
