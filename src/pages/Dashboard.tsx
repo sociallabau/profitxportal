@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { TrendingUp, Receipt, DollarSign, Trophy, Plus, ClipboardList } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
+import GoalCountdown from '@/components/GoalCountdown';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
@@ -116,6 +117,8 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      <GoalCountdown currentMrr={Number(latest?.mrr_manual || latest?.mrr || 0)} />
 
       {(() => {
         const margin = latestRevenue > 0 ? (latestProfit / latestRevenue) * 100 : 0;
