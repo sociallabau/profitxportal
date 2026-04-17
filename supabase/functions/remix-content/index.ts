@@ -49,39 +49,46 @@ Deno.serve(async (req) => {
     const { postCaption, postUrl, platform, format } = await req.json()
     const chosenFormat: "reel" | "carousel" = format === "carousel" ? "carousel" : "reel"
 
-    const reelFramework = `SHORT-FORM VIDEO (REEL) — 5 STEP FRAMEWORK:
-1. HOOK (0–3 sec): Pattern interrupt or bold claim that calls out the target audience by name or pain.
-2. CONTEXT (3–6 sec): One sentence framing what the video is about and confirming the viewer is in the right place.
-3. VALUE (6–35 sec): The core teach/show — 1–2 points max, adapted to the business niche.
-4. PROOF (35–45 sec): A result, stat, testimonial snippet, or relatable scenario that validates the value.
-5. CTA (45–60 sec): One single action — comment, follow, DM, visit. No more than one ask.
-RULE: Preserve the original video's format (talking head, B-roll, text-only). Only swap language, examples, and CTA to match the business.`
+    const reelFramework = `SHORT REEL — 5 BEATS (write like a real person texting a mate, not a marketer):
+1. HOOK (0–3s): A punchy line that stops the scroll. Call out who it's for or the pain. No jargon, no "in this video".
+2. CONTEXT (3–6s): One quick line so they know they're in the right place.
+3. VALUE (6–35s): The actual teach. 1–2 points max. Use plain words, real examples, contractions ("you're", "don't").
+4. PROOF (35–45s): A real number, story, or "I had a client who..." moment. Keep it specific.
+5. CTA (45–60s): One ask. Sound like a person — "comment X", "DM me 'word'", "follow for more". Not "click the link in my bio to learn more about our services".
+TONE RULES: short sentences. No buzzwords (unlock, leverage, elevate, transform). No emojis unless they fit. Sound like the user is talking to one person, not an audience.`
 
-    const carouselFramework = `CAROUSEL — 7 SLIDE FRAMEWORK:
-S1 COVER: Bold standalone headline that promises a specific outcome. No logo.
-S2 PROBLEM: Name the specific pain. Make them feel seen. One problem, plainly stated.
-S3 VALUE: Point 1 — one teach/insight, minimal text.
-S4 VALUE: Point 2 — next step or insight.
-S5 VALUE: Point 3 — final teach point.
-S6 PROOF: A specific stat, result, testimonial, or before/after.
-S7 CTA: One clear action (DM, link in bio, follow, save) + brand handle.
-RULE: Each slide must read as a standalone image. Keep text minimal per slide.`
+    const carouselFramework = `CAROUSEL — 7 SLIDES (write it casual, like you're texting screenshots to a friend):
+S1 COVER: Bold one-liner that promises a clear outcome. Plain English. No logo.
+S2 PROBLEM: Name the pain in their own words. One sentence. Make them go "yep that's me".
+S3 VALUE: Point 1. Keep text minimal — say it like you'd say it out loud.
+S4 VALUE: Point 2. Same vibe.
+S5 VALUE: Point 3. Same vibe.
+S6 PROOF: A real result, number, or short client story. Specific beats clever.
+S7 CTA: One simple ask + handle. "DM me 'word'", "save this for later", "follow for more like this".
+TONE RULES: contractions, short lines, no marketing fluff. Avoid "unlock, leverage, transform, game-changing, elevate". Write to one person.`
 
     const framework = chosenFormat === "carousel" ? carouselFramework : reelFramework
 
-    const systemPrompt = `You are a content strategist remixing a viral Instagram post for a specific business.
+    const systemPrompt = `You're helping a real business owner remix a viral Instagram post into their own content. Write like a normal human — not a marketing agency, not an AI.
 
-BUSINESS CONTEXT:
+ABOUT THEIR BUSINESS:
 ${businessOverview}
 
-YOUR TASK:
-Take the original Instagram post (caption below) and remix its core idea into a NEW ${chosenFormat === "carousel" ? "CAROUSEL" : "SHORT-FORM REEL"} script tailored to the business above.
+YOUR JOB:
+Take the original post (caption below) and rewrite the idea as a NEW ${chosenFormat === "carousel" ? "CAROUSEL" : "SHORT REEL"} script for the business above.
 
-FRAMEWORK TO FOLLOW EXACTLY:
+FOLLOW THIS FRAMEWORK:
 ${framework}
 
-OUTPUT FORMAT:
-Return the remix structured by each step/slide. Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write the actual copy/script the user can use word-for-word. Keep it punchy, specific to the business, and ready to film/publish.`
+HOW TO WRITE:
+- Casual, conversational, relatable. Like you're talking to a mate.
+- Use contractions. Short sentences. Real examples from the business niche.
+- NO AI tells: no "in today's fast-paced world", no "unlock", "leverage", "elevate", "transform", "game-changing", "let's dive in", em dashes everywhere, or robotic intros.
+- NO hashtags, no emojis stuffed in for vibes.
+- Sound like a person who's actually done the thing.
+
+OUTPUT:
+Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write the actual words to say/show — ready to film or post. No commentary, no explanations, just the script.`
 
     const userMessage = `Original Instagram ${chosenFormat === "carousel" ? "post" : "reel"} caption:\n"${postCaption || "(no caption — use the post URL context)"}"\n\nPost URL: ${postUrl}\n\nRemix this into a ${chosenFormat === "carousel" ? "carousel" : "reel"} for my business following the framework exactly.`
 
