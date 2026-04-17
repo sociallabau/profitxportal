@@ -175,19 +175,26 @@ export default function ClientHealth() {
 
   const clientsWithHealth = useMemo(() =>
     clients.map((c: any) => {
-      // Check if this on-ramp client has completed all on-ramp modules
       const clientCompletedKeys = allCompletions
         .filter((cp: any) => cp.user_id === c.id)
         .map((cp: any) => cp.task_key);
       const allOnRampDone = ON_RAMP_MODULE_IDS.every(id => clientCompletedKeys.includes(id));
-      const isOnRamp = !c.tier || c.tier === 'onramp' || c.tier === 'on-ramp';
-      const readyForGrowth = isOnRamp && allOnRampDone;
+
+      const tier = normalizeTier(c.tier);
+      const monthlyRevenue = Number(c.last_total_revenue || 0);
+
+      const eligibleForGrowth = tier === 'onramp' && monthlyRevenue >= 15000;
+      const eligibleForScale  = tier !== 'scale'  && monthlyRevenue >= 32000;
+      const readyForGrowth = eligibleForGrowth || (tier === 'onramp' && allOnRampDone);
 
       return {
         ...c,
         health: calcHealthScore(c),
         conclusion: generateConclusion(c),
         readyForGrowth,
+        eligibleForGrowth,
+        eligibleForScale,
+        monthlyRevenue,
       };
     }).sort((a: any, b: any) => b.health.score - a.health.score),
     [clients, allCompletions]
@@ -197,6 +204,7 @@ export default function ClientHealth() {
   const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
   const redCount   = clientsWithHealth.filter((c: any) => c.health.band === 'red').length;
   const readyToUnlock = clientsWithHealth.filter((c: any) => c.readyForGrowth);
+  const readyForScale = clientsWithHealth.filter((c: any) => c.eligibleForScale);
 
   const { data: pageViewAgg = [] } = useQuery({
     queryKey: ['page-view-agg'],
