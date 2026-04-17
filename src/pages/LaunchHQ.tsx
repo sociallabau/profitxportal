@@ -32,8 +32,8 @@ const STAGES: { key: string; label: string; color: string }[] = [
   { key: 'qualified', label: 'Qualified', color: 'bg-blue-500/15 text-blue-400' },
   { key: 'dmd', label: "DM'd", color: 'bg-amber-500/15 text-amber-400' },
   { key: 'replied', label: 'Replied', color: 'bg-purple-500/15 text-purple-400' },
-  { key: 'positive', label: 'Positive 🔥', color: 'bg-orange-500/15 text-orange-400' },
-  { key: 'booked', label: 'Booked', color: 'bg-emerald-500/15 text-emerald-400' },
+  { key: 'positive', label: 'Positive Reply 🔥', color: 'bg-orange-500/15 text-orange-400' },
+  { key: 'booked', label: 'Booked Call', color: 'bg-emerald-500/15 text-emerald-400' },
   { key: 'passed', label: 'Passed', color: 'bg-destructive/15 text-destructive' },
 ];
 
@@ -237,11 +237,10 @@ export default function LaunchHQ() {
 
 function PreLaunchView({ onLaunch }: { onLaunch: () => void }) {
   const checklist = [
-    { t: 'Profile optimised', d: 'Bio explains who you help & how. Link in bio works. Highlights set up.' },
-    { t: 'Offer locked in', d: 'You know your monthly retainer price + what they get.' },
-    { t: 'Stupidly Simple Ad framework', d: 'Read the module. Know your hook + creative.' },
-    { t: 'Budget ready', d: '$10–$20/day × 5 days = $50–$100 total. Have it on the card.' },
-    { t: 'Calendly link active', d: 'You need a booking link to drop in DMs.' },
+    'Profile Optimised',
+    'Call Out Target Market In Video',
+    "Caption Is 'Follow @(handle) If You're A (Industry)'",
+    'Budget Locked In',
   ];
   return (
     <Card className="p-6">
@@ -249,12 +248,9 @@ function PreLaunchView({ onLaunch }: { onLaunch: () => void }) {
       <p className="text-sm text-muted-foreground mb-4">Tick these off in your head, then hit launch.</p>
       <div className="space-y-3">
         {checklist.map((c) => (
-          <div key={c.t} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-            <div className="w-6 h-6 rounded-full border-2 border-primary/50 shrink-0 mt-0.5" />
-            <div>
-              <div className="font-medium">{c.t}</div>
-              <div className="text-sm text-muted-foreground">{c.d}</div>
-            </div>
+          <div key={c} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border items-center">
+            <div className="w-6 h-6 rounded-full border-2 border-primary/50 shrink-0" />
+            <div className="font-medium">{c}</div>
           </div>
         ))}
       </div>
@@ -369,7 +365,7 @@ function FollowerKanban({ followers, onStageChange, onOpen, onDelete }: any) {
                   <div className="text-xs text-muted-foreground mt-1">{f.dm_history.length} msg{f.dm_history.length > 1 ? 's' : ''}</div>
                 )}
                 <div className="flex gap-1 mt-2 flex-wrap">
-                  {STAGES.filter(s => s.key !== f.stage).slice(0, 3).map(s => (
+                  {STAGES.filter(s => s.key !== f.stage && s.key !== 'passed').map(s => (
                     <button key={s.key} onClick={() => onStageChange(f, s.key)}
                       className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-primary hover:text-primary-foreground transition-colors">
                       → {s.label}
@@ -389,10 +385,8 @@ function FollowerKanban({ followers, onStageChange, onOpen, onDelete }: any) {
 }
 
 function LaunchDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (v: any) => void }) {
-  const [budget, setBudget] = useState(15);
-  const [followers, setFollowers] = useState(0);
-  const [hook, setHook] = useState('');
-  const [offer, setOffer] = useState('');
+  const [budget, setBudget] = useState<string>('');
+  const [industry, setIndustry] = useState('');
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
@@ -400,24 +394,15 @@ function LaunchDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () 
         <div className="space-y-4 mt-2">
           <div>
             <Label>Daily budget ($)</Label>
-            <Input type="number" min={5} max={100} value={budget} onChange={(e) => setBudget(Number(e.target.value))} />
-            <p className="text-xs text-muted-foreground mt-1">Recommended: $10–$20/day for 5 days</p>
+            <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 15" />
           </div>
           <div>
-            <Label>Current follower count</Label>
-            <Input type="number" value={followers} onChange={(e) => setFollowers(Number(e.target.value))} placeholder="Check IG now" />
-            <p className="text-xs text-muted-foreground mt-1">We'll track growth from this baseline</p>
+            <Label>Industry</Label>
+            <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. local gyms" />
           </div>
-          <div>
-            <Label>Ad hook (the line in your reel)</Label>
-            <Input value={hook} onChange={(e) => setHook(e.target.value)} placeholder="e.g. 'Why local gyms are losing $5k/mo on bad reels'" />
-          </div>
-          <div>
-            <Label>Your offer (1 line)</Label>
-            <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="e.g. '$2k/mo content retainer for service businesses'" />
-          </div>
-          <Button onClick={() => onSubmit({ daily_budget: budget, starting_followers: followers, ad_hook: hook, offer_summary: offer })}
-            className="w-full gap-2" size="lg" disabled={!hook || !offer}>
+          <Button
+            onClick={() => onSubmit({ daily_budget: Number(budget) || 0, starting_followers: 0, ad_hook: industry, offer_summary: industry })}
+            className="w-full gap-2" size="lg" disabled={!budget || !industry}>
             <Rocket className="w-4 h-4" /> Launch — go all guns blazing
           </Button>
         </div>
