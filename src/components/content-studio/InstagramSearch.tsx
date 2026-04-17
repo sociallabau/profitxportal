@@ -196,17 +196,20 @@ export default function InstagramSearch() {
 
       {/* Quick Filters (keyword mode) */}
       {mode === 'keyword' && (
-        <div className="flex gap-2 flex-wrap mb-4">
-          {QUICK_FILTERS.map(f => (
-            <button
-              key={f}
-              onClick={() => handleQuickFilter(f)}
-              className="px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <>
+          <p className="text-xs text-muted-foreground mb-2">Showing Reels only from accounts with 5,000+ followers.</p>
+          <div className="flex gap-2 flex-wrap mb-4">
+            {QUICK_FILTERS.map(f => (
+              <button
+                key={f}
+                onClick={() => handleQuickFilter(f)}
+                className="px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Loading Skeletons */}
