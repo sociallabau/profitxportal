@@ -385,10 +385,8 @@ function FollowerKanban({ followers, onStageChange, onOpen, onDelete }: any) {
 }
 
 function LaunchDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (v: any) => void }) {
-  const [budget, setBudget] = useState(15);
-  const [followers, setFollowers] = useState(0);
-  const [hook, setHook] = useState('');
-  const [offer, setOffer] = useState('');
+  const [budget, setBudget] = useState<string>('');
+  const [industry, setIndustry] = useState('');
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
@@ -396,24 +394,15 @@ function LaunchDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () 
         <div className="space-y-4 mt-2">
           <div>
             <Label>Daily budget ($)</Label>
-            <Input type="number" min={5} max={100} value={budget} onChange={(e) => setBudget(Number(e.target.value))} />
-            <p className="text-xs text-muted-foreground mt-1">Recommended: $10–$20/day for 5 days</p>
+            <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 15" />
           </div>
           <div>
-            <Label>Current follower count</Label>
-            <Input type="number" value={followers} onChange={(e) => setFollowers(Number(e.target.value))} placeholder="Check IG now" />
-            <p className="text-xs text-muted-foreground mt-1">We'll track growth from this baseline</p>
+            <Label>Industry</Label>
+            <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. local gyms" />
           </div>
-          <div>
-            <Label>Ad hook (the line in your reel)</Label>
-            <Input value={hook} onChange={(e) => setHook(e.target.value)} placeholder="e.g. 'Why local gyms are losing $5k/mo on bad reels'" />
-          </div>
-          <div>
-            <Label>Your offer (1 line)</Label>
-            <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="e.g. '$2k/mo content retainer for service businesses'" />
-          </div>
-          <Button onClick={() => onSubmit({ daily_budget: budget, starting_followers: followers, ad_hook: hook, offer_summary: offer })}
-            className="w-full gap-2" size="lg" disabled={!hook || !offer}>
+          <Button
+            onClick={() => onSubmit({ daily_budget: Number(budget) || 0, starting_followers: 0, ad_hook: industry, offer_summary: industry })}
+            className="w-full gap-2" size="lg" disabled={!budget || !industry}>
             <Rocket className="w-4 h-4" /> Launch — go all guns blazing
           </Button>
         </div>
