@@ -61,7 +61,7 @@ export default function LaunchHQ() {
       if (!campaign) return [];
       const { data } = await supabase.from('campaign_followers').select('*')
         .eq('campaign_id', campaign.id).order('created_at', { ascending: false });
-      return (data ?? []) as Follower[];
+      return ((data ?? []) as unknown) as Follower[];
     },
     enabled: !!campaign,
   });
