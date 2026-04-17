@@ -82,6 +82,20 @@ export default function InstagramSearch() {
     setResults([]);
     setError(null);
 
+    // Drive a believable progress bar while Apify scrapes (~10-25s)
+    setSearchProgress(2);
+    setSearchStage('Looking up @' + query.trim().replace(/^@/, '') + '…');
+    if (searchTimer.current) window.clearInterval(searchTimer.current);
+    const start = Date.now();
+    searchTimer.current = window.setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const pct = Math.min(94, Math.round((1 - Math.exp(-elapsed / 8)) * 100));
+      setSearchProgress(pct);
+      if (elapsed > 4 && elapsed < 12) setSearchStage('Pulling recent posts…');
+      else if (elapsed >= 12 && elapsed < 20) setSearchStage('Scoring outliers…');
+      else if (elapsed >= 20) setSearchStage('Almost there…');
+    }, 250);
+
     try {
       const { data, error: fnError } = await supabase.functions.invoke("fetch-instagram-content", {
         body: { mode, query: query.trim(), limit: 20 },
@@ -103,7 +117,16 @@ export default function InstagramSearch() {
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
-      setIsLoading(false);
+      if (searchTimer.current) {
+        window.clearInterval(searchTimer.current);
+        searchTimer.current = null;
+      }
+      setSearchProgress(100);
+      window.setTimeout(() => {
+        setIsLoading(false);
+        setSearchProgress(0);
+        setSearchStage('');
+      }, 400);
     }
   };
 
