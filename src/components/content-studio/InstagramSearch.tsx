@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Search, Loader2, ExternalLink, Sparkles, Bookmark, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Loader2, ExternalLink, Sparkles, Bookmark, AlertTriangle, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { Progress } from '@/components/ui/progress';
 
 interface InstagramPost {
   id: string;
