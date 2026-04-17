@@ -663,6 +663,8 @@ export type Database = {
           source_handle: string | null
           source_thumbnail_url: string | null
           source_url: string | null
+          source_video_url: string | null
+          transcript: string | null
           user_id: string
           views: number | null
         }
@@ -678,6 +680,8 @@ export type Database = {
           source_handle?: string | null
           source_thumbnail_url?: string | null
           source_url?: string | null
+          source_video_url?: string | null
+          transcript?: string | null
           user_id: string
           views?: number | null
         }
@@ -693,6 +697,8 @@ export type Database = {
           source_handle?: string | null
           source_thumbnail_url?: string | null
           source_url?: string | null
+          source_video_url?: string | null
+          transcript?: string | null
           user_id?: string
           views?: number | null
         }
