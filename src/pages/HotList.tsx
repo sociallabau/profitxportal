@@ -9,10 +9,12 @@ interface HotListCard {
   id: string;
   user_id: string;
   name: string;
-  instagram_handle?: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
+  business_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  source?: string | null;
+  deal_value?: number | null;
+  notes?: string | null;
   column_id: string;
   position: number;
   created_at: string;
@@ -20,13 +22,27 @@ interface HotListCard {
 }
 
 const COLUMNS = [
-  { id: 'new', label: '🔥 New Lead' },
-  { id: 'contacted', label: '📬 Contacted' },
-  { id: 'nurturing', label: '💬 Nurturing' },
-  { id: 'closed', label: '✅ Closed' },
+  { id: 'reached_out', label: '📤 Reached Out' },
+  { id: 'call_taken', label: '📞 Call Taken / Proposal Sent' },
+  { id: 'needs_push', label: '⏰ Needs Push for Meeting' },
+  { id: 'meeting_taken', label: '🤝 Meeting Taken' },
+  { id: 'two_stage_close', label: '🎯 Needs 2-Stage Close' },
+  { id: 'one_off_closed', label: '💵 One-Off Closed' },
+  { id: 'retainer_closed', label: '✅ Retainer Closed' },
 ];
 
-const emptyForm = { name: '', instagram_handle: '', email: '', phone: '', notes: '', column_id: 'new' };
+const DEFAULT_COL = COLUMNS[0].id;
+
+const emptyForm = {
+  name: '',
+  business_name: '',
+  phone: '',
+  email: '',
+  source: '',
+  deal_value: '',
+  notes: '',
+  column_id: DEFAULT_COL,
+};
 
 export default function HotList() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -49,11 +65,11 @@ export default function HotList() {
       .select('*')
       .eq('user_id', user!.id)
       .order('position', { ascending: true });
-    if (!error && data) setCards(data as HotListCard[]);
+    if (!error && data) setCards(data as any as HotListCard[]);
     setLoading(false);
   };
 
-  const openAdd = (colId = 'new') => {
+  const openAdd = (colId = DEFAULT_COL) => {
     setEditingCard(null);
     setForm({ ...emptyForm, column_id: colId });
     setModalOpen(true);
@@ -63,9 +79,11 @@ export default function HotList() {
     setEditingCard(card);
     setForm({
       name: card.name,
-      instagram_handle: card.instagram_handle || '',
-      email: card.email || '',
+      business_name: card.business_name || '',
       phone: card.phone || '',
+      email: card.email || '',
+      source: card.source || '',
+      deal_value: card.deal_value != null ? String(card.deal_value) : '',
       notes: card.notes || '',
       column_id: card.column_id,
     });
@@ -75,29 +93,30 @@ export default function HotList() {
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required'); return; }
     setSaving(true);
+    const dealValueNum = form.deal_value.trim() ? Number(form.deal_value) : null;
+    const payload = {
+      name: form.name,
+      business_name: form.business_name || null,
+      phone: form.phone || null,
+      email: form.email || null,
+      source: form.source || null,
+      deal_value: Number.isFinite(dealValueNum as number) ? dealValueNum : null,
+      notes: form.notes || null,
+      column_id: form.column_id,
+    };
     if (editingCard) {
       const { error } = await supabase.from('hot_list').update({
-        name: form.name,
-        instagram_handle: form.instagram_handle || null,
-        email: form.email || null,
-        phone: form.phone || null,
-        notes: form.notes || null,
-        column_id: form.column_id,
+        ...payload,
         updated_at: new Date().toISOString(),
-      }).eq('id', editingCard.id);
+      } as any).eq('id', editingCard.id);
       if (error) toast.error('Failed to update');
       else toast.success('Lead updated');
     } else {
       const { error } = await supabase.from('hot_list').insert({
         user_id: user!.id,
-        name: form.name,
-        instagram_handle: form.instagram_handle || null,
-        email: form.email || null,
-        phone: form.phone || null,
-        notes: form.notes || null,
-        column_id: form.column_id,
+        ...payload,
         position: cards.filter(c => c.column_id === form.column_id).length,
-      });
+      } as any);
       if (error) toast.error('Failed to add lead');
       else toast.success('Lead added');
     }
@@ -127,6 +146,8 @@ export default function HotList() {
 
   if (authLoading || loading) return null;
 
+  const inputCls = "w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
+
   return (
     <PageLayout>
       <div className="flex items-center justify-between mb-6">
@@ -151,7 +172,7 @@ export default function HotList() {
               onDragOver={e => { e.preventDefault(); setDragOverCol(col.id); }}
               onDragLeave={() => setDragOverCol(null)}
               onDrop={() => handleDrop(col.id)}
-              className={`flex-1 min-w-[260px] rounded-xl p-3 transition-colors ${
+              className={`flex-shrink-0 w-[260px] rounded-xl p-3 transition-colors ${
                 dragOverCol === col.id ? 'bg-accent/50 ring-2 ring-primary' : 'bg-muted/30'
               }`}
             >
@@ -178,10 +199,21 @@ export default function HotList() {
                       </button>
                     </div>
                   </div>
-                  {card.instagram_handle && (
-                    <p className="text-xs text-muted-foreground">@{card.instagram_handle.replace('@', '')}</p>
+                  {card.business_name && (
+                    <p className="text-xs text-foreground/80">{card.business_name}</p>
                   )}
                   {card.email && <p className="text-xs text-muted-foreground">{card.email}</p>}
+                  {card.phone && <p className="text-xs text-muted-foreground">{card.phone}</p>}
+                  <div className="flex gap-2 mt-1 flex-wrap">
+                    {card.source && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{card.source}</span>
+                    )}
+                    {card.deal_value != null && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-semibold">
+                        ${Number(card.deal_value).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                   {card.notes && (
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{card.notes}</p>
                   )}
@@ -204,7 +236,7 @@ export default function HotList() {
         <>
           <div className="fixed inset-0 z-40 bg-background/70" onClick={() => setModalOpen(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-card border border-border rounded-xl w-full max-w-md p-6">
+            <div className="bg-card border border-border rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-foreground">{editingCard ? 'Edit Lead' : 'Add Lead'}</h2>
                 <button onClick={() => setModalOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -218,35 +250,50 @@ export default function HotList() {
                   placeholder="Name *"
                   value={form.name}
                   onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className={inputCls}
                 />
                 <input
                   type="text"
-                  placeholder="@instagram_handle"
-                  value={form.instagram_handle}
-                  onChange={e => setForm(p => ({ ...p, instagram_handle: e.target.value }))}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={form.email}
-                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  placeholder="Business name"
+                  value={form.business_name}
+                  onChange={e => setForm(p => ({ ...p, business_name: e.target.value }))}
+                  className={inputCls}
                 />
                 <input
                   type="tel"
                   placeholder="Phone"
                   value={form.phone}
                   onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className={inputCls}
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  className={inputCls}
+                />
+                <input
+                  type="text"
+                  placeholder="Source (e.g. Instagram, referral)"
+                  value={form.source}
+                  onChange={e => setForm(p => ({ ...p, source: e.target.value }))}
+                  className={inputCls}
+                />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="$ Value"
+                  value={form.deal_value}
+                  onChange={e => setForm(p => ({ ...p, deal_value: e.target.value }))}
+                  className={inputCls}
                 />
                 <textarea
                   placeholder="Notes"
                   rows={3}
                   value={form.notes}
                   onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                  className={`${inputCls} resize-none`}
                 />
 
                 {/* Stage selector */}
