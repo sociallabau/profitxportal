@@ -251,23 +251,56 @@ export default function ClientHealth() {
 
       {/* Unlock Growth notification */}
       {readyToUnlock.length > 0 && (
-        <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
+        <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpCircle className="w-5 h-5 text-purple-400" />
             <h2 className="text-sm font-bold text-purple-400">Ready to Unlock Growth Tier</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            {readyToUnlock.length === 1 ? 'This client has' : `${readyToUnlock.length} clients have`} completed all On-Ramp modules and {readyToUnlock.length === 1 ? 'is' : 'are'} ready to move to Growth.
+            {readyToUnlock.length === 1 ? 'This client is' : `${readyToUnlock.length} clients are`} eligible for Growth — hit $15k+/month or finished all On-Ramp modules.
           </p>
           <div className="space-y-2">
             {readyToUnlock.map((client: any) => (
               <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
-                <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
+                <div>
+                  <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
+                  {client.monthlyRevenue > 0 && (
+                    <span className="ml-2 text-xs text-muted-foreground">${Number(client.monthlyRevenue).toLocaleString()}/mo</span>
+                  )}
+                </div>
                 <button
                   onClick={() => changeTier.mutate({ clientId: client.id, tier: 'growth' })}
                   className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition"
                 >
                   Unlock Growth →
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {readyForScale.length > 0 && (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowUpCircle className="w-5 h-5 text-orange-400" />
+            <h2 className="text-sm font-bold text-orange-400">Ready to Unlock Scale Tier</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            {readyForScale.length === 1 ? 'This client has' : `${readyForScale.length} clients have`} hit $32k+/month — eligible for Scale.
+          </p>
+          <div className="space-y-2">
+            {readyForScale.map((client: any) => (
+              <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
+                <div>
+                  <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">${Number(client.monthlyRevenue).toLocaleString()}/mo</span>
+                </div>
+                <button
+                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'scale' })}
+                  className="px-3 py-1 text-xs font-bold rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition"
+                >
+                  Unlock Scale →
                 </button>
               </div>
             ))}
