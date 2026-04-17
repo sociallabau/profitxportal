@@ -1,16 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  const location = useLocation();
+  const [status, setStatus] = useState<'loading' | 'unauthenticated' | 'needs-onboarding' | 'ready'>('loading');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setStatus(session ? 'authenticated' : 'unauthenticated');
-    });
-  }, []);
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (!session) { setStatus('unauthenticated'); return; }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarded, is_admin')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      // Admins skip onboarding gate
+      if (profile?.is_admin) { setStatus('ready'); return; }
+      setStatus(profile?.onboarded ? 'ready' : 'needs-onboarding');
+    })();
+    return () => { cancelled = true; };
+  }, [location.pathname]);
 
   if (status === 'loading') {
     return (
@@ -22,6 +38,10 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (status === 'unauthenticated') {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (status === 'needs-onboarding' && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <>{children}</>;
