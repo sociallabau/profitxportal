@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Rocket, Plus, Copy, Check, Sparkles, Trash2, ArrowRight, Flame, X, Users, Target } from 'lucide-react';
+import { Rocket, Plus, Copy, Check, Sparkles, Trash2, ArrowRight, Flame, X, Users, Target, Lock } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,16 @@ export default function LaunchHQ() {
   const [bulkHandles, setBulkHandles] = useState('');
   const [openFollower, setOpenFollower] = useState<Follower | null>(null);
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile-tier-launch', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('tier').eq('id', user!.id).single();
+      return data;
+    },
+    enabled: !!user,
+  });
+  const isUnlocked = profile?.tier && profile.tier !== 'onramp';
+
   const { data: campaign } = useQuery({
     queryKey: ['active-campaign', user?.id],
     queryFn: async () => {
@@ -52,7 +62,7 @@ export default function LaunchHQ() {
         .eq('user_id', user.id).eq('status', 'active').maybeSingle();
       return data as Campaign | null;
     },
-    enabled: !!user,
+    enabled: !!user && !!isUnlocked,
   });
 
   const { data: followers = [] } = useQuery({
@@ -154,6 +164,20 @@ export default function LaunchHQ() {
   });
 
   if (loading || !user) return null;
+
+  if (!isUnlocked) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+          <Lock className="w-10 h-10 text-primary" />
+          <h1 className="text-2xl font-bold flex items-center gap-2"><Rocket className="w-6 h-6 text-primary" /> Launch Command Centre</h1>
+          <p className="text-muted-foreground max-w-md">
+            Launch HQ unlocks once you've finished your Onramp. Complete your foundations first — then it's all guns blazing.
+          </p>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
