@@ -124,14 +124,14 @@ Deno.serve(async (req) => {
     let posts = items.map((p: any) => {
       const productType = (p.productType || p.product_type || "").toString().toLowerCase()
       const typeStr = (p.type || "").toString().toLowerCase()
-      const isVideo = !!(p.videoUrl || p.videoPlayUrl || p.video_url || p.isVideo || p.is_video)
-      const isReel = productType.includes("clips") || productType === "reel" || typeStr === "video" || typeStr === "reel" || (isVideo && (p.videoDuration || p.video_duration || 0) <= 90)
+      const isVideo = !!(p.videoUrl || p.videoPlayUrl || p.video_url || p.isVideo || p.is_video) || typeStr === "video" || productType.includes("clips") || productType === "reel"
+      const isReel = productType.includes("clips") || productType === "reel" || typeStr === "video" || typeStr === "reel" || isVideo
       return {
         id: p.id || p.shortCode || p.shortcode,
         shortCode: p.shortCode || p.shortcode || "",
         thumbnail: p.displayUrl || p.imageUrl || p.thumbnailUrl || p.thumbnail_src || p.thumbnailSrc || "",
         videoUrl: p.videoUrl || p.videoPlayUrl || p.video_url || null,
-        postUrl: p.url || `https://www.instagram.com/${(productType.includes("clips") || typeStr === "reel") ? "reel" : "p"}/${p.shortCode || p.shortcode}/`,
+        postUrl: p.url || `https://www.instagram.com/${isReel ? "reel" : "p"}/${p.shortCode || p.shortcode}/`,
         caption: p.caption || p.alt || p.edge_media_to_caption?.edges?.[0]?.node?.text || "",
         likes: p.likesCount || p.likes || p.edge_liked_by?.count || p.edge_media_preview_like?.count || 0,
         comments: p.commentsCount || p.comments || p.edge_media_to_comment?.count || 0,
@@ -145,16 +145,37 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Keyword mode: only Reels + accounts with >= 5000 followers (when follower count is known)
+    // Keyword mode: only Reels (videos), then enrich with follower counts and filter to 5k+
     if (mode === "keyword") {
-      const before = posts.length
-      posts = posts.filter((p: any) => p.isReel && (p.ownerFollowers === 0 || p.ownerFollowers >= 5000))
-      // If we have follower data on some posts, drop the ones with 0 (unknown)
-      const hasFollowerData = posts.some((p: any) => p.ownerFollowers > 0)
-      if (hasFollowerData) {
-        posts = posts.filter((p: any) => p.ownerFollowers >= 5000)
-      }
-      console.log(`Keyword filter: ${before} -> ${posts.length} (reels + 5k+ followers)`)
+      const beforeReels = posts.length
+      posts = posts.filter((p: any) => p.isReel)
+      console.log(`Reels filter: ${beforeReels} -> ${posts.length}`)
+
+      // Enrich top candidates with follower count (parallel profile lookups, capped to 12)
+      const candidates = posts.slice(0, 12).filter((p: any) => p.ownerUsername)
+      const uniqueHandles = [...new Set(candidates.map((p: any) => p.ownerUsername))]
+      console.log(`Enriching ${uniqueHandles.length} unique profiles for follower counts`)
+
+      const followerMap = new Map<string, number>()
+      await Promise.all(uniqueHandles.map(async (handle: string) => {
+        try {
+          const profileUrl = `${APIFY_BASE}/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}&timeout=30&memory=256`
+          const r = await fetch(profileUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ usernames: [handle] }),
+          })
+          if (!r.ok) return
+          const arr = await r.json()
+          const followers = arr?.[0]?.followersCount || arr?.[0]?.followers_count || 0
+          followerMap.set(handle, followers)
+        } catch (_) { /* swallow */ }
+      }))
+
+      posts = posts
+        .map((p: any) => ({ ...p, ownerFollowers: followerMap.get(p.ownerUsername) || p.ownerFollowers || 0 }))
+        .filter((p: any) => p.ownerFollowers >= 5000)
+      console.log(`After 5k+ follower filter: ${posts.length}`)
     }
 
     posts = posts.slice(0, 24)
