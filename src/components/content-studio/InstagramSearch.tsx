@@ -64,9 +64,15 @@ export default function InstagramSearch() {
   const [remixStage, setRemixStage] = useState<string>('');
   const progressTimer = useRef<number | null>(null);
 
+  // Search progress bar
+  const [searchProgress, setSearchProgress] = useState(0);
+  const [searchStage, setSearchStage] = useState<string>('');
+  const searchTimer = useRef<number | null>(null);
+
   useEffect(() => {
     return () => {
       if (progressTimer.current) window.clearInterval(progressTimer.current);
+      if (searchTimer.current) window.clearInterval(searchTimer.current);
     };
   }, []);
 
