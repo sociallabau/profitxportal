@@ -118,6 +118,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <GoalCountdown currentMrr={Number(latest?.mrr_manual || latest?.mrr || 0)} />
+
       {(() => {
         const margin = latestRevenue > 0 ? (latestProfit / latestRevenue) * 100 : 0;
         const marginColor = margin >= 30 ? 'text-green-400' : margin >= 15 ? 'text-yellow-400' : margin >= 0 ? 'text-orange-400' : 'text-destructive';
