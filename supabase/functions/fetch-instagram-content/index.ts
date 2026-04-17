@@ -61,19 +61,24 @@ Deno.serve(async (req) => {
         directUrls: [`https://www.instagram.com/${handle}/`],
         resultsType: "posts",
         resultsLimit: 24,
-        addParentData: true,
+        addParentData: false,
       }
     } else {
       const keyword = query.replace(/^#/, "").trim().replace(/\s+/g, "")
+      // Use directUrls for hashtag search — more reliable than `hashtags` param
       apifyInput = {
-        hashtags: [`#${keyword}`],
+        directUrls: [`https://www.instagram.com/explore/tags/${keyword}/`],
         resultsType: "posts",
         resultsLimit: 24,
         addParentData: false,
+        searchType: "hashtag",
+        searchLimit: 1,
       }
     }
 
-    const apifyUrl = `${APIFY_BASE}/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${APIFY_TOKEN}&timeout=55&memory=256`
+    console.log("Apify input:", JSON.stringify(apifyInput))
+
+    const apifyUrl = `${APIFY_BASE}/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${APIFY_TOKEN}&timeout=90&memory=512`
 
     const apifyResponse = await fetch(apifyUrl, {
       method: "POST",
