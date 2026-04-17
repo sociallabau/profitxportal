@@ -237,11 +237,10 @@ export default function LaunchHQ() {
 
 function PreLaunchView({ onLaunch }: { onLaunch: () => void }) {
   const checklist = [
-    { t: 'Profile optimised', d: 'Bio explains who you help & how. Link in bio works. Highlights set up.' },
-    { t: 'Offer locked in', d: 'You know your monthly retainer price + what they get.' },
-    { t: 'Stupidly Simple Ad framework', d: 'Read the module. Know your hook + creative.' },
-    { t: 'Budget ready', d: '$10–$20/day × 5 days = $50–$100 total. Have it on the card.' },
-    { t: 'Calendly link active', d: 'You need a booking link to drop in DMs.' },
+    'Profile Optimised',
+    'Call Out Target Market In Video',
+    "Caption Is 'Follow @(handle) If You're A (Industry)'",
+    'Budget Locked In',
   ];
   return (
     <Card className="p-6">
