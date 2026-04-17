@@ -235,20 +235,32 @@ export default function InstagramSearch() {
         </button>
       </div>
 
-      {/* Loading Skeletons */}
+      {/* Search progress + Loading Skeletons */}
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
-              <div className="aspect-video bg-muted" />
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-muted rounded w-1/3" />
-                <div className="h-3 bg-muted rounded w-full" />
-                <div className="h-3 bg-muted rounded w-2/3" />
-              </div>
+        <>
+          <div className="mb-4 bg-card border border-border rounded-lg p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-foreground/80 flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {searchStage}
+              </span>
+              <span className="text-[10px] text-muted-foreground">{searchProgress}%</span>
             </div>
-          ))}
-        </div>
+            <Progress value={searchProgress} className="h-1.5" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
+                <div className="aspect-video bg-muted" />
+                <div className="p-4 space-y-2">
+                  <div className="h-4 bg-muted rounded w-1/3" />
+                  <div className="h-3 bg-muted rounded w-full" />
+                  <div className="h-3 bg-muted rounded w-2/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Results Grid */}
