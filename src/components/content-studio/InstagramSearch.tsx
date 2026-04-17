@@ -54,8 +54,21 @@ export default function InstagramSearch() {
   // Inline remix state per post
   const [remixingId, setRemixingId] = useState<string | null>(null);
   const [remixResults, setRemixResults] = useState<Record<string, string>>({});
+  const [remixSummaries, setRemixSummaries] = useState<Record<string, string>>({});
   const [remixErrors, setRemixErrors] = useState<Record<string, string>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showSummaryId, setShowSummaryId] = useState<string | null>(null);
+
+  // Fake-progress bar while remixing (gives perceived progress for the 5-15s call)
+  const [remixProgress, setRemixProgress] = useState(0);
+  const [remixStage, setRemixStage] = useState<string>('');
+  const progressTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (progressTimer.current) window.clearInterval(progressTimer.current);
+    };
+  }, []);
 
   const searchInstagram = async () => {
     if (!query.trim()) return;
