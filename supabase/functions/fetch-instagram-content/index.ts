@@ -95,6 +95,10 @@ Deno.serve(async (req) => {
     }
 
     const rawPosts = await apifyResponse.json()
+    console.log(`Apify returned ${Array.isArray(rawPosts) ? rawPosts.length : 0} items`)
+    if (Array.isArray(rawPosts) && rawPosts.length > 0) {
+      console.log("Sample item keys:", Object.keys(rawPosts[0]).join(","))
+    }
 
     if (!Array.isArray(rawPosts) || rawPosts.length === 0) {
       return new Response(
@@ -103,20 +107,31 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Hashtag search may return a wrapper object with `topPosts`/`latestPosts` arrays
+    let items: any[] = rawPosts
+    if (rawPosts.length > 0 && (rawPosts[0].topPosts || rawPosts[0].latestPosts)) {
+      const wrapper = rawPosts[0]
+      items = [...(wrapper.topPosts || []), ...(wrapper.latestPosts || [])]
+      console.log(`Unwrapped hashtag results: ${items.length} posts`)
+    }
+
+    // Filter out items that are clearly not posts (no shortcode/id)
+    items = items.filter((p: any) => p && (p.shortCode || p.shortcode || p.id))
+
     // Map to consistent shape
-    const posts = rawPosts.map((p: any) => ({
-      id: p.id || p.shortCode,
-      shortCode: p.shortCode || "",
-      thumbnail: p.displayUrl || p.imageUrl || p.thumbnailUrl || "",
-      videoUrl: p.videoUrl || p.videoPlayUrl || null,
-      postUrl: p.url || `https://www.instagram.com/p/${p.shortCode}/`,
-      caption: p.caption || p.alt || "",
-      likes: p.likesCount || p.likes || 0,
-      comments: p.commentsCount || p.comments || 0,
-      views: p.videoViewCount || p.views || p.playsCount || 0,
-      timestamp: p.timestamp || p.takenAt || "",
-      ownerUsername: p.ownerUsername || p.username || "",
-      type: p.type || "Image",
+    const posts = items.map((p: any) => ({
+      id: p.id || p.shortCode || p.shortcode,
+      shortCode: p.shortCode || p.shortcode || "",
+      thumbnail: p.displayUrl || p.imageUrl || p.thumbnailUrl || p.thumbnail_src || p.thumbnailSrc || "",
+      videoUrl: p.videoUrl || p.videoPlayUrl || p.video_url || null,
+      postUrl: p.url || `https://www.instagram.com/p/${p.shortCode || p.shortcode}/`,
+      caption: p.caption || p.alt || p.edge_media_to_caption?.edges?.[0]?.node?.text || "",
+      likes: p.likesCount || p.likes || p.edge_liked_by?.count || p.edge_media_preview_like?.count || 0,
+      comments: p.commentsCount || p.comments || p.edge_media_to_comment?.count || 0,
+      views: p.videoViewCount || p.views || p.playsCount || p.video_view_count || 0,
+      timestamp: p.timestamp || p.takenAt || p.taken_at_timestamp || "",
+      ownerUsername: p.ownerUsername || p.username || p.owner?.username || "",
+      type: p.type || (p.isVideo || p.is_video ? "Video" : "Image"),
       outlierScore: 1.0,
     }))
 
