@@ -365,7 +365,7 @@ function FollowerKanban({ followers, onStageChange, onOpen, onDelete }: any) {
                   <div className="text-xs text-muted-foreground mt-1">{f.dm_history.length} msg{f.dm_history.length > 1 ? 's' : ''}</div>
                 )}
                 <div className="flex gap-1 mt-2 flex-wrap">
-                  {STAGES.filter(s => s.key !== f.stage).slice(0, 3).map(s => (
+                  {STAGES.filter(s => s.key !== f.stage && s.key !== 'passed').map(s => (
                     <button key={s.key} onClick={() => onStageChange(f, s.key)}
                       className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-primary hover:text-primary-foreground transition-colors">
                       → {s.label}
