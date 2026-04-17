@@ -165,6 +165,20 @@ export default function LaunchHQ() {
 
   if (loading || !user) return null;
 
+  if (!isUnlocked) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+          <Lock className="w-10 h-10 text-primary" />
+          <h1 className="text-2xl font-bold flex items-center gap-2"><Rocket className="w-6 h-6 text-primary" /> Launch Command Centre</h1>
+          <p className="text-muted-foreground max-w-md">
+            Launch HQ unlocks once you've finished your Onramp. Complete your foundations first — then it's all guns blazing.
+          </p>
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout>
       <div className="space-y-6">
