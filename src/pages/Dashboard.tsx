@@ -120,6 +120,18 @@ export default function Dashboard() {
 
       <GoalCountdown currentMrr={Number(latest?.mrr_manual || latest?.mrr || 0)} />
 
+      {(monthlyHistory?.length ?? 0) === 0 && (
+        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-6 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-foreground">👋 Welcome! Log last month's numbers to set your baseline.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Takes 3 minutes — unlocks your dashboard, trends and goal tracking.</p>
+          </div>
+          <button onClick={() => navigate('/submissions/monthly')} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition shrink-0">
+            Submit Last Month →
+          </button>
+        </div>
+      )}
+
       {(() => {
         const margin = latestRevenue > 0 ? (latestProfit / latestRevenue) * 100 : 0;
         const marginColor = margin >= 30 ? 'text-green-400' : margin >= 15 ? 'text-yellow-400' : margin >= 0 ? 'text-orange-400' : 'text-destructive';
