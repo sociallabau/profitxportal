@@ -329,6 +329,9 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          retainer_tier_1: number | null
+          retainer_tier_2: number | null
+          retainer_tier_3: number | null
           starting_mrr: number | null
           target_date: string | null
           target_mrr: number
@@ -338,6 +341,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          retainer_tier_1?: number | null
+          retainer_tier_2?: number | null
+          retainer_tier_3?: number | null
           starting_mrr?: number | null
           target_date?: string | null
           target_mrr: number
@@ -347,6 +353,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          retainer_tier_1?: number | null
+          retainer_tier_2?: number | null
+          retainer_tier_3?: number | null
           starting_mrr?: number | null
           target_date?: string | null
           target_mrr?: number
