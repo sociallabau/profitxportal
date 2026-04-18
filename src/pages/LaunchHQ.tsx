@@ -126,18 +126,23 @@ export default function LaunchHQ() {
 
   const setStage = async (f: Follower, stage: string) => {
     let hot_list_id = f.hot_list_id;
-    if (stage === 'positive' && !hot_list_id) {
+    if ((stage === 'positive' || stage === 'booked') && !hot_list_id) {
       const dmText = f.dm_history.map(m => `${m.role === 'me' ? 'Me' : 'Them'}: ${m.text}`).join('\n');
-      const { data } = await supabase.from('hot_list').insert({
+      const { data, error } = await supabase.from('hot_list').insert({
         user_id: user!.id,
         name: `@${f.handle}`,
         instagram_handle: f.handle,
         source: 'IG Ad Campaign',
-        column_id: 'new',
-        notes: `From Launch Command Centre.\n\n${dmText}${f.notes ? `\n\nNotes: ${f.notes}` : ''}`,
+        column_id: stage === 'booked' ? 'call_booked' : 'new',
+        notes: `From Launch Command Centre.${dmText ? `\n\n${dmText}` : ''}${f.notes ? `\n\nNotes: ${f.notes}` : ''}`,
       }).select('id').single();
-      hot_list_id = data?.id ?? null;
-      if (hot_list_id) toast({ title: '🔥 Sent to Hot List!', description: 'Now go close them.' });
+      if (error) {
+        toast({ title: 'Could not add to Hot List', description: error.message, variant: 'destructive' });
+      } else {
+        hot_list_id = data?.id ?? null;
+        qc.invalidateQueries({ queryKey: ['hot-list'] });
+        if (hot_list_id) toast({ title: '🔥 Sent to Hot List!', description: 'Now go close them.' });
+      }
     }
     updateFollower.mutate({ id: f.id, patch: { stage, hot_list_id } });
   };
