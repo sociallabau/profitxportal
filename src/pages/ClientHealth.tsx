@@ -6,6 +6,7 @@ import {
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 const TIER_OPTIONS = [
   { value: 'onramp', label: 'On-Ramp' },
