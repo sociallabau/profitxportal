@@ -20,9 +20,16 @@ export function useGoal() {
   });
 
   const setGoal = useMutation({
-    mutationFn: async (values: { target_mrr: number; starting_mrr: number; target_date: string }) => {
+    mutationFn: async (values: {
+      target_mrr: number;
+      starting_mrr: number;
+      target_date: string;
+      retainer_tier_1?: number | null;
+      retainer_tier_2?: number | null;
+      retainer_tier_3?: number | null;
+    }) => {
       const { error } = await supabase.from('goals').upsert(
-        { user_id: user!.id, ...values },
+        { user_id: user!.id, ...values } as any,
         { onConflict: 'user_id' }
       );
       if (error) throw error;
