@@ -133,7 +133,7 @@ export default function LaunchHQ() {
         name: `@${f.handle}`,
         instagram_handle: f.handle,
         source: 'IG Ad Campaign',
-        column_id: stage === 'booked' ? 'call_booked' : 'new',
+        column_id: 'reached_out',
         notes: `From Launch Command Centre.${dmText ? `\n\n${dmText}` : ''}${f.notes ? `\n\nNotes: ${f.notes}` : ''}`,
       }).select('id').single();
       if (error) {
