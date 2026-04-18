@@ -67,8 +67,8 @@ const App = () => (
           <Route path="/cash-menu" element={<ProtectedRoute><CashMenu /></ProtectedRoute>} />
           <Route path="/wins" element={<ProtectedRoute><WinsWall /></ProtectedRoute>} />
           <Route path="/module/:moduleId" element={<ProtectedRoute><ModulePage /></ProtectedRoute>} />
-          <Route path="/submissions/clients" element={<AdminRoute><NewClients /></AdminRoute>} />
-          <Route path="/submissions/monthly" element={<AdminRoute><MonthlyTotals /></AdminRoute>} />
+          <Route path="/submissions/clients" element={<ProtectedRoute><NewClients /></ProtectedRoute>} />
+          <Route path="/submissions/monthly" element={<ProtectedRoute><MonthlyTotals /></ProtectedRoute>} />
           <Route path="/client-health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />

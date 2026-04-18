@@ -126,13 +126,24 @@ export default function ClientHealth() {
   const changeTier = useMutation({
     mutationFn: async ({ clientId, tier }: { clientId: string; tier: string }) => {
       const nextTier = normalizeTier(tier);
-      const { error } = await supabase.from('profiles').update({ tier: nextTier }).eq('id', clientId);
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ tier: nextTier })
+        .eq('id', clientId)
+        .select('id, tier');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Tier update blocked — no rows updated. Check admin permissions.');
+      }
       return nextTier;
     },
     onSuccess: (nextTier) => {
       qc.invalidateQueries({ queryKey: ['admin-client-overview'] });
       setSelectedClient((prev: any) => prev ? { ...prev, tier: nextTier } : prev);
+      toast.success(`Tier updated to ${formatTierLabel(nextTier)}`);
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to update tier');
     },
   });
 
