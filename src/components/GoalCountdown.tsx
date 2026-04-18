@@ -6,12 +6,18 @@ interface Props {
   currentMrr: number;
 }
 
-const RETAINER_TIERS = [2000, 3000, 4000];
-
 export default function GoalCountdown({ currentMrr }: Props) {
   const { goal } = useGoal();
   const navigate = useNavigate();
-  const goalData = goal.data;
+  const goalData = goal.data as any;
+
+  const retainerTiers = [
+    goalData?.retainer_tier_1,
+    goalData?.retainer_tier_2,
+    goalData?.retainer_tier_3,
+  ]
+    .map((v) => Number(v))
+    .filter((v) => v > 0);
 
   if (!goalData?.target_mrr || !goalData?.target_date) {
     return (
@@ -80,22 +86,30 @@ export default function GoalCountdown({ currentMrr }: Props) {
       </div>
 
       {gap > 0 ? (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Retainers needed to close the gap</p>
-          <div className="grid grid-cols-3 gap-3">
-            {RETAINER_TIERS.map((price) => {
-              const needed = Math.ceil(gap / price);
-              const perWeek = daysLeft > 0 ? (needed / (daysLeft / 7)).toFixed(1) : '∞';
-              return (
-                <div key={price} className="bg-background/50 border border-border rounded-lg p-3 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">${(price / 1000)}k retainer</p>
-                  <p className="text-2xl font-bold text-primary">{needed}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">~{perWeek}/week</p>
-                </div>
-              );
-            })}
+        retainerTiers.length === 0 ? (
+          <div className="bg-background/50 border border-border border-dashed rounded-lg p-4 text-center">
+            <p className="text-xs text-muted-foreground mb-2">Add your retainer prices in Settings to see how many clients you need to hit your goal.</p>
+            <button onClick={() => navigate('/settings')} className="text-xs font-semibold text-primary hover:underline">Set retainer tiers →</button>
           </div>
-        </div>
+        ) : (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Retainers needed to close the gap</p>
+            <div className={`grid gap-3 ${retainerTiers.length === 1 ? 'grid-cols-1' : retainerTiers.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {retainerTiers.map((price) => {
+                const needed = Math.ceil(gap / price);
+                const perWeek = daysLeft > 0 ? (needed / (daysLeft / 7)).toFixed(1) : '∞';
+                const label = price >= 1000 && price % 1000 === 0 ? `$${price / 1000}k retainer` : `$${price.toLocaleString()} retainer`;
+                return (
+                  <div key={price} className="bg-background/50 border border-border rounded-lg p-3 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                    <p className="text-2xl font-bold text-primary">{needed}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">~{perWeek}/week</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )
       ) : onTrack ? (
         <p className="text-sm text-green-400 font-semibold text-center py-2">🎉 You've hit your MRR goal — push for the stretch!</p>
       ) : (

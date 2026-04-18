@@ -19,6 +19,9 @@ export default function SettingsPage() {
   const [targetMrr, setTargetMrr] = useState('');
   const [startingMrr, setStartingMrr] = useState('');
   const [targetDate, setTargetDate] = useState('');
+  const [tier1, setTier1] = useState('');
+  const [tier2, setTier2] = useState('');
+  const [tier3, setTier3] = useState('');
 
   useEffect(() => {
     if (profile?.full_name) setFullName(profile.full_name);
@@ -27,9 +30,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (goalData) {
-      setTargetMrr(String(goalData.target_mrr ?? ''));
-      setStartingMrr(String(goalData.starting_mrr ?? ''));
-      setTargetDate(goalData.target_date ?? '');
+      const g = goalData as any;
+      setTargetMrr(String(g.target_mrr ?? ''));
+      setStartingMrr(String(g.starting_mrr ?? ''));
+      setTargetDate(g.target_date ?? '');
+      setTier1(g.retainer_tier_1 != null ? String(g.retainer_tier_1) : '');
+      setTier2(g.retainer_tier_2 != null ? String(g.retainer_tier_2) : '');
+      setTier3(g.retainer_tier_3 != null ? String(g.retainer_tier_3) : '');
     }
   }, [goalData]);
 
@@ -162,9 +169,31 @@ export default function SettingsPage() {
                   className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none" />
               </div>
             </div>
+            <div className="mb-3">
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Your Retainer Prices ($ / month)</label>
+              <p className="text-xs text-muted-foreground mb-2">Add 2–3 retainer tiers you actually offer. We use these to show how many clients you need to close to hit your goal.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input type="number" value={tier1} onChange={e => setTier1(e.target.value)}
+                  placeholder="Tier 1 e.g. 1500"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none" />
+                <input type="number" value={tier2} onChange={e => setTier2(e.target.value)}
+                  placeholder="Tier 2 e.g. 3000"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none" />
+                <input type="number" value={tier3} onChange={e => setTier3(e.target.value)}
+                  placeholder="Tier 3 (optional)"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none" />
+              </div>
+            </div>
             <div className="flex justify-end">
               <button
-                onClick={() => setGoal.mutate({ target_mrr: parseFloat(targetMrr), starting_mrr: parseFloat(startingMrr), target_date: targetDate })}
+                onClick={() => setGoal.mutate({
+                  target_mrr: parseFloat(targetMrr),
+                  starting_mrr: parseFloat(startingMrr) || 0,
+                  target_date: targetDate,
+                  retainer_tier_1: tier1 ? parseFloat(tier1) : null,
+                  retainer_tier_2: tier2 ? parseFloat(tier2) : null,
+                  retainer_tier_3: tier3 ? parseFloat(tier3) : null,
+                })}
                 disabled={!targetMrr || setGoal.isPending}
                 className="px-5 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-sm hover:bg-primary/90 transition-all disabled:opacity-50"
               >
