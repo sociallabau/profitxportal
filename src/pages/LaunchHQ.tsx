@@ -52,7 +52,7 @@ export default function LaunchHQ() {
     },
     enabled: !!user,
   });
-  const isUnlocked = profile?.tier && profile.tier !== 'onramp';
+  const isUnlocked = true;
 
   const { data: campaign } = useQuery({
     queryKey: ['active-campaign', user?.id],
