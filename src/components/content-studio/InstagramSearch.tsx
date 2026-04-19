@@ -96,26 +96,54 @@ export default function InstagramSearch() {
       else if (elapsed >= 20) setSearchStage('Almost there…');
     }, 250);
 
+    const handle = query.trim().replace(/^@/, '');
     try {
       const { data, error: fnError } = await supabase.functions.invoke("fetch-instagram-content", {
         body: { mode, query: query.trim(), limit: 20 },
       });
-      if (fnError) throw fnError;
-      if (data?.error) {
-        if (data.error.includes("APIFY_API_TOKEN")) {
-          setError("Content search is not configured yet. Contact your admin.");
+
+      // Try to read the real error body from a non-2xx response
+      let serverError: string | null = null;
+      if (fnError) {
+        try {
+          const ctx = (fnError as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            serverError = body?.error || null;
+          } else if (ctx && typeof ctx.text === 'function') {
+            serverError = await ctx.text();
+          }
+        } catch { /* ignore parse errors */ }
+      }
+
+      const rawErr = serverError || data?.error || (fnError ? fnError.message : null);
+
+      if (rawErr) {
+        const lower = String(rawErr).toLowerCase();
+        if (lower.includes('apify_api_token')) {
+          setError('Content search is not configured yet. Contact your admin.');
+        } else if (
+          lower.includes('not found') ||
+          lower.includes('does not exist') ||
+          lower.includes('user not found') ||
+          lower.includes(' 404') ||
+          lower.includes('private') ||
+          lower.includes('apify error')
+        ) {
+          setError(`We couldn't find @${handle} on Instagram. Double-check the handle (no spaces, no #) and try again.`);
         } else {
-          throw new Error(data.error);
+          setError(rawErr);
         }
         return;
       }
+
       const posts = data?.posts || [];
       setResults(posts);
       if (posts.length === 0) {
-        setError("No results found. Try a different handle or keyword.");
+        setError(`No public posts found for @${handle}. Try a different handle.`);
       }
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(`We couldn't find @${handle} on Instagram. Double-check the handle and try again.`);
     } finally {
       if (searchTimer.current) {
         window.clearInterval(searchTimer.current);
