@@ -40,8 +40,10 @@ const PILLARS = [
   {
     id: 'scale', name: 'SCALE', color: 'text-orange-400', borderColor: 'border-orange-400/20',
     modules: [
-      { id: 'hire-first-editor', name: 'Hire Your First Editor', desc: 'Remove yourself from production without losing quality.', tier: 'scale', circleUrl: '' },
-      { id: 'retention-upsell', name: 'Retention & Upsell Framework', desc: 'Keep clients longer and increase their monthly spend.', tier: 'scale', circleUrl: '' },
+      { id: 'hire-first-editor', name: 'Hire Your First Editor', desc: 'Remove yourself from production without losing quality.', tier: 'growth', circleUrl: '' },
+      { id: 'lean-org-chart', name: 'Your Lean Organisation Chart', desc: 'Map the roles your business needs to run lean and scale without bloat.', tier: 'scale', circleUrl: '' },
+      { id: 'client-retention', name: 'Client Retention', desc: 'Keep clients longer with proactive communication, results reporting, and renewals.', tier: 'scale', circleUrl: '' },
+      { id: 'leadership-staff-management', name: 'Leadership & Staff Management', desc: 'Lead your team with clarity — set standards, run reviews, and build a culture that performs.', tier: 'scale', circleUrl: '' },
       { id: 'financial-mastery', name: 'Financial Mastery', desc: 'Build a business that runs on clear financial systems.', tier: 'scale', circleUrl: '' },
     ],
   },
