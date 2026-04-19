@@ -15,11 +15,11 @@ export const CIRCLE_URLS = {
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
-  { label: 'Launch HQ', path: '/launch', icon: Rocket },
   { label: 'Content Studio', path: '/content-studio', icon: Sparkles },
   { label: 'Hot List', path: '/hot-list', icon: Flame },
-  { label: 'Wins Wall', path: '/wins', icon: Trophy },
+  { label: 'Launch HQ', path: '/launch', icon: Rocket },
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
+  { label: 'Wins Wall', path: '/wins', icon: Trophy },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Financials', path: '/financials', icon: Wallet },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
