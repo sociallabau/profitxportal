@@ -194,7 +194,10 @@ export default function ContentCalendar() {
       {panelOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-background/70" onClick={closePanel} />
-          <div className="fixed right-0 top-0 z-50 w-full max-w-md h-screen bg-card border-l border-border overflow-y-auto p-6">
+          <div
+            className="fixed right-0 top-0 z-50 w-full sm:max-w-md bg-card border-l border-border overflow-y-auto p-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] overscroll-contain"
+            style={{ height: '100dvh' }}
+          >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-foreground">
                 {editingPost ? 'Edit Post' : 'New Post'}
