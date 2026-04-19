@@ -28,11 +28,24 @@ export function useGoal() {
       retainer_tier_2?: number | null;
       retainer_tier_3?: number | null;
     }) => {
+      // Always pull the live session — the cached `user` may be stale/expired,
+      // which causes RLS inserts to fail with "new row violates row-level security policy".
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) {
+        throw new Error('Your session has expired. Please sign in again to save your goal.');
+      }
       const { error } = await supabase.from('goals').upsert(
-        { user_id: user!.id, ...values } as any,
+        { user_id: uid, ...values } as any,
         { onConflict: 'user_id' }
       );
-      if (error) throw error;
+      if (error) {
+        // Surface a friendlier message for the most common cause
+        if (error.message?.includes('row-level security')) {
+          throw new Error('Your session has expired. Please sign in again to save your goal.');
+        }
+        throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goal'] }),
   });
