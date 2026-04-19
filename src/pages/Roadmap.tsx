@@ -34,6 +34,7 @@ const PILLARS = [
     modules: [
       { id: 'proposal-doc', name: 'Proposal Doc', desc: 'Build a proposal doc that does the selling for you, sent before the meeting and used during it.', tier: 'on-ramp', circleUrl: '' },
       { id: 'sales-meeting-flow', name: 'Sales Meeting Flow', desc: 'Walk into every sales meeting with conviction, diagnose what the client needs, and close.', tier: 'on-ramp', circleUrl: '' },
+      { id: 'your-offer-suite', name: 'Your Offer Suite', desc: 'Design a clear suite of offers — entry, core, and premium — so every prospect has a logical next step.', tier: 'growth', circleUrl: '' },
     ],
   },
   {
