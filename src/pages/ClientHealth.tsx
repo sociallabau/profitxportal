@@ -672,36 +672,6 @@ export default function ClientHealth() {
                   </div>
                 </div>
 
-                {/* Latest month snapshot */}
-                {c.last_total_revenue > 0 && (
-                  <div className="bg-card border border-border rounded-xl p-4">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                      Latest Month Snapshot
-                      {c.last_submission_month && (
-                        <span className="ml-2 font-normal normal-case">
-                          ({new Date(c.last_submission_month).toLocaleString('default', { month: 'short', year: 'numeric' })})
-                        </span>
-                      )}
-                    </p>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      {[
-                        { label: 'Revenue',    value: `$${Number(c.last_total_revenue).toLocaleString()}`,    color: 'text-foreground' },
-                        { label: 'MRR',        value: `$${Number(c.last_mrr || 0).toLocaleString()}`,         color: 'text-primary' },
-                        { label: 'Expenses',   value: `$${Number(c.last_expenses || 0).toLocaleString()}`,    color: 'text-orange-400' },
-                        { label: 'Ad Spend',   value: Number(c.last_ad_spend) > 0 ? `$${Number(c.last_ad_spend).toLocaleString()}` : '—', color: 'text-blue-400' },
-                        { label: 'Content',    value: `${c.last_content_posts ?? '—'} posts`,                color: 'text-foreground' },
-                        { label: 'Leads',      value: `${c.last_leads ?? '—'}`,                              color: 'text-foreground' },
-                        { label: 'Meetings',   value: `${c.last_meetings ?? '—'}`,                           color: 'text-foreground' },
-                        { label: 'New Clients',value: `${c.last_new_clients ?? '—'}`,                        color: 'text-green-400'  },
-                      ].map(({ label, value, color }) => (
-                        <div key={label} className="flex justify-between">
-                          <span className="text-muted-foreground">{label}</span>
-                          <span className={`font-semibold ${color}`}>{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Wellbeing scores */}
                 {(c.last_confidence || c.last_nps) && (
