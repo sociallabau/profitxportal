@@ -7,6 +7,7 @@ import {
 import { TrendingUp, Receipt, DollarSign, Trophy, Plus, ClipboardList } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import GoalCountdown from '@/components/GoalCountdown';
+import AnnouncementsModal from '@/components/AnnouncementsModal';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
@@ -103,6 +104,7 @@ export default function Dashboard() {
 
   return (
     <PageLayout>
+      <AnnouncementsModal />
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
