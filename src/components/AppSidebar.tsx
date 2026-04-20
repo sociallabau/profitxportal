@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Gauge, Route, BarChart3, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X, ExternalLink,
-  GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock,
+  GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ const navItems = [
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
   { label: 'Vault', path: '/vault', icon: Lock },
+  { label: 'Calls', path: '/calls', icon: Video },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Financials', path: '/financials', icon: Wallet },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
