@@ -104,6 +104,7 @@ export default function Dashboard() {
 
   return (
     <PageLayout>
+      <AnnouncementsModal />
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
