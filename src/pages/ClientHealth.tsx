@@ -252,6 +252,14 @@ export default function ClientHealth() {
   const readyToUnlock = clientsWithHealth.filter((c: any) => c.readyForGrowth);
   const readyForScale = clientsWithHealth.filter((c: any) => c.eligibleForScale);
 
+  const lowSurveys = clientsWithHealth.filter((c: any) => {
+    const conf = Number(c.last_confidence ?? 0);
+    const nps = Number(c.last_nps ?? 0);
+    const hasConf = c.last_confidence !== null && c.last_confidence !== undefined;
+    const hasNps = c.last_nps !== null && c.last_nps !== undefined;
+    return (hasConf && conf > 0 && conf <= LOW_CONFIDENCE) || (hasNps && nps > 0 && nps <= LOW_NPS);
+  });
+
   const { data: pageViewAgg = [] } = useQuery({
     queryKey: ['page-view-agg'],
     enabled: !!selfProfile?.is_admin,
@@ -282,7 +290,7 @@ export default function ClientHealth() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { label: 'On Track',   count: greenCount, band: 'green' as const },
-          { label: 'Watch',      count: amberCount, band: 'amber' as const },
+          { label: 'Good',       count: amberCount, band: 'amber' as const },
           { label: 'Needs Help', count: redCount,   band: 'red'   as const },
         ].map(({ label, count, band }) => {
           const s = BAND[band];
@@ -294,6 +302,38 @@ export default function ClientHealth() {
           );
         })}
       </div>
+
+      {/* Low survey-score alerts */}
+      {lowSurveys.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+            <h2 className="text-sm font-bold text-red-400">Low Survey Scores — Reach Out</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            {lowSurveys.length === 1 ? 'This client' : `${lowSurveys.length} clients`} reported low business confidence (≤{LOW_CONFIDENCE}/10) or coaching satisfaction (≤{LOW_NPS}/10).
+          </p>
+          <div className="space-y-2">
+            {lowSurveys.map((client: any) => {
+              const conf = Number(client.last_confidence ?? 0);
+              const nps = Number(client.last_nps ?? 0);
+              const flags: string[] = [];
+              if (conf > 0 && conf <= LOW_CONFIDENCE) flags.push(`Confidence ${conf}/10`);
+              if (nps > 0 && nps <= LOW_NPS) flags.push(`Coaching ${nps}/10`);
+              return (
+                <button
+                  key={client.id}
+                  onClick={() => setSelectedClient(client)}
+                  className="w-full flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border hover:border-red-500/40 transition text-left"
+                >
+                  <span className="text-sm font-semibold text-foreground">{client.full_name || 'Unnamed Client'}</span>
+                  <span className="text-xs text-red-400 font-medium">{flags.join(' · ')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Unlock Growth notification */}
       {readyToUnlock.length > 0 && (
