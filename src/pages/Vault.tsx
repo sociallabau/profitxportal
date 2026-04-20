@@ -1,12 +1,16 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
 import { PlayCircle, ExternalLink } from 'lucide-react';
+import vaultQaMarch from '@/assets/vault-qa-march.jpg';
+import vaultOrganic from '@/assets/vault-organic-content.jpg';
+import vaultQaApril from '@/assets/vault-qa-april.jpg';
 
 type VaultItem = {
   title: string;
   category: 'Q&A' | 'Workshop' | 'Lesson';
   date?: string;
   url: string;
+  thumbnail: string;
 };
 
 const ITEMS: VaultItem[] = [
@@ -15,17 +19,20 @@ const ITEMS: VaultItem[] = [
     category: 'Q&A',
     date: 'Mar 18',
     url: 'https://fathom.video/share/cxFvsiwisUVxLfxqN_edSJC7XjXysuWb',
+    thumbnail: vaultQaMarch,
   },
   {
     title: 'Lesson — Organic Content Flow',
     category: 'Lesson',
     url: 'https://fathom.video/share/DcMunbGJxo_LVJ3kUveZHXqCgCm7UsTc',
+    thumbnail: vaultOrganic,
   },
   {
     title: 'Q&A — April 14th',
     category: 'Q&A',
     date: 'Apr 14',
     url: 'https://fathom.video/share/fNxXUxTxAaazuGGzzdSocVzQ_JmqKmFm',
+    thumbnail: vaultQaApril,
   },
 ];
 
@@ -51,11 +58,21 @@ export default function Vault() {
             rel="noopener noreferrer"
             className="group"
           >
-            <Card className="h-full p-5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col gap-4">
-              <div className="aspect-video rounded-lg bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-border flex items-center justify-center">
-                <PlayCircle className="w-12 h-12 text-primary/80 group-hover:scale-110 transition-transform" />
+            <Card className="h-full overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col">
+              <div className="relative aspect-video overflow-hidden bg-muted">
+                <img
+                  src={item.thumbnail}
+                  alt={item.title}
+                  width={1024}
+                  height={576}
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <PlayCircle className="w-14 h-14 text-white drop-shadow-lg" />
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="p-5 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span
                     className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[item.category]}`}
