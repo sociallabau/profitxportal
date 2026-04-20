@@ -7,6 +7,7 @@ import {
 import { TrendingUp, Receipt, DollarSign, Trophy, Plus, ClipboardList } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import GoalCountdown from '@/components/GoalCountdown';
+import AnnouncementsModal from '@/components/AnnouncementsModal';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
