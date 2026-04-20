@@ -22,6 +22,7 @@ import ModulePage from "./pages/ModulePage";
 import ContentStudio from "./pages/ContentStudio";
 import HotList from "./pages/HotList";
 import LaunchHQ from "./pages/LaunchHQ";
+import Vault from "./pages/Vault";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -66,6 +67,7 @@ const App = () => (
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/cash-menu" element={<ProtectedRoute><CashMenu /></ProtectedRoute>} />
           <Route path="/wins" element={<ProtectedRoute><WinsWall /></ProtectedRoute>} />
+          <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
           <Route path="/module/:moduleId" element={<ProtectedRoute><ModulePage /></ProtectedRoute>} />
           <Route path="/submissions/clients" element={<ProtectedRoute><NewClients /></ProtectedRoute>} />
           <Route path="/submissions/monthly" element={<ProtectedRoute><MonthlyTotals /></ProtectedRoute>} />
