@@ -37,10 +37,11 @@ const categoryStyles: Record<VaultItem['category'], string> = {
 
 export default function Vault() {
   return (
-    <PageLayout
-      title="Vault"
-      subtitle="Recordings of Q&As, workshops and lessons — watch any time."
-    >
+    <PageLayout>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold italic text-foreground">Vault</h1>
+        <p className="text-muted-foreground mt-1">Recordings of Q&As, workshops and lessons — watch any time.</p>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {ITEMS.map((item) => (
           <a
