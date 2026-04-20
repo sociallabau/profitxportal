@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle
+  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle
 } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
@@ -30,73 +30,107 @@ const ON_RAMP_MODULE_IDS = [
   'discovery-call', 'follow-up-system',
 ];
 
+// Margin thresholds (net profit margin %)
+// >= TARGET_MARGIN  => On Track (green)
+// >= MIN_MARGIN     => Good (amber)
+// <  MIN_MARGIN     => Needs Help (red)
+const TARGET_MARGIN = 30;
+const MIN_MARGIN = 20;
+
+// Low-score thresholds for survey alerts (out of 10)
+const LOW_CONFIDENCE = 4;
+const LOW_NPS = 6;
+
+function getMarginBand(netMargin: number): 'green' | 'amber' | 'red' {
+  if (netMargin >= TARGET_MARGIN) return 'green';
+  if (netMargin >= MIN_MARGIN) return 'amber';
+  return 'red';
+}
+
 function calcHealthScore(client: any) {
-  let financial = 0, wellbeing = 0, funnel = 0, roadmap = 0;
+  // Margin-based scoring across 4 pillars: revenue, margin %, content posted, new clients
+  const revenue   = Number(client.last_total_revenue || 0);
+  const expenses  = Number(client.last_expenses || 0);
+  const netMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : -1;
+  const content   = Number(client.last_content_posts || 0);
+  const newClients = Number(client.last_new_clients || 0);
 
-  const revenue    = Number(client.last_total_revenue || 0);
-  const mrr        = Number(client.last_mrr || 0);
-  const expenses   = Number(client.last_expenses || 0);
-  const netMargin  = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : -1;
-  const mrrPct     = revenue > 0 ? (mrr / revenue) * 100 : 0;
-  const confidence = Number(client.last_confidence || 0);
-  const nps        = Number(client.last_nps || 0);
-  const daysSub    = Number(client.days_since_submission ?? 999);
-  const daysLogin  = Number(client.days_since_last_login ?? 999);
-  const content    = Number(client.last_content_posts || 0);
-  const leads      = Number(client.last_leads || 0);
-  const meetings   = Number(client.last_meetings || 0);
-  const completed  = Number(client.modules_completed || 0);
+  // Revenue (max 25)
+  let revenueScore = 0;
+  if (revenue >= 30000) revenueScore = 25;
+  else if (revenue >= 15000) revenueScore = 18;
+  else if (revenue >= 5000) revenueScore = 12;
+  else if (revenue > 0) revenueScore = 6;
 
-  if (revenue > 0)    financial += 10;
-  if (netMargin >= 20) financial += 15; else if (netMargin >= 10) financial += 7;
-  if (mrrPct >= 40)   financial += 10; else if (mrrPct >= 20) financial += 5;
-  if (Number(client.last_new_clients) >= 1) financial += 5;
+  // Margin (max 35) — primary driver
+  let marginScore = 0;
+  if (netMargin >= TARGET_MARGIN) marginScore = 35;
+  else if (netMargin >= MIN_MARGIN) marginScore = 22;
+  else if (netMargin >= 10) marginScore = 12;
+  else if (netMargin >= 0) marginScore = 5;
 
-  if (confidence >= 7) wellbeing += 8; else if (confidence >= 5) wellbeing += 4;
-  if (nps >= 7)        wellbeing += 8; else if (nps >= 5) wellbeing += 4;
-  if (daysSub <= 35)   wellbeing += 5;
-  if (daysLogin <= 14) wellbeing += 4; else if (daysLogin <= 30) wellbeing += 2;
+  // Content posted (max 20)
+  let contentScore = 0;
+  if (content >= 12) contentScore = 20;
+  else if (content >= 8) contentScore = 14;
+  else if (content >= 4) contentScore = 8;
+  else if (content >= 1) contentScore = 3;
 
-  if (content >= 10)  funnel += 6; else if (content >= 4) funnel += 3;
-  if (leads >= 5)     funnel += 7; else if (leads >= 1) funnel += 3;
-  if (meetings >= 2)  funnel += 4; else if (meetings >= 1) funnel += 2;
-  if (Number(client.last_new_clients) >= 1) funnel += 3;
+  // New clients (max 20)
+  let clientsScore = 0;
+  if (newClients >= 3) clientsScore = 20;
+  else if (newClients >= 2) clientsScore = 14;
+  else if (newClients >= 1) clientsScore = 8;
 
-  if (completed >= 10) roadmap += 15; else if (completed >= 6) roadmap += 10;
-  else if (completed >= 3) roadmap += 5; else if (completed >= 1) roadmap += 2;
+  const score = revenueScore + marginScore + contentScore + clientsScore;
 
-  const score = financial + wellbeing + funnel + roadmap;
-  const band  = score >= 70 ? 'green' : score >= 40 ? 'amber' : 'red';
-  return { score, band, financial, wellbeing, funnel, roadmap };
+  // Overall band is driven by the margin band, refined by score for edge cases
+  const marginBand = getMarginBand(netMargin);
+  let band: 'green' | 'amber' | 'red' = marginBand;
+  // If they have no revenue at all, force red
+  if (revenue <= 0) band = 'red';
+
+  return {
+    score,
+    band,
+    netMargin: revenue > 0 ? netMargin : 0,
+    revenueScore,
+    marginScore,
+    contentScore,
+    clientsScore,
+  };
 }
 
 function generateConclusion(client: any) {
-  const name      = client.full_name?.split(' ')[0] || 'This client';
+  const name = client.full_name?.split(' ')[0] || 'This client';
   const parts: string[] = [];
-  const daysLogin  = Number(client.days_since_last_login ?? 999);
-  const daysSub    = Number(client.days_since_submission ?? 999);
+  const revenue   = Number(client.last_total_revenue || 0);
+  const expenses  = Number(client.last_expenses || 0);
+  const netMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
   const newClients = Number(client.last_new_clients || 0);
   const content    = Number(client.last_content_posts || 0);
-  const leads      = Number(client.last_leads || 0);
-  const confidence = Number(client.last_confidence || 0);
-  const completed  = Number(client.modules_completed || 0);
+  const daysSub    = Number(client.days_since_submission ?? 999);
 
-  if (daysLogin > 30) parts.push(`hasn't logged in for ${daysLogin} days — re-engagement needed`);
-  if (daysSub > 45) parts.push(`overdue on monthly submission (${daysSub} days)`);
-  if (newClients >= 2) parts.push(`signed ${newClients} new clients — strong momentum`);
-  if (content >= 8 && leads >= 5 && newClients >= 1) parts.push(`content → leads → clients funnel is working`);
-  if (content === 0) parts.push(`not posting content — zero top-of-funnel activity`);
-  if (content >= 8 && newClients === 0) parts.push(`posting content but not converting — check DMs and discovery calls`);
-  if (confidence <= 4) parts.push(`low confidence (${confidence}/10) — worth a check-in`);
-  if (completed < 3) parts.push(`minimal roadmap progress (${completed} modules)`);
+  if (revenue <= 0) parts.push(`no revenue submitted yet`);
+  else if (netMargin >= TARGET_MARGIN) parts.push(`margin ${netMargin.toFixed(0)}% — above target`);
+  else if (netMargin >= MIN_MARGIN) parts.push(`margin ${netMargin.toFixed(0)}% — within range`);
+  else parts.push(`margin ${netMargin.toFixed(0)}% — below ${MIN_MARGIN}%, needs help`);
 
-  if (parts.length === 0) return `${name} appears on track — keep monitoring monthly submissions.`;
-  return `${name} ${parts.join('; ')}.`;
+  if (newClients >= 2) parts.push(`signed ${newClients} new clients`);
+  else if (newClients === 0 && content >= 8) parts.push(`posting content but not converting`);
+  else if (newClients === 0) parts.push(`no new clients this month`);
+
+  if (content === 0) parts.push(`no content posted`);
+  else if (content >= 12) parts.push(`${content} posts — strong output`);
+
+  if (daysSub > 45) parts.push(`monthly submission overdue (${daysSub} days)`);
+
+  return `${name}: ${parts.join('; ')}.`;
 }
 
 const BAND = {
   green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', dot: 'bg-green-400', label: 'On Track' },
-  amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', dot: 'bg-yellow-400', label: 'Watch' },
+  amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', dot: 'bg-yellow-400', label: 'Good' },
   red:   { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', dot: 'bg-red-400', label: 'Needs Help' },
 };
 
