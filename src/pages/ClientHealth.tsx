@@ -540,26 +540,113 @@ export default function ClientHealth() {
                   </p>
                 </div>
 
-                {/* Health score breakdown */}
-                <div className="bg-card border border-border rounded-xl p-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Health Breakdown</p>
-                  <div className="space-y-2.5">
-                    {[
-                      { label: 'Financial',  val: h.financial, max: 40, color: 'bg-green-400'  },
-                      { label: 'Wellbeing',  val: h.wellbeing, max: 25, color: 'bg-blue-400'   },
-                      { label: 'Funnel',     val: h.funnel,    max: 20, color: 'bg-purple-400' },
-                      { label: 'Roadmap',    val: h.roadmap,   max: 15, color: 'bg-orange-400' },
-                    ].map(({ label, val, max, color }) => (
-                      <div key={label}>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-foreground">{label}</span>
-                          <span className="text-muted-foreground">{val}/{max}</span>
+                {/* Financials snapshot — margin focus */}
+                {(() => {
+                  const revenue = Number(c.last_total_revenue || 0);
+                  const expenses = Number(c.last_expenses || 0);
+                  const netProfit = revenue - expenses;
+                  const netMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+                  const marginBand = getMarginBand(netMargin);
+                  const ms = BAND[marginBand];
+                  const marginLabel = marginBand === 'green' ? 'Above target' : marginBand === 'amber' ? 'In range' : 'Below target';
+
+                  return (
+                    <div className="bg-card border border-border rounded-xl p-4">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Financials Snapshot</p>
+
+                      {/* Margin highlight */}
+                      <div className={`${ms.bg} border ${ms.border} rounded-lg p-3 mb-3`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-muted-foreground">Net Profit Margin</span>
+                          <span className={`text-xs font-bold ${ms.text}`}>{marginLabel}</span>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${(val/max)*100}%` }} />
+                        <div className="flex items-baseline justify-between">
+                          <span className={`text-2xl font-bold ${ms.text}`}>{netMargin.toFixed(1)}%</span>
+                          <span className="text-xs text-muted-foreground">Target ≥ {TARGET_MARGIN}% · Min {MIN_MARGIN}%</span>
                         </div>
                       </div>
-                    ))}
+
+                      {/* Stat grid */}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {[
+                          { label: 'Revenue',    value: `$${revenue.toLocaleString()}`,                                   color: 'text-foreground' },
+                          { label: 'Expenses',   value: `$${expenses.toLocaleString()}`,                                  color: 'text-orange-400' },
+                          { label: 'Net Profit', value: `$${netProfit.toLocaleString()}`,                                 color: netProfit >= 0 ? 'text-green-400' : 'text-red-400' },
+                          { label: 'MRR',        value: `$${Number(c.last_mrr || 0).toLocaleString()}`,                   color: 'text-primary' },
+                          { label: 'Ad Spend',   value: Number(c.last_ad_spend) > 0 ? `$${Number(c.last_ad_spend).toLocaleString()}` : '—', color: 'text-blue-400' },
+                          { label: 'New Clients',value: `${c.last_new_clients ?? '—'}`,                                   color: 'text-green-400' },
+                          { label: 'Content',    value: `${c.last_content_posts ?? '—'} posts`,                           color: 'text-foreground' },
+                          { label: 'Leads',      value: `${c.last_leads ?? '—'}`,                                         color: 'text-foreground' },
+                        ].map(({ label, value, color }) => (
+                          <div key={label} className="flex justify-between">
+                            <span className="text-muted-foreground">{label}</span>
+                            <span className={`font-semibold ${color}`}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Hot List stats */}
+                {(() => {
+                  const total = clientHotList.length;
+                  const closed = clientHotList.filter((h: any) => h.column_id === 'closed' || h.column_id === 'won').length;
+                  const pipelineValue = clientHotList
+                    .filter((h: any) => h.column_id !== 'closed' && h.column_id !== 'won' && h.column_id !== 'lost')
+                    .reduce((sum: number, h: any) => sum + Number(h.deal_value || 0), 0);
+                  const closedValue = clientHotList
+                    .filter((h: any) => h.column_id === 'closed' || h.column_id === 'won')
+                    .reduce((sum: number, h: any) => sum + Number(h.deal_value || 0), 0);
+
+                  return (
+                    <div className="bg-card border border-border rounded-xl p-4">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Hot List</p>
+                      {total === 0 ? (
+                        <p className="text-xs text-muted-foreground">No leads in their hot list yet.</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Total Leads</span>
+                            <span className="font-semibold text-foreground">{total}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Closed</span>
+                            <span className="font-semibold text-green-400">{closed}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Pipeline Value</span>
+                            <span className="font-semibold text-primary">${pipelineValue.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Closed Value</span>
+                            <span className="font-semibold text-green-400">${closedValue.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Login & submission recency */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`p-3 rounded-xl border ${!isNaN(daysLogin) && daysLogin > 14 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-card border-border'}`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Last login</p>
+                    </div>
+                    <p className={`text-sm font-semibold ${!isNaN(daysLogin) && daysLogin > 14 ? 'text-orange-400' : 'text-foreground'}`}>
+                      {!isNaN(daysLogin) ? `${daysLogin} days ago` : 'No data'}
+                    </p>
+                  </div>
+                  <div className={`p-3 rounded-xl border ${!isNaN(daysSub) && daysSub > 40 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-card border-border'}`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Last submission</p>
+                    </div>
+                    <p className={`text-sm font-semibold ${!isNaN(daysSub) && daysSub > 40 ? 'text-orange-400' : 'text-foreground'}`}>
+                      {!isNaN(daysSub) ? `${daysSub} days ago` : 'Never'}
+                    </p>
                   </div>
                 </div>
 
