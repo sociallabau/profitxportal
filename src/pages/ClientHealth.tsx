@@ -209,6 +209,18 @@ export default function ClientHealth() {
     },
   });
 
+  const { data: clientHotList = [] } = useQuery({
+    queryKey: ['client-hot-list', selectedClient?.id],
+    enabled: !!selectedClient,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('hot_list')
+        .select('column_id, deal_value')
+        .eq('user_id', selectedClient!.id);
+      return data ?? [];
+    },
+  });
+
   // Fetch all checklist completions to detect on-ramp graduates
   const { data: allCompletions = [] } = useQuery({
     queryKey: ['all-checklist-completions'],
