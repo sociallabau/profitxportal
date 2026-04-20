@@ -76,7 +76,7 @@ export default function Calls() {
   return (
     <PageLayout>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold italic text-foreground">Calls</h1>
+        <h1 className="text-3xl font-bold italic text-foreground">Upcoming Calls</h1>
         <p className="text-muted-foreground mt-1">
           Upcoming workshops, Q&amp;As and coaching calls — join live or add to your calendar.
         </p>

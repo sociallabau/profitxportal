@@ -20,10 +20,10 @@ const navItems = [
   { label: 'Launch HQ', path: '/launch', icon: Rocket },
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
-  { label: 'Vault', path: '/vault', icon: Lock },
-  { label: 'Calls', path: '/calls', icon: Video },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Financials', path: '/financials', icon: Wallet },
+  { label: 'Vault', path: '/vault', icon: Lock },
+  { label: 'Upcoming Calls', path: '/calls', icon: Video },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
 ];
 
