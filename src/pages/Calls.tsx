@@ -17,7 +17,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX — Workshop — Paid Ads',
     category: 'Workshop',
-    start: '2026-04-29T18:00:00',
+    start: '2026-04-29T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/zzd-yxwv-byn',
     description: 'Live workshop covering paid ads strategy. Join via Google Meet.',
