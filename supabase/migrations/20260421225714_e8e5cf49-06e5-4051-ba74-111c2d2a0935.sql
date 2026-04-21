@@ -1,0 +1,1 @@
+UPDATE module_pages SET module_id = '5ps-framework' WHERE module_id = '5-ps-framework';
