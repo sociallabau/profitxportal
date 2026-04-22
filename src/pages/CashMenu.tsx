@@ -11,45 +11,33 @@ const ACTIONS = [
     key: 'past_clients',
     emoji: '📬',
     label: 'Message Every Past Client',
-    subtitle: "Email, text or DM anyone you've ever shot for — one message, multiple retainer conversations.",
-    effort: '30 mins',
-    expectedResult: '1–3 discovery calls booked',
+    subtitle: "Text or email every client you've done a one-off shoot for. Notify them of the new system you've built — positioned around making them an authority and helping them attract new business. If they want more info, you're happy to give them a buzz or send the info doc through.",
+    effort: '30 min – 1 hr',
+    expectedResult: '1–3 replies for info doc',
     scripts: [
       {
-        channel: 'DM (Instagram / WhatsApp)',
-        body: `Hey [Name]! Hope things are going well. I've just put together a new programme for businesses like yours and I genuinely think it could do some serious numbers for you.
+        channel: 'Text (SMS)',
+        body: `Hey [Name], it's [Your Name]. Quick one — I've built a new system for businesses like yours, designed to position you as the authority in your space and bring in real new business off the back of it.
 
-It's a monthly video content retainer — short-form videos, social strategy, and paid ads all rolled in together. The goal is simple: more enquiries, more visibility, more revenue. I've seen it work really well for [niche/similar businesses].
-
-I've only got a couple of spots left this month. If you're keen, let me know and I'll send you the details — I think it'd crush for you.`,
+Thought of you straight away. Happy to give you a quick buzz or flick the info doc through if you want to take a look?`,
       },
       {
         channel: 'Email',
-        body: `Subject: Something I think could do really well for [Business Name]
+        body: `Subject: New thing I've built — thought of you
 
 Hey [Name],
 
-Hope you're well! Just wanted to reach out because I've designed a new programme and I immediately thought of you.
+Hope you're well. I've built out a new system off the back of the work I've been doing — it's designed to position you as the authority in your space and actually bring in new business, not just content for the sake of it.
 
-It's a monthly video content retainer — I handle the filming, editing, social posting and paid ads, and you get a consistent stream of content working hard for your business every single week.
+Thought of you straight away. Happy to jump on a quick call or send the info doc through if you'd like a look.
 
-The clients I'm running this with right now are seeing a real increase in enquiries and leads from social — not just views, actual people reaching out.
-
-I've got a couple of spots available this month and wanted to offer it to people I've already worked with first. If it's of interest, I'll send you the full breakdown — just hit reply.
-
-Cheers,
+Let me know,
 [Your Name]`,
-      },
-      {
-        channel: 'Text (SMS)',
-        body: `Hey [Name], it's [Your Name] from [Business]. Hope you're good! I've put together something new — a monthly video retainer that handles content, socials and ads for businesses like yours. Think it could work really well for you. Got a couple spots left — keen to hear more?`,
       },
     ],
     tips: [
-      'Personalise the business name and one specific thing you remember about their project',
-      "Don't pitch in the first message — just spark curiosity and get a \"tell me more\"",
-      'Your goal is a discovery call, not a sale in the DM',
-      'Send to minimum 10 past clients. Even a 20% reply rate gets you 2 conversations.',
+      "Keep it casual — you already have the relationship, don't pitch like a stranger.",
+      'Send to every past one-off client. Even 1–2 info doc replies turns into real conversations.',
     ],
   },
   {
