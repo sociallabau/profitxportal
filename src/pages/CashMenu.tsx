@@ -400,8 +400,19 @@ export default function CashMenu() {
                       </ul>
                     </div>
 
-                    <button
-                      onClick={() => markDone(action.key)}
+                    {(action as any).followUp && (
+                      <div className="space-y-2 bg-background/50 border border-border rounded-lg p-4">
+                        <h4 className="text-xs font-medium text-primary uppercase tracking-wider">📞 {(action as any).followUp.title}</h4>
+                        <ul className="space-y-1.5">
+                          {(action as any).followUp.steps.map((step: string, i: number) => (
+                            <li key={i} className="flex gap-2 text-sm text-muted-foreground">
+                              <span className="text-primary flex-shrink-0">{i + 1}.</span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                       disabled={isDone}
                       className={`w-full py-3 rounded-lg font-semibold text-sm transition-all
                         ${isDone
