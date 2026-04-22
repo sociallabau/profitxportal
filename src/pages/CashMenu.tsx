@@ -56,7 +56,6 @@ I've also built out a new program off the back of the work I've been doing — d
       },
     ],
     tips: [
-      "Don't start with \"just following up\" — it's weak. Lead with the video and the new angle.",
       'Pick a video that genuinely fits their business — the personalisation is the whole point.',
       'Pull out your old DMs and make a list before you start. Aim for 15–20 reactivations.',
     ],
