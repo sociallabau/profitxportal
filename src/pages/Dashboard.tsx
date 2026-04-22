@@ -8,15 +8,21 @@ import { TrendingUp, Receipt, DollarSign, Trophy, Plus, ClipboardList } from 'lu
 import PageLayout from '@/components/PageLayout';
 import GoalCountdown from '@/components/GoalCountdown';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
+import TierUpgradeModal from '@/components/TierUpgradeModal';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { usePageTracking } from '@/hooks/usePageTracking';
 
 export default function Dashboard() {
   const { user } = useRequireAuth();
+  const { data: profile } = useProfile();
   usePageTracking('dashboard');
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [tierModalDismissed, setTierModalDismissed] = useState(false);
+  const showTierUpgrade =
+    !!profile && !tierModalDismissed && profile.tier && profile.tier !== (profile as any).tier_seen;
 
   const [winModalOpen, setWinModalOpen] = useState(false);
   const [winForm, setWinForm] = useState({ win_text: '', cash_amount: '' });
@@ -105,6 +111,13 @@ export default function Dashboard() {
   return (
     <PageLayout>
       <AnnouncementsModal />
+      {showTierUpgrade && profile && (
+        <TierUpgradeModal
+          userId={profile.id}
+          newTier={profile.tier!}
+          onClose={() => setTierModalDismissed(true)}
+        />
+      )}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>

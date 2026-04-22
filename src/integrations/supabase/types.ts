@@ -683,6 +683,7 @@ export type Database = {
           milestones_hit: number[] | null
           onboarded: boolean | null
           tier: string | null
+          tier_seen: string | null
         }
         Insert: {
           business_overview?: string | null
@@ -696,6 +697,7 @@ export type Database = {
           milestones_hit?: number[] | null
           onboarded?: boolean | null
           tier?: string | null
+          tier_seen?: string | null
         }
         Update: {
           business_overview?: string | null
@@ -709,6 +711,7 @@ export type Database = {
           milestones_hit?: number[] | null
           onboarded?: boolean | null
           tier?: string | null
+          tier_seen?: string | null
         }
         Relationships: []
       }
