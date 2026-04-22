@@ -385,15 +385,7 @@ function RenderSection({
 
     case 'link_placeholder':
       return section.url ? (
-        <a
-          href={section.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
-        >
-          <LinkIcon className="w-4 h-4" />
-          {section.label}
-        </a>
+        <LinkPlaceholderButton url={section.url} label={section.label} />
       ) : (
         <div className="rounded-xl border border-dashed border-border p-4 flex items-center gap-3 opacity-60">
           <LinkIcon className="w-4 h-4 text-muted-foreground" />
