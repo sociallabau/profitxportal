@@ -46,33 +46,27 @@ Let me know,
     label: 'Warm Reactivation',
     subtitle: 'Reach out to every lead who showed interest in the last 6 months but never converted.',
     effort: '45 mins',
-    expectedResult: '1–2 booked calls from cold conversations',
+    expectedResult: '1–2 replies for info doc',
     scripts: [
       {
-        channel: 'DM / WhatsApp',
-        body: `Hey [Name]! Just circling back — I know we chatted a while back and the timing wasn't quite right.
+        channel: 'Text / DM (attach a short-form video that suits them)',
+        body: `Hey [Name], hope you're well. Saw this video the other day — [attach video] — and thought something like this would be sick for you to do. Reckon it'd do really well.
 
-I've since put together something a bit different — a monthly video retainer that covers short-form content, social strategy and paid ads. The focus is entirely on getting you more enquiries, not just better-looking content.
-
-I'm not here to push anything, but I do think there's a real opportunity here for you and I'd hate for you to miss it. Would it be worth a quick 20-min chat to see if it makes sense?`,
-      },
-      {
-        channel: 'If they go quiet after that — follow-up (3 days later)',
-        body: `No pressure at all — I know how it is when things get busy. Just wanted to check: is the main thing putting you off timing, budget, or you're not sure the content side would actually move the needle for your business?
-
-Whatever it is, happy to be straight with you.`,
-      },
-      {
-        channel: 'Final message (if still quiet — 1 week later)',
-        body: `[Name] — I'm going to leave it here so I'm not spamming your DMs. But I genuinely think there's something here for you. If you ever want to explore it, just hit me up. I'll be here.`,
+I've also built out a new program off the back of the work I've been doing — designed to position you as the authority in your space and bring in real new business. If you want some info on it, let me know and I'll send the doc through.`,
       },
     ],
     tips: [
-      "Don't start with \"just following up\" — it's weak. Lead with the new angle or new result.",
-      'The second message that asks "what\'s putting you off" forces them to say it. If they reply, you can handle it. If they don\'t, they\'re not serious — move on.',
+      "Don't start with \"just following up\" — it's weak. Lead with the video and the new angle.",
+      'Pick a video that genuinely fits their business — the personalisation is the whole point.',
       'Pull out your old DMs and make a list before you start. Aim for 15–20 reactivations.',
-      'Anyone who enquired in the last 12 months goes on this list.',
     ],
+    followUp: {
+      title: 'Follow-up procedure',
+      steps: [
+        "If no reply after 2 days — call them. A quick phone call cuts through every time and shows you actually care, not just blasting messages.",
+        "Keep the call casual: reference the video you sent, ask how things are going, then offer to send the info doc through.",
+      ],
+    },
   },
   {
     key: 'push_week',
