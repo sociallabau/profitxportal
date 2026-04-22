@@ -9,6 +9,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const PILLAR_COLORS: Record<string, { accent: string; bg: string; border: string }> = {
@@ -384,15 +385,7 @@ function RenderSection({
 
     case 'link_placeholder':
       return section.url ? (
-        <a
-          href={section.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
-        >
-          <LinkIcon className="w-4 h-4" />
-          {section.label}
-        </a>
+        <LinkPlaceholderButton url={section.url} label={section.label} />
       ) : (
         <div className="rounded-xl border border-dashed border-border p-4 flex items-center gap-3 opacity-60">
           <LinkIcon className="w-4 h-4 text-muted-foreground" />
@@ -412,4 +405,54 @@ function RenderSection({
     default:
       return null;
   }
+}
+
+function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  const isPdf = /\.pdf($|\?)/i.test(url);
+  const isInternal = url.startsWith('/');
+
+  if (isPdf) {
+    return (
+      <>
+        <button
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
+        >
+          <LinkIcon className="w-4 h-4" />
+          {label}
+        </button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 flex flex-col">
+            <DialogHeader className="px-6 py-4 border-b border-border">
+              <DialogTitle className="flex items-center justify-between gap-4">
+                <span>{label}</span>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-normal text-muted-foreground hover:text-foreground underline mr-8"
+                >
+                  Open in new tab
+                </a>
+              </DialogTitle>
+            </DialogHeader>
+            <iframe src={url} title={label} className="flex-1 w-full bg-white rounded-b-lg" />
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  return (
+    <a
+      href={url}
+      target={isInternal ? undefined : '_blank'}
+      rel={isInternal ? undefined : 'noopener noreferrer'}
+      className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
+    >
+      <LinkIcon className="w-4 h-4" />
+      {label}
+    </a>
+  );
 }
