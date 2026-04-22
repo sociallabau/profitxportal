@@ -278,7 +278,24 @@ export default function CashMenu() {
                     </div>
                   </div>
                   {(action as any).opensModule ? (
-                    <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                    <div className="flex items-center gap-3 flex-shrink-0 mt-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isDone) markDone(action.key);
+                        }}
+                        disabled={isDone}
+                        title={isDone ? 'Marked as done' : 'Mark as done'}
+                        className={`w-5 h-5 rounded border flex items-center justify-center transition-colors
+                          ${isDone
+                            ? 'bg-primary border-primary text-primary-foreground cursor-default'
+                            : 'border-muted-foreground/40 hover:border-primary hover:bg-primary/10 cursor-pointer'
+                          }`}
+                      >
+                        {isDone && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </div>
                   ) : isOpen ? (
                     <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
                   ) : (
