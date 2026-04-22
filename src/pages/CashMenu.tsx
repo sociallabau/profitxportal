@@ -369,6 +369,9 @@ export default function CashMenu() {
 
                     <div className="space-y-4">
                       <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Scripts</h4>
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground italic">
+                        Heads up — these are just base scripts. Make sure you rewrite them so they're personal to who you're sending it to, your relationship with them, and your own tone of voice.
+                      </div>
                       {action.scripts.map((script, i) => (
                         <div key={i} className="bg-background rounded-lg overflow-hidden border border-border">
                           <div className="flex items-center justify-between px-4 py-2 border-b border-border">
