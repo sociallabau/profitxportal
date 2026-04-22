@@ -88,11 +88,11 @@ Posting random content and boosting the odd post isn't a strategy. It's noise.
       },
       {
         channel: 'Day 2 — Client Result / Proof',
-        body: `[Client name] came to me at [starting point — e.g. "$3k/month, posting randomly with no real enquiries"].
+        body: `[Client name] came to me with basically no digital presence — no content strategy, no social system, just posting randomly when they remembered.
 
-The problem wasn't effort. It was that they had no system tying content, socials and ads back to actual revenue.
+The problem wasn't effort. It was that they had no system tying content, socials and ads back to actual business results.
 
-We installed [your unique mechanism / system name] and now they're at [result — e.g. "$12k/month with consistent inbound enquiries every week"].
+We installed [your unique mechanism / system name] and now they've got a proper digital strategy running — consistent content, a funnel that works, and real enquiries coming in weekly.
 
 If you want the info on how we did it — DM me "[KEYWORD]" and I'll send it through.`,
       },
