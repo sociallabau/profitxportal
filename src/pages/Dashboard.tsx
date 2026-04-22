@@ -8,15 +8,21 @@ import { TrendingUp, Receipt, DollarSign, Trophy, Plus, ClipboardList } from 'lu
 import PageLayout from '@/components/PageLayout';
 import GoalCountdown from '@/components/GoalCountdown';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
+import TierUpgradeModal from '@/components/TierUpgradeModal';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { usePageTracking } from '@/hooks/usePageTracking';
 
 export default function Dashboard() {
   const { user } = useRequireAuth();
+  const { data: profile } = useProfile();
   usePageTracking('dashboard');
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [tierModalDismissed, setTierModalDismissed] = useState(false);
+  const showTierUpgrade =
+    !!profile && !tierModalDismissed && profile.tier && profile.tier !== (profile as any).tier_seen;
 
   const [winModalOpen, setWinModalOpen] = useState(false);
   const [winForm, setWinForm] = useState({ win_text: '', cash_amount: '' });
