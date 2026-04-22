@@ -71,46 +71,40 @@ I've also built out a new program off the back of the work I've been doing — d
     key: 'push_week',
     emoji: '📣',
     label: 'Push Week on Socials',
-    subtitle: "Only do this if you've been consistent with content for 4+ weeks. A 5-day push to drive inbound enquiries.",
+    subtitle: "Only run this if you've been consistent with content for 4+ weeks (2–3 posts a week, mix of awareness and trust content). We need eyeballs on the page before we try to harvest them.",
     effort: '5 days of posting',
-    expectedResult: '3–8 inbound DMs from engaged followers',
+    expectedResult: '1–2 inbound DMs or messages',
     warning: "Only run this if you've been posting consistently. A push week with a dead feed won't work.",
     scripts: [
       {
         channel: 'Day 1 — The Problem Post',
-        body: `Most [niche] businesses are creating content that gets views but no enquiries.
+        body: `Most [niche] businesses don't know how to use social media to actually generate revenue.
 
-Here's why: they're optimising for likes, not leads.
+The problem isn't that they aren't being seen. The problem is there's no real strategy behind their content, socials, or ads — nothing that ties back to driving real business results.
 
-Every piece of content should have one job: get the right person to DM you, comment, or book a call.
+Posting random content and boosting the odd post isn't a strategy. It's noise.
 
-That's the difference between content that looks nice and content that actually makes you money.
-
-[CTA: If this is something you're dealing with, drop me a DM — happy to show you what we do differently.]`,
+[CTA: If this is hitting a nerve, drop me a DM — happy to show you what an actual system looks like.]`,
       },
       {
         channel: 'Day 2 — Client Result / Proof',
-        body: `[Client name/business] came to me [X months] ago. They were getting [struggle: e.g. "0–2 enquiries a month from social"].
+        body: `[Client name] came to me at [starting point — e.g. "$3k/month, posting randomly with no real enquiries"].
 
-We set up their video content strategy, started posting consistently, ran a simple ad.
+The problem wasn't effort. It was that they had no system tying content, socials and ads back to actual revenue.
 
-[Result: e.g. "Within 8 weeks they had 11 new enquiry DMs and signed 2 new retainer clients."]
+We installed [your unique mechanism / system name] and now they're at [result — e.g. "$12k/month with consistent inbound enquiries every week"].
 
-This is what consistent, strategic content does. Not viral content. Consistent content.
-
-[CTA: Got a couple of spots available this month if you want to know more.]`,
+If you want the info on how we did it — DM me "[KEYWORD]" and I'll send it through.`,
       },
       {
         channel: 'Day 3 — The Education Post',
-        body: `The 3 reasons your video content isn't generating leads:
+        body: `Most [niche] businesses don't know how to turn social media into actual revenue.
 
-1. You're creating content for everyone (so it speaks to no one)
-2. You're not posting consistently enough to build trust
-3. There's no clear next step for someone who's interested
+And honestly — they shouldn't have to. You don't need to learn how to do it yourself. You need someone who already has the answer and can install it for you.
 
-Fix all 3 of those and you've got a content machine, not just a feed.
+That's the whole point of bringing someone in. You stay in your lane running the business. We handle the system that brings the new business in.
 
-[CTA: DM me "LEADS" and I'll tell you which one is your biggest issue.]`,
+[CTA: DM me "[KEYWORD]" if you want to see how we do it.]`,
       },
       {
         channel: 'Day 4 — Behind the Scenes / Authority',
@@ -125,34 +119,24 @@ This is a system. Not random content. A system.
 [CTA: One spot left this month. DM me if you want in.]`,
       },
       {
-        channel: 'Day 5 — The Direct Offer Post',
-        body: `Going to be straight with you.
+        channel: 'Day 5 — The Direct Offer Post (drop the hammer)',
+        body: `Alright — being straight with you.
 
-I've got [X] spots left for my video content retainer this month.
+I've got [X] spots left this month for my retainer.
 
-Here's what you get: monthly filming, short-form editing, social posting strategy, and a simple paid ad running alongside your organic content.
+You get: monthly filming, short-form editing, a proper social strategy, and a simple paid ad running alongside it. All built around driving real enquiries, not just views.
 
-Here's what you don't get: excuses about the algorithm, random content that doesn't convert, or someone who disappears after month one.
+If you're a [niche] business that's actually serious about making content work — DM me or drop a comment and we'll have a chat.
 
-If you're a [niche] business that's serious about content actually working for you — DM me or drop a comment.
-
-Let's talk.`,
-      },
-      {
-        channel: 'Inbound DM Reply Script (when someone messages after the push week)',
-        body: `Hey [Name]! Thanks for reaching out — appreciate it.
-
-Quick question before I go into anything: what does your content situation look like right now? Are you posting consistently, or has it been a bit stop-start?
-
-Just want to make sure what I do is actually the right fit for you.`,
+→ Pair this post with a direct piece-to-camera video.
+→ Roll out a story sequence the same day: problem → proof → offer → "DM me [KEYWORD]".
+→ This is the day you drop the hammer after a week of warming the room up.`,
       },
     ],
     tips: [
       "Post once per day for 5 days. Don't overthink it — use these scripts as a direct starting point.",
       'Stories matter. Post a "behind the scenes" or a question box on stories each day too.',
       'The goal of push week is inbound DMs, not likes. Track every conversation that comes in.',
-      'If someone comments on a post, DM them within 5 minutes while they\'re in buying mode.',
-      'After push week, follow up with everyone who engaged but didn\'t message.',
     ],
   },
   {
