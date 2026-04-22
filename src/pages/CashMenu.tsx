@@ -129,7 +129,9 @@ You get: monthly filming, short-form editing, a proper social strategy, and a si
 If you're a [niche] business that's actually serious about making content work — DM me or drop a comment and we'll have a chat.
 
 → Pair this post with a direct piece-to-camera video.
-→ Roll out a story sequence the same day — here's the framework: https://messy-arrow-f59.notion.site/Story-Sequence-Strategy-4f4bdcf32ce48226812f81073b03de51?source=copy_link
+→ Roll out a story sequence the same day — use the framework here:
+   [  📖 Open Story Sequence Framework  ]
+   (https://messy-arrow-f59.notion.site/Story-Sequence-Strategy-4f4bdcf32ce48226812f81073b03de51)
 → This is the day you drop the hammer after a week of warming the room up.`,
       },
     ],
