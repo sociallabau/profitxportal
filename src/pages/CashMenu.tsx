@@ -122,14 +122,14 @@ This is a system. Not random content. A system.
         channel: 'Day 5 — The Direct Offer Post (drop the hammer)',
         body: `Alright — being straight with you.
 
-I've got [X] spots left this month for my retainer.
+I've got [X] spots left this month for businesses who want the unique system we've built installed for them.
 
 You get: monthly filming, short-form editing, a proper social strategy, and a simple paid ad running alongside it. All built around driving real enquiries, not just views.
 
 If you're a [niche] business that's actually serious about making content work — DM me or drop a comment and we'll have a chat.
 
 → Pair this post with a direct piece-to-camera video.
-→ Roll out a story sequence the same day: problem → proof → offer → "DM me [KEYWORD]".
+→ Roll out a story sequence the same day — here's the framework: https://messy-arrow-f59.notion.site/Story-Sequence-Strategy-4f4bdcf32ce48226812f81073b03de51?source=copy_link
 → This is the day you drop the hammer after a week of warming the room up.`,
       },
     ],
