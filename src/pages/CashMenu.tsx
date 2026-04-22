@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Check, Copy, ChevronDown, ChevronUp, Zap, Lock } from 'lucide-react';
+import { Check, Copy, ChevronDown, ChevronUp, Zap, Lock, ExternalLink } from 'lucide-react';
 import { useCashMenu } from '@/hooks/useCashMenu';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import PageLayout from '@/components/PageLayout';
 import { usePageTracking } from '@/hooks/usePageTracking';
+import { ModuleContentDialog } from '@/components/ModuleContentView';
 
 const ACTIONS = [
   {
@@ -143,77 +144,12 @@ If you're a [niche] business that's actually serious about making content work �
     key: 'simple_ad',
     emoji: '💸',
     label: 'The Stupidly Simple Ad',
-    subtitle: '$20/day for 5 days. One video, one static/carousel. A follow-up DM to everyone who engages.',
+    subtitle: 'A simple paid ad system to put your offer in front of warm strangers and start conversations.',
     effort: '1 hour to set up, 5 days to run',
     expectedResult: '2–5 warm engagements, 1–3 conversations',
-    scripts: [
-      {
-        channel: '📹 Video Ad Script (speak to camera or voiceover)',
-        body: `If you're a [niche] business spending money on marketing but not seeing it come back through the door — this is for you.
-
-Most content looks good but doesn't convert. The reason is always the same: there's no system behind it.
-
-We handle everything — the filming, the editing, the social strategy, and the ads. You just show up.
-
-The businesses we work with go from [problem: "posting randomly with no results"] to [outcome: "consistent enquiries and signed clients within 90 days"].
-
-If that sounds like something you need — click the link or send us a message.
-
-[End card: Your name + "DM us" or "Book a free call"]`,
-      },
-      {
-        channel: '🖼️ Static / Carousel Ad Copy',
-        body: `Headline: "Is your content making you money or just getting you likes?"
-
-Body:
-Most [niche] businesses are posting consistently but not converting. Not because the content is bad — because there's no system behind it.
-
-We do monthly video retainers for [niche] businesses that want content that actually brings in enquiries.
-
-Short-form video. Social strategy. Simple ads. All handled.
-
-CTA: "DM us to find out if we're a fit" or "Book a free 20-min call"
-
-[Visual: Before/after of a client result, or a clean behind-the-scenes shot]`,
-      },
-      {
-        channel: '📲 Follow-Up DM (send to everyone who likes, comments or clicks)',
-        body: `Hey [Name]! Noticed you came across our content — appreciate it.
-
-Quick question: are you just here to watch the content, or are you actually after some help with your video content and socials?
-
-No wrong answer — just want to know if it's worth having a chat.`,
-      },
-      {
-        channel: "➡️ If they say they're interested — next message",
-        body: `Nice one. So what does your content situation look like right now? Are you posting, running ads, or starting from scratch?
-
-Want to make sure we're actually the right fit before we waste each other's time.`,
-      },
-      {
-        channel: '📋 Ad Setup (quick guide)',
-        body: `Platform: Instagram + Facebook (Meta Ads Manager)
-Budget: $20/day for 5 days ($100 total)
-Objective: Engagement or Messages (not Reach)
-Audience: Interest-based targeting — your niche (e.g. "fitness", "gym owners", "coaches", "local businesses")
-Placement: Instagram Feed + Reels + Facebook Feed
-Ad format: Run one video ad AND one static/carousel at the same time
-Duration: 5 days, then review which performed better
-
-After 5 days:
-— Check which ad got more engagement/messages
-— DM everyone who interacted
-— Pause the weaker ad if you want to continue`,
-      },
-    ],
-    tips: [
-      "The DM is the most important part — not the ad itself. The ad just starts the conversation.",
-      'Check your ad account daily and DM every new engagement within an hour.',
-      "Don't send a pitch in the first DM. Ask the question, let them qualify themselves.",
-      'The "are you just here to watch or do you want help" message is deliberately casual — it doesn\'t feel like a sales DM.',
-      "If Meta Ads is new to you — use \"Boost Post\" on your best-performing organic reel first. It's simpler and good enough to start.",
-    ],
-    roadmapLink: { moduleId: 'stupidly-simple-ad', pillar: 'traffic', label: 'Traffic' },
+    opensModule: 'stupidly-simple-ad',
+    scripts: [],
+    tips: [],
   },
 ];
 
@@ -222,6 +158,7 @@ export default function CashMenu() {
   usePageTracking('cash-menu');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [moduleModal, setModuleModal] = useState<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ['profile-tier'],
@@ -313,7 +250,13 @@ export default function CashMenu() {
                   ${isDone ? 'border-primary/40 bg-primary/5' : 'border-border bg-card'}`}
               >
                 <button
-                  onClick={() => toggle(action.key)}
+                  onClick={() => {
+                    if ((action as any).opensModule) {
+                      setModuleModal((action as any).opensModule);
+                    } else {
+                      toggle(action.key);
+                    }
+                  }}
                   className="w-full flex items-start justify-between p-5 text-left gap-4"
                 >
                   <div className="flex items-start gap-3">
@@ -334,10 +277,16 @@ export default function CashMenu() {
                       </div>
                     </div>
                   </div>
-                  {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /> : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />}
+                  {(action as any).opensModule ? (
+                    <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                  ) : isOpen ? (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                  )}
                 </button>
 
-                {isOpen && (
+                {isOpen && !(action as any).opensModule && (
                   <div className="border-t border-border p-5 space-y-6">
                     {action.warning && (
                       <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm text-warning">
@@ -444,6 +393,14 @@ export default function CashMenu() {
           </div>
         )}
       </div>
+
+      {moduleModal && (
+        <ModuleContentDialog
+          moduleId={moduleModal}
+          open={!!moduleModal}
+          onOpenChange={(open) => !open && setModuleModal(null)}
+        />
+      )}
     </PageLayout>
   );
 }
