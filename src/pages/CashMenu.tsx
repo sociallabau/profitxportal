@@ -413,6 +413,9 @@ export default function CashMenu() {
                         </ul>
                       </div>
                     )}
+
+                    <button
+                      onClick={() => markDone(action.key)}
                       disabled={isDone}
                       className={`w-full py-3 rounded-lg font-semibold text-sm transition-all
                         ${isDone
