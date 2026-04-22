@@ -144,8 +144,8 @@ If you're a [niche] business that's actually serious about making content work �
     emoji: '💸',
     label: 'The Stupidly Simple Ad',
     subtitle: '$20/day for 5 days. One video, one static/carousel. A follow-up DM to everyone who engages.',
-    effort: '2 hours to set up, 5 days to run',
-    expectedResult: '5–15 warm engagements, 2–4 conversations',
+    effort: '1 hour to set up, 5 days to run',
+    expectedResult: '2–5 warm engagements, 1–3 conversations',
     scripts: [
       {
         channel: '📹 Video Ad Script (speak to camera or voiceover)',
