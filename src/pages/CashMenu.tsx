@@ -406,7 +406,7 @@ export default function CashMenu() {
           <div className="bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-xl p-6 text-center space-y-2">
             <p className="text-2xl">🎉</p>
             <h3 className="text-foreground font-bold italic text-xl">You've run all 4 moves.</h3>
-            <p className="text-muted-foreground text-sm">Now it's about consistency. Head back to your Roadmap and keep pushing your scores green.</p>
+            <p className="text-muted-foreground text-sm">If you're ever feeling stuck on how to make some simple moves that generate cash, come back here. Or start each quarter with this.</p>
           </div>
         )}
       </div>
