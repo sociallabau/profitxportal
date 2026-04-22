@@ -213,6 +213,7 @@ After 5 days:
       'The "are you just here to watch or do you want help" message is deliberately casual — it doesn\'t feel like a sales DM.',
       "If Meta Ads is new to you — use \"Boost Post\" on your best-performing organic reel first. It's simpler and good enough to start.",
     ],
+    roadmapLink: { moduleId: 'stupidly-simple-ad', pillar: 'traffic', label: 'Traffic' },
   },
 ];
 
@@ -379,6 +380,15 @@ export default function CashMenu() {
                         className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
                       >
                         📖 Open Story Sequence Framework
+                      </a>
+                    )}
+
+                    {(action as any).roadmapLink && (
+                      <a
+                        href={`/module/${(action as any).roadmapLink.pillar}/${(action as any).roadmapLink.moduleId}`}
+                        className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        🗺️ Open {(action as any).roadmapLink.label} Module
                       </a>
                     )}
 
