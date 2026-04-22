@@ -111,6 +111,13 @@ export default function Dashboard() {
   return (
     <PageLayout>
       <AnnouncementsModal />
+      {showTierUpgrade && profile && (
+        <TierUpgradeModal
+          userId={profile.id}
+          newTier={profile.tier!}
+          onClose={() => setTierModalDismissed(true)}
+        />
+      )}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
