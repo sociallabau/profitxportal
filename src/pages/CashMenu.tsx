@@ -393,6 +393,14 @@ export default function CashMenu() {
           </div>
         )}
       </div>
+
+      {moduleModal && (
+        <ModuleContentDialog
+          moduleId={moduleModal}
+          open={!!moduleModal}
+          onOpenChange={(open) => !open && setModuleModal(null)}
+        />
+      )}
     </PageLayout>
   );
 }
