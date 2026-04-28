@@ -22,6 +22,14 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/zzd-yxwv-byn',
     description: 'Live workshop covering paid ads strategy. Join via Google Meet.',
   },
+  {
+    title: 'ProfitX — Q&A Call',
+    category: 'Q&A',
+    start: '2026-05-13T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/vte-wrkq-rpp',
+    description: 'Live Q&A call. Time zone: Australia/Brisbane. Join via Google Meet.',
+  },
 ];
 
 const categoryStyles: Record<Call['category'], string> = {
