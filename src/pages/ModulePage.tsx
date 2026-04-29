@@ -287,10 +287,10 @@ function RenderSection({
       return (
         <div className="flex items-center gap-3 pt-6 first:pt-0">
           <span className={`text-2xl font-bold ${colors.accent}`}>
-            {SECTION_NUMBERS[section.number - 1] || section.number}
+            {section.number ? SECTION_NUMBERS[Number(section.number) - 1] || section.number : null}
           </span>
           <span className={`text-xs font-bold tracking-[0.3em] uppercase ${colors.accent}`}>
-            {section.label}
+            {section.label || section.title}
           </span>
           <div className={`flex-1 h-px ${colors.bg}`} />
         </div>
@@ -327,7 +327,7 @@ function RenderSection({
     case 'bullet_list':
       return (
         <ul className="space-y-3">
-          {section.items.map((item: any, j: number) => (
+          {asArray(section.items).map((item: any, j: number) => (
             <li key={j} className="flex items-start gap-3 text-sm">
               {item.emoji && <span className="text-lg shrink-0">{item.emoji}</span>}
               <div>
@@ -341,18 +341,19 @@ function RenderSection({
       );
 
     case 'numbered_steps':
+      const numberedItems = asArray(section.items ?? section.steps);
       return (
         <div className="space-y-4">
-          {section.items.map((step: any, j: number) => (
+          {numberedItems.map((step: any, j: number) => (
             <div key={j} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <span className={`shrink-0 w-7 h-7 rounded-full ${colors.bg} ${colors.accent} flex items-center justify-center text-xs font-bold`}>
                   {j + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold">{step.title}</p>
+                  {step.title && <p className="text-sm font-bold">{step.title}</p>}
                   <p className="text-sm text-muted-foreground mt-1 leading-relaxed whitespace-pre-line">
-                    {step.text}
+                    {itemText(step)}
                   </p>
                 </div>
               </div>
