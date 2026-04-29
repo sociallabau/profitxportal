@@ -26,6 +26,13 @@ interface SectionBlock {
   [key: string]: any;
 }
 
+const asArray = (value: unknown): any[] => (Array.isArray(value) ? value : []);
+
+const itemText = (item: any): string => {
+  if (typeof item === 'string') return item;
+  return item?.text ?? item?.title ?? item?.label ?? '';
+};
+
 export default function ModulePage() {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
@@ -200,7 +207,9 @@ export default function ModulePage() {
     );
   }
 
-  const sections: SectionBlock[] = (modulePage.sections as SectionBlock[]) || [];
+  const sections: SectionBlock[] = Array.isArray(modulePage.sections)
+    ? (modulePage.sections as SectionBlock[])
+    : [];
 
   return (
     <PageLayout>
