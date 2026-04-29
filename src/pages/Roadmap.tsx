@@ -101,7 +101,8 @@ export default function Roadmap() {
     },
   });
 
-  const completionMap: Record<string, boolean> = Object.fromEntries(completions.map((c: any) => [c.task_key, c.completed]));
+  const safeCompletions = Array.isArray(completions) ? completions : [];
+  const completionMap: Record<string, boolean> = Object.fromEntries(safeCompletions.map((c: any) => [c.task_key, c.completed]));
 
   const toggleModule = useMutation({
     mutationFn: async ({ moduleId, current }: { moduleId: string; current: boolean }) => {

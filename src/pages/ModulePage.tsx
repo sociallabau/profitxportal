@@ -26,6 +26,13 @@ interface SectionBlock {
   [key: string]: any;
 }
 
+const asArray = (value: unknown): any[] => (Array.isArray(value) ? value : []);
+
+const itemText = (item: any): string => {
+  if (typeof item === 'string') return item;
+  return item?.text ?? item?.title ?? item?.label ?? '';
+};
+
 export default function ModulePage() {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
@@ -200,7 +207,9 @@ export default function ModulePage() {
     );
   }
 
-  const sections: SectionBlock[] = (modulePage.sections as SectionBlock[]) || [];
+  const sections: SectionBlock[] = Array.isArray(modulePage.sections)
+    ? (modulePage.sections as SectionBlock[])
+    : [];
 
   return (
     <PageLayout>
@@ -278,10 +287,10 @@ function RenderSection({
       return (
         <div className="flex items-center gap-3 pt-6 first:pt-0">
           <span className={`text-2xl font-bold ${colors.accent}`}>
-            {SECTION_NUMBERS[section.number - 1] || section.number}
+            {section.number ? SECTION_NUMBERS[Number(section.number) - 1] || section.number : null}
           </span>
           <span className={`text-xs font-bold tracking-[0.3em] uppercase ${colors.accent}`}>
-            {section.label}
+            {section.label || section.title}
           </span>
           <div className={`flex-1 h-px ${colors.bg}`} />
         </div>
@@ -304,7 +313,7 @@ function RenderSection({
           )}
           {section.items && (
             <ul className="mt-2 space-y-1.5">
-              {section.items.map((item: string, j: number) => (
+              {asArray(section.items).map((item: string, j: number) => (
                 <li key={j} className="text-sm text-muted-foreground flex items-start gap-2">
                   <span className={`mt-1.5 w-1.5 h-1.5 rounded-full ${colors.accent} bg-current shrink-0`} />
                   {item}
@@ -318,7 +327,7 @@ function RenderSection({
     case 'bullet_list':
       return (
         <ul className="space-y-3">
-          {section.items.map((item: any, j: number) => (
+          {asArray(section.items).map((item: any, j: number) => (
             <li key={j} className="flex items-start gap-3 text-sm">
               {item.emoji && <span className="text-lg shrink-0">{item.emoji}</span>}
               <div>
@@ -332,18 +341,19 @@ function RenderSection({
       );
 
     case 'numbered_steps':
+      const numberedItems = asArray(section.items ?? section.steps);
       return (
         <div className="space-y-4">
-          {section.items.map((step: any, j: number) => (
+          {numberedItems.map((step: any, j: number) => (
             <div key={j} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <span className={`shrink-0 w-7 h-7 rounded-full ${colors.bg} ${colors.accent} flex items-center justify-center text-xs font-bold`}>
                   {j + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold">{step.title}</p>
+                  {step.title && <p className="text-sm font-bold">{step.title}</p>}
                   <p className="text-sm text-muted-foreground mt-1 leading-relaxed whitespace-pre-line">
-                    {step.text}
+                    {itemText(step)}
                   </p>
                 </div>
               </div>
@@ -361,15 +371,17 @@ function RenderSection({
       );
 
     case 'action_checklist':
+      const checklistItems = asArray(section.items);
       return (
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Action Checklist</p>
-          {section.items.map((item: any) => {
-            const taskKey = `module:${moduleId}:${item.id}`;
+          {checklistItems.map((item: any, index: number) => {
+            const text = itemText(item);
+            const taskKey = `module:${moduleId}:${item.id ?? index}`;
             const checked = !!completionMap[taskKey];
             return (
               <button
-                key={item.id}
+                key={item.id ?? index}
                 onClick={() => onToggle(taskKey, checked)}
                 className="flex items-center gap-3 w-full text-left group"
               >
@@ -379,7 +391,7 @@ function RenderSection({
                   <Circle className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary/60 shrink-0" />
                 )}
                 <span className={`text-sm ${checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                  {item.text}
+                  {text}
                 </span>
               </button>
             );
