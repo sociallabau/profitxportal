@@ -381,7 +381,7 @@ function RenderSection({
             const checked = !!completionMap[taskKey];
             return (
               <button
-                key={item.id}
+                key={item.id ?? index}
                 onClick={() => onToggle(taskKey, checked)}
                 className="flex items-center gap-3 w-full text-left group"
               >
