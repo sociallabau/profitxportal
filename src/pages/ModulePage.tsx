@@ -313,7 +313,7 @@ function RenderSection({
           )}
           {section.items && (
             <ul className="mt-2 space-y-1.5">
-              {section.items.map((item: string, j: number) => (
+              {asArray(section.items).map((item: string, j: number) => (
                 <li key={j} className="text-sm text-muted-foreground flex items-start gap-2">
                   <span className={`mt-1.5 w-1.5 h-1.5 rounded-full ${colors.accent} bg-current shrink-0`} />
                   {item}
@@ -371,11 +371,13 @@ function RenderSection({
       );
 
     case 'action_checklist':
+      const checklistItems = asArray(section.items);
       return (
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Action Checklist</p>
-          {section.items.map((item: any) => {
-            const taskKey = `module:${moduleId}:${item.id}`;
+          {checklistItems.map((item: any, index: number) => {
+            const text = itemText(item);
+            const taskKey = `module:${moduleId}:${item.id ?? index}`;
             const checked = !!completionMap[taskKey];
             return (
               <button
@@ -389,7 +391,7 @@ function RenderSection({
                   <Circle className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary/60 shrink-0" />
                 )}
                 <span className={`text-sm ${checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                  {item.text}
+                  {text}
                 </span>
               </button>
             );
