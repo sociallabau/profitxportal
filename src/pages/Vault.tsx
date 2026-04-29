@@ -1,9 +1,10 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { PlayCircle, ExternalLink } from 'lucide-react';
+import { PlayCircle, ExternalLink, BookOpen } from 'lucide-react';
 import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
 import vaultQaApril from '@/assets/vault-qa-april.jpg';
+import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
 
 type VaultItem = {
   title: string;
@@ -11,6 +12,7 @@ type VaultItem = {
   date?: string;
   url: string;
   thumbnail: string;
+  workbookUrl?: string;
 };
 
 const ITEMS: VaultItem[] = [
@@ -26,6 +28,7 @@ const ITEMS: VaultItem[] = [
     category: 'Lesson',
     url: 'https://fathom.video/share/DcMunbGJxo_LVJ3kUveZHXqCgCm7UsTc',
     thumbnail: vaultOrganic,
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Traffic-Engine-Workshop-Resources-32dbdcf32ce480e0abd8fa3e9b587b67?source=copy_link',
   },
   {
     title: 'Q&A — April 14th',
@@ -33,6 +36,13 @@ const ITEMS: VaultItem[] = [
     date: 'Apr 14',
     url: 'https://fathom.video/share/fNxXUxTxAaazuGGzzdSocVzQ_JmqKmFm',
     thumbnail: vaultQaApril,
+  },
+  {
+    title: 'Lesson — Paid Advertising (Meta Ads)',
+    category: 'Lesson',
+    url: 'https://fathom.video/share/Py4yTENtyK8bmzL7tg6H3Qsd5_GbE63f',
+    thumbnail: vaultPaidAds,
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Paid-Ads-Workshop-Resources-Workbooks-34fbdcf32ce4816bb7dde01b4933d0fb?source=copy_link',
   },
 ];
 
@@ -51,14 +61,16 @@ export default function Vault() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {ITEMS.map((item) => (
-          <a
+          <Card
             key={item.url}
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group"
+            className="h-full overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col group"
           >
-            <Card className="h-full overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
               <div className="relative aspect-video overflow-hidden bg-muted">
                 <img
                   src={item.thumbnail}
@@ -72,27 +84,45 @@ export default function Vault() {
                   <PlayCircle className="w-14 h-14 text-white drop-shadow-lg" />
                 </div>
               </div>
-              <div className="p-5 flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[item.category]}`}
-                  >
-                    {item.category}
-                  </span>
-                  {item.date && (
-                    <span className="text-xs text-muted-foreground">{item.date}</span>
-                  )}
-                </div>
-                <h3 className="font-semibold text-foreground leading-snug">
-                  {item.title}
-                </h3>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+            </a>
+            <div className="p-5 flex flex-col gap-2 flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[item.category]}`}
+                >
+                  {item.category}
+                </span>
+                {item.date && (
+                  <span className="text-xs text-muted-foreground">{item.date}</span>
+                )}
+              </div>
+              <h3 className="font-semibold text-foreground leading-snug">
+                {item.title}
+              </h3>
+              <div className="mt-auto pt-2 flex flex-col gap-1.5">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                >
                   <ExternalLink className="w-3 h-3" />
                   Watch on Fathom
-                </div>
+                </a>
+                {item.workbookUrl && (
+                  <a
+                    href={item.workbookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    Workbook
+                  </a>
+                )}
               </div>
-            </Card>
-          </a>
+            </div>
+          </Card>
         ))}
       </div>
     </PageLayout>
