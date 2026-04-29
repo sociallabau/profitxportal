@@ -46,10 +46,14 @@ export default function ModulePage() {
         .from('module_pages')
         .select('*')
         .eq('module_id', moduleId!)
-        .single();
-      if (error) throw error;
+        .maybeSingle();
+      if (error) {
+        console.error('Failed to load module page', error);
+        return null;
+      }
       return data;
     },
+    retry: false,
   });
 
   const { data: completions = [] } = useQuery({
