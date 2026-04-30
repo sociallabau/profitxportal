@@ -424,39 +424,41 @@ function RenderSection({
 }
 
 function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
-  const [open, setOpen] = useState(false);
   const isPdf = /\.pdf($|\?)/i.test(url);
   const isInternal = url.startsWith('/');
 
+  const handlePdfDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) throw new Error('fetch failed');
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const filename = (url.split('/').pop()?.split('?')[0]) || `${label || 'download'}.pdf`;
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch {
+      // Fallback: open in new tab if fetch is blocked by CORS
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   if (isPdf) {
     return (
-      <>
-        <button
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
-        >
-          <LinkIcon className="w-4 h-4" />
-          {label}
-        </button>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 flex flex-col">
-            <DialogHeader className="px-6 py-4 border-b border-border">
-              <DialogTitle className="flex items-center justify-between gap-4">
-                <span>{label}</span>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-normal text-muted-foreground hover:text-foreground underline mr-8"
-                >
-                  Open in new tab
-                </a>
-              </DialogTitle>
-            </DialogHeader>
-            <iframe src={url} title={label} className="flex-1 w-full bg-white rounded-b-lg" />
-          </DialogContent>
-        </Dialog>
-      </>
+      <a
+        href={url}
+        onClick={handlePdfDownload}
+        download
+        className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
+      >
+        <LinkIcon className="w-4 h-4" />
+        {label}
+      </a>
     );
   }
 
