@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Lock, Video, ClipboardList, Sparkles } from 'lucide-react';
+import { Lock, Video, ClipboardList, Sparkles, Wand2 } from 'lucide-react';
 
 type Announcement = {
   key: string;
@@ -12,6 +12,20 @@ type Announcement = {
 };
 
 const ANNOUNCEMENTS: Announcement[] = [
+  {
+    key: 'announce_content_generator_v1',
+    icon: Wand2,
+    title: 'New: AI Content Generator',
+    body: (
+      <>
+        A brand new <strong className="text-foreground">Content Generator</strong> is now live inside the <strong className="text-foreground">Content Studio</strong>. Generate Reel frameworks, Carousels and Lead Emails tailored to your business in seconds.
+        <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          📲 Check <strong className="text-foreground">WhatsApp</strong> for the Loom walkthrough on how to use it.
+        </div>
+      </>
+    ),
+    cta: { label: 'Try it now', path: '/content-studio?tab=Content+Generator' },
+  },
   {
     key: 'announce_vault_calls_v1',
     icon: Sparkles,
