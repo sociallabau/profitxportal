@@ -37,7 +37,7 @@ STRICT TONE RULES — follow these exactly:
 OUTPUT FORMAT — return exactly this structure, no extra commentary:
 
 REEL_FRAMEWORK:
-[5-7 dot points, each a direction not a script line. Include opening hook direction and closing CTA direction. Use "- " prefix for each bullet.]
+[A talking-points framework for what to SAY on camera — NOT a storyboard, NOT shot directions, NOT visual descriptions. Do not mention shots, cuts, transitions, text overlays, b-roll, or visuals of any kind. Structure as 5-7 bullets covering: the hook line to open with, the core points to make in order, and the CTA line to close with. Each bullet describes the message/idea to deliver at that beat (e.g. "Hook: call out the specific frustration of chasing clients for footage approvals"). Use "- " prefix for each bullet.]
 
 CAROUSEL:
 [5-7 slides. Format each as "Slide N — Headline" on one line, then 1-2 short supporting lines below. First slide is hook (no question marks), final slide is CTA.]
