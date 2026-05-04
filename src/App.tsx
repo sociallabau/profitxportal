@@ -20,6 +20,7 @@ import CashMenu from "./pages/CashMenu";
 import WinsWall from "./pages/WinsWall";
 import ModulePage from "./pages/ModulePage";
 import ContentStudio from "./pages/ContentStudio";
+import ContentGenerator from "./pages/ContentGenerator";
 import HotList from "./pages/HotList";
 import LaunchHQ from "./pages/LaunchHQ";
 import Vault from "./pages/Vault";
@@ -62,6 +63,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
           <Route path="/content-studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
+          <Route path="/content-generator" element={<ProtectedRoute><ContentGenerator /></ProtectedRoute>} />
           <Route path="/hot-list" element={<ProtectedRoute><HotList /></ProtectedRoute>} />
           <Route path="/launch" element={<ProtectedRoute><LaunchHQ /></ProtectedRoute>} />
           <Route path="/financials" element={<ProtectedRoute><Financials /></ProtectedRoute>} />

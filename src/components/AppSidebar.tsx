@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Gauge, Route, BarChart3, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X, ExternalLink,
-  GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video,
+  GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, Wand2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ export const CIRCLE_URLS = {
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
   { label: 'Content Studio', path: '/content-studio', icon: Sparkles },
+  { label: 'Content Generator', path: '/content-generator', icon: Wand2 },
   { label: 'Hot List', path: '/hot-list', icon: Flame },
   { label: 'Launch HQ', path: '/launch', icon: Rocket },
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
