@@ -374,6 +374,7 @@ export function ContentGeneratorView({ hideHeader = false }: { hideHeader?: bool
           )}
         </div>
       )}
-    </PageLayout>
+    </>
+
   );
 }
