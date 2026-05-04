@@ -113,6 +113,14 @@ function OutputBlock({ title, helper, content, loading, onRegenerate, subjectLin
 }
 
 export default function ContentGenerator() {
+  return (
+    <PageLayout>
+      <ContentGeneratorView />
+    </PageLayout>
+  );
+}
+
+export function ContentGeneratorView({ hideHeader = false }: { hideHeader?: boolean }) {
   const { data: profile } = useProfile();
   const businessText = profile?.business_overview || "";
   const businessThin = useMemo(
@@ -205,7 +213,7 @@ export default function ContentGenerator() {
   const hasOutputs = reel || carousel || emailBody;
 
   return (
-    <PageLayout>
+    <>
       <Dialog open={showOnboarding} onOpenChange={(o) => !o && dismissOnboarding()}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
@@ -230,15 +238,17 @@ export default function ContentGenerator() {
         </DialogContent>
       </Dialog>
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
-          <Wand2 className="w-7 h-7 text-primary" />
-          Content Generator
-        </h1>
-        <p className="text-muted-foreground">
-          One topic, one P, three pieces of content. A reel framework, a carousel, and a lead email.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
+            <Wand2 className="w-7 h-7 text-primary" />
+            Content Generator
+          </h1>
+          <p className="text-muted-foreground">
+            One topic, one P, three pieces of content. A reel framework, a carousel, and a lead email.
+          </p>
+        </div>
+      )}
 
       {businessThin && (
         <Card className="p-4 mb-6 bg-yellow-500/10 border-yellow-500/30">
@@ -364,6 +374,7 @@ export default function ContentGenerator() {
           )}
         </div>
       )}
-    </PageLayout>
+    </>
+
   );
 }

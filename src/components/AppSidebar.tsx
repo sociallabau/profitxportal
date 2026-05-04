@@ -16,7 +16,6 @@ export const CIRCLE_URLS = {
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
   { label: 'Content Studio', path: '/content-studio', icon: Sparkles },
-  { label: 'Content Generator', path: '/content-generator', icon: Wand2 },
   { label: 'Hot List', path: '/hot-list', icon: Flame },
   { label: 'Launch HQ', path: '/launch', icon: Rocket },
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
