@@ -51,7 +51,7 @@ EMAIL_BODY:
 function buildPartPrompt(part: "all" | "reel" | "carousel" | "email") {
   if (part === "all") return SYSTEM_PROMPT;
   const sectionMap = {
-    reel: "REEL_FRAMEWORK:\n[5-7 dot points using '- ' prefix]",
+    reel: "REEL_FRAMEWORK:\n[Talking-points framework for what to SAY on camera — not shots/visuals/storyboard. 5-7 bullets with '- ' prefix covering hook line, core points in order, and CTA line.]",
     carousel: "CAROUSEL:\n[5-7 slides as 'Slide N — Headline' then 1-2 supporting lines]",
     email: "EMAIL_SUBJECT:\n[one line]\n\nEMAIL_BODY:\n[200-300 words plain prose]",
   };
