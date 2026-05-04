@@ -4,8 +4,9 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import ContentCalendar from '@/components/content-studio/ContentCalendar';
 import InstagramSearch from '@/components/content-studio/InstagramSearch';
 import SavedIdeas from '@/components/content-studio/SavedIdeas';
+import { ContentGeneratorView } from './ContentGenerator';
 
-const TABS = ['Content Calendar', 'Instagram', 'Saved Ideas'] as const;
+const TABS = ['Content Calendar', 'Instagram', 'Saved Ideas', 'Content Generator'] as const;
 
 export default function ContentStudio() {
   const { loading } = useRequireAuth();
@@ -18,7 +19,7 @@ export default function ContentStudio() {
       <h1 className="text-2xl font-bold text-foreground mb-1">Content Studio</h1>
       <p className="text-sm text-muted-foreground mb-6">Plan, research, and remix content for your business.</p>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -37,6 +38,7 @@ export default function ContentStudio() {
       {activeTab === 'Content Calendar' && <ContentCalendar />}
       {activeTab === 'Instagram' && <InstagramSearch />}
       {activeTab === 'Saved Ideas' && <SavedIdeas />}
+      {activeTab === 'Content Generator' && <ContentGeneratorView hideHeader />}
     </PageLayout>
   );
 }
