@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
 import ContentCalendar from '@/components/content-studio/ContentCalendar';
@@ -10,7 +11,15 @@ const TABS = ['Content Calendar', 'Instagram', 'Saved Ideas', 'Content Generator
 
 export default function ContentStudio() {
   const { loading } = useRequireAuth();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('Content Calendar');
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && (TABS as readonly string[]).includes(t)) {
+      setActiveTab(t as typeof TABS[number]);
+    }
+  }, [searchParams]);
 
   if (loading) return null;
 
