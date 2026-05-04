@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Lock, Video, ClipboardList, Sparkles } from 'lucide-react';
+import { Lock, Video, ClipboardList, Sparkles, Wand2 } from 'lucide-react';
 
 type Announcement = {
   key: string;
