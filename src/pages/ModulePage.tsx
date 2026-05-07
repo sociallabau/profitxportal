@@ -299,6 +299,25 @@ function RenderSection({
     case 'heading':
       return <h2 className="text-xl font-bold">{section.text}</h2>;
 
+    case 'video_embed': {
+      const url: string = section.url || '';
+      const loomMatch = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/);
+      const embedUrl = loomMatch ? `https://www.loom.com/embed/${loomMatch[1]}` : url;
+      return (
+        <div className="space-y-2">
+          {section.title && <p className="text-sm font-bold">{section.title}</p>}
+          <div className="relative w-full overflow-hidden rounded-xl border border-border bg-black" style={{ paddingTop: '56.25%' }}>
+            <iframe
+              src={embedUrl}
+              title={section.title || 'Module video'}
+              allowFullScreen
+              className="absolute inset-0 h-full w-full"
+            />
+          </div>
+        </div>
+      );
+    }
+
     case 'paragraph':
       return <p className="text-sm text-muted-foreground leading-relaxed">{section.text}</p>;
 
