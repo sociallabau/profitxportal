@@ -5,6 +5,7 @@ import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
 import vaultQaApril from '@/assets/vault-qa-april.jpg';
 import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
+import vaultQaMay from '@/assets/vault-qa-may.jpg';
 
 type VaultItem = {
   title: string;
@@ -43,6 +44,13 @@ const ITEMS: VaultItem[] = [
     url: 'https://fathom.video/share/Py4yTENtyK8bmzL7tg6H3Qsd5_GbE63f',
     thumbnail: vaultPaidAds,
     workbookUrl: 'https://messy-arrow-f59.notion.site/Paid-Ads-Workshop-Resources-Workbooks-34fbdcf32ce4816bb7dde01b4933d0fb?source=copy_link',
+  },
+  {
+    title: 'Q&A — May 13th',
+    category: 'Q&A',
+    date: 'May 13',
+    url: 'https://fathom.video/share/PGSbzCgBaxAVwbQa8Ra_TdGUr3Ba75LR',
+    thumbnail: vaultQaMay,
   },
 ];
 
