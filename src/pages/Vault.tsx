@@ -45,6 +45,13 @@ const ITEMS: VaultItem[] = [
     thumbnail: vaultPaidAds,
     workbookUrl: 'https://messy-arrow-f59.notion.site/Paid-Ads-Workshop-Resources-Workbooks-34fbdcf32ce4816bb7dde01b4933d0fb?source=copy_link',
   },
+  {
+    title: 'Q&A — May 13th',
+    category: 'Q&A',
+    date: 'May 13',
+    url: 'https://fathom.video/share/PGSbzCgBaxAVwbQa8Ra_TdGUr3Ba75LR',
+    thumbnail: vaultQaMay,
+  },
 ];
 
 const categoryStyles: Record<VaultItem['category'], string> = {
