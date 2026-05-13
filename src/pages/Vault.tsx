@@ -52,34 +52,6 @@ const ITEMS: VaultItem[] = [
     url: 'https://fathom.video/share/cxFvsiwisUVxLfxqN_edSJC7XjXysuWb',
     thumbnail: vaultQaMarch,
   },
-  {
-    title: 'Lesson — Organic Content Flow',
-    category: 'Lesson',
-    url: 'https://fathom.video/share/DcMunbGJxo_LVJ3kUveZHXqCgCm7UsTc',
-    thumbnail: vaultOrganic,
-    workbookUrl: 'https://messy-arrow-f59.notion.site/Traffic-Engine-Workshop-Resources-32dbdcf32ce480e0abd8fa3e9b587b67?source=copy_link',
-  },
-  {
-    title: 'Q&A — April 14th',
-    category: 'Q&A',
-    date: 'Apr 14',
-    url: 'https://fathom.video/share/fNxXUxTxAaazuGGzzdSocVzQ_JmqKmFm',
-    thumbnail: vaultQaApril,
-  },
-  {
-    title: 'Lesson — Paid Advertising (Meta Ads)',
-    category: 'Lesson',
-    url: 'https://fathom.video/share/Py4yTENtyK8bmzL7tg6H3Qsd5_GbE63f',
-    thumbnail: vaultPaidAds,
-    workbookUrl: 'https://messy-arrow-f59.notion.site/Paid-Ads-Workshop-Resources-Workbooks-34fbdcf32ce4816bb7dde01b4933d0fb?source=copy_link',
-  },
-  {
-    title: 'Q&A — May 13th',
-    category: 'Q&A',
-    date: 'May 13',
-    url: 'https://fathom.video/share/PGSbzCgBaxAVwbQa8Ra_TdGUr3Ba75LR',
-    thumbnail: vaultQaMay,
-  },
 ];
 
 const categoryStyles: Record<VaultItem['category'], string> = {
