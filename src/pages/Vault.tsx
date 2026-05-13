@@ -5,6 +5,7 @@ import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
 import vaultQaApril from '@/assets/vault-qa-april.jpg';
 import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
+import vaultQaMay from '@/assets/vault-qa-may.jpg';
 
 type VaultItem = {
   title: string;
