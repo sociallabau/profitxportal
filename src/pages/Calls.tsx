@@ -38,6 +38,14 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/hjc-ycoe-sxq',
     description: 'Profit By Design™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet.',
   },
+  {
+    title: 'ProfitX — 6 Week Focus Finder',
+    category: 'Workshop',
+    start: '2026-05-29T15:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/wvb-vcyj-fpa',
+    description: '6 Week Focus Finder. Time zone: Australia/Brisbane. Join via Google Meet.',
+  },
 ];
 
 const categoryStyles: Record<Call['category'], string> = {
