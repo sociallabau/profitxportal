@@ -27,7 +27,7 @@ const ITEMS: VaultItem[] = [
     date: 'May 27',
     url: 'https://fathom.video/share/eszuA_bGgedERbyHpaVHWpp2jQ1zyfsr',
     thumbnail: vaultProfitByDesign,
-    workbookUrl: '/workbooks/profit-by-design-workshop.pdf',
+    workbookUrl: 'https://drive.google.com/file/d/1gFwRMipbuberV3xdo5ikR7UpD4ia-xy9/view?usp=sharing',
     templates: [
       { label: 'Full Detailed P&L Template', url: 'https://docs.google.com/spreadsheets/d/1D1DUaFonfb2ti6QqGRf3em9GrPicguEyASx_uq-B8po/edit?usp=sharing' },
       { label: 'Client Profitability Calculator', url: 'https://docs.google.com/spreadsheets/d/1ZBn-liGJHSG1v9mASUS6gWuSu6vne-bCzmfyR0mNPRg/edit?usp=sharing' },
