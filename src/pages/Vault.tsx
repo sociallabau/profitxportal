@@ -1,11 +1,14 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { PlayCircle, ExternalLink, BookOpen } from 'lucide-react';
+import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet } from 'lucide-react';
 import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
 import vaultQaApril from '@/assets/vault-qa-april.jpg';
 import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
 import vaultQaMay from '@/assets/vault-qa-may.jpg';
+import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
+
+type Template = { label: string; url: string };
 
 type VaultItem = {
   title: string;
@@ -14,9 +17,22 @@ type VaultItem = {
   url: string;
   thumbnail: string;
   workbookUrl?: string;
+  templates?: Template[];
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Workshop — Profit By Design™',
+    category: 'Workshop',
+    date: 'May 27',
+    url: 'https://fathom.video/share/eszuA_bGgedERbyHpaVHWpp2jQ1zyfsr',
+    thumbnail: vaultProfitByDesign,
+    workbookUrl: '/workbooks/profit-by-design-workshop.pdf',
+    templates: [
+      { label: 'Full Detailed P&L Template', url: 'https://docs.google.com/spreadsheets/d/1D1DUaFonfb2ti6QqGRf3em9GrPicguEyASx_uq-B8po/edit?usp=sharing' },
+      { label: 'Client Profitability Calculator', url: 'https://docs.google.com/spreadsheets/d/1ZBn-liGJHSG1v9mASUS6gWuSu6vne-bCzmfyR0mNPRg/edit?usp=sharing' },
+    ],
+  },
   {
     title: 'Q&A — May 13th',
     category: 'Q&A',
@@ -127,6 +143,23 @@ export default function Vault() {
                     <BookOpen className="w-3 h-3" />
                     Workbook
                   </a>
+                )}
+                {item.templates && item.templates.length > 0 && (
+                  <div className="pt-1.5 mt-1 border-t border-border/50 flex flex-col gap-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">Templates</span>
+                    {item.templates.map((tpl) => (
+                      <a
+                        key={tpl.url}
+                        href={tpl.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <FileSpreadsheet className="w-3 h-3" />
+                        {tpl.label}
+                      </a>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
