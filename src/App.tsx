@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from '@/lib/supabase';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import OwnerRoute from './components/OwnerRoute';
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -79,7 +80,7 @@ const App = () => (
           <Route path="/client-health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
-          <Route path="/admin/my-finances" element={<AdminRoute><MyFinances /></AdminRoute>} />
+          <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>

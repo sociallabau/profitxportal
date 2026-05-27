@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
+import { OWNER_USER_ID } from '@/lib/owner';
 
 export const CIRCLE_URLS = {
   modules: 'https://app.circle.so/sign_in',
@@ -29,6 +30,9 @@ const navItems = [
 
 const adminItems = [
   { label: 'Client Health', path: '/client-health', icon: HeartPulse },
+];
+
+const ownerItems = [
   { label: 'My Finances', path: '/admin/my-finances', icon: DollarSign },
 ];
 
@@ -82,6 +86,22 @@ function NavContent({ onClose }: { onClose?: () => void }) {
           <div className="pt-3 mt-2 border-t border-border">
             <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Admin</p>
             {adminItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  active(item.path)
+                    ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                )}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                {item.label}
+              </Link>
+            ))}
+            {profile?.id === OWNER_USER_ID && ownerItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
