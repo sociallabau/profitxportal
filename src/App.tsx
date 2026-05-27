@@ -25,6 +25,7 @@ import HotList from "./pages/HotList";
 import LaunchHQ from "./pages/LaunchHQ";
 import Vault from "./pages/Vault";
 import Calls from "./pages/Calls";
+import MyFinances from "./pages/admin/MyFinances";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -78,6 +79,7 @@ const App = () => (
           <Route path="/client-health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
+          <Route path="/admin/my-finances" element={<AdminRoute><MyFinances /></AdminRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>

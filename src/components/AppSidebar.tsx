@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Gauge, Route, BarChart3, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X, ExternalLink,
-  GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, Wand2,
+  GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, Wand2, DollarSign,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,7 @@ const navItems = [
 
 const adminItems = [
   { label: 'Client Health', path: '/client-health', icon: HeartPulse },
+  { label: 'My Finances', path: '/admin/my-finances', icon: DollarSign },
 ];
 
 function NavContent({ onClose }: { onClose?: () => void }) {
