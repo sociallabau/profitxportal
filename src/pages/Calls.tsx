@@ -46,6 +46,14 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/wvb-vcyj-fpa',
     description: '6 Week Focus Finder. Time zone: Australia/Brisbane. Join via Google Meet.',
   },
+  {
+    title: 'ProfitX — Q&A Call',
+    category: 'Q&A',
+    start: '2026-06-10T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/hrh-zzii-fjg',
+    description: 'Live Q&A call. Time zone: Australia/Brisbane. Join via Google Meet.',
+  },
 ];
 
 const categoryStyles: Record<Call['category'], string> = {
