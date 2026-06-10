@@ -141,7 +141,7 @@ export default function Vault() {
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Watch on Fathom
+                  {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
                 </a>
                 {item.workbookUrl && (
                   <a
@@ -152,6 +152,17 @@ export default function Vault() {
                   >
                     <BookOpen className="w-3 h-3" />
                     Workbook
+                  </a>
+                )}
+                {item.transcriptUrl && (
+                  <a
+                    href={item.transcriptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <FileText className="w-3 h-3" />
+                    Transcript & summary
                   </a>
                 )}
                 {item.templates && item.templates.length > 0 && (
