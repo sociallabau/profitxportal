@@ -1,11 +1,12 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet } from 'lucide-react';
+import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText } from 'lucide-react';
 import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
 import vaultQaApril from '@/assets/vault-qa-april.jpg';
 import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
 import vaultQaMay from '@/assets/vault-qa-may.jpg';
+import vaultQaJune from '@/assets/vault-qa-june.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 
 type Template = { label: string; url: string };
@@ -17,10 +18,19 @@ type VaultItem = {
   url: string;
   thumbnail: string;
   workbookUrl?: string;
+  transcriptUrl?: string;
   templates?: Template[];
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Q&A — June 10th',
+    category: 'Q&A',
+    date: 'Jun 10',
+    url: 'https://drive.google.com/file/d/1dgxq-QSDq60T_a-6MA9FGIozpl0gjgdq/view?usp=sharing',
+    thumbnail: vaultQaJune,
+    transcriptUrl: 'https://docs.google.com/document/d/1nnxYqHz9HpyN5tW9ZB9KUTyR521cjVFOJwQGqmxRhfM/edit?usp=sharing',
+  },
   {
     title: 'Workshop — Profit By Design™',
     category: 'Workshop',
@@ -131,7 +141,7 @@ export default function Vault() {
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Watch on Fathom
+                  {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
                 </a>
                 {item.workbookUrl && (
                   <a
@@ -142,6 +152,17 @@ export default function Vault() {
                   >
                     <BookOpen className="w-3 h-3" />
                     Workbook
+                  </a>
+                )}
+                {item.transcriptUrl && (
+                  <a
+                    href={item.transcriptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <FileText className="w-3 h-3" />
+                    Transcript & summary
                   </a>
                 )}
                 {item.templates && item.templates.length > 0 && (
