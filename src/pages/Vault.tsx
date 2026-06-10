@@ -1,11 +1,12 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet } from 'lucide-react';
+import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText } from 'lucide-react';
 import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
 import vaultQaApril from '@/assets/vault-qa-april.jpg';
 import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
 import vaultQaMay from '@/assets/vault-qa-may.jpg';
+import vaultQaJune from '@/assets/vault-qa-june.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 
 type Template = { label: string; url: string };
