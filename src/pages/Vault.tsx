@@ -18,10 +18,19 @@ type VaultItem = {
   url: string;
   thumbnail: string;
   workbookUrl?: string;
+  transcriptUrl?: string;
   templates?: Template[];
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Q&A — June 10th',
+    category: 'Q&A',
+    date: 'Jun 10',
+    url: 'https://drive.google.com/file/d/1dgxq-QSDq60T_a-6MA9FGIozpl0gjgdq/view?usp=sharing',
+    thumbnail: vaultQaJune,
+    transcriptUrl: 'https://docs.google.com/document/d/1nnxYqHz9HpyN5tW9ZB9KUTyR521cjVFOJwQGqmxRhfM/edit?usp=sharing',
+  },
   {
     title: 'Workshop — Profit By Design™',
     category: 'Workshop',
