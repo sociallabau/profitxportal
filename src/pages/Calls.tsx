@@ -58,13 +58,13 @@ const CALLS: Call[] = [
     description: 'Live Q&A call. Time zone: Australia/Brisbane. Join via Google Meet.',
   },
   {
-    title: 'ProfitX Workshop — Smooth Operator™',
+    title: 'ProfitX Workshop - Smooth Operator™',
     category: 'Workshop',
     start: '2026-06-24T07:00:00',
     durationMins: 90,
-    meetUrl: 'https://meet.google.com/asf-ects-ojs',
+    meetUrl: 'https://meet.google.com/twb-tvei-feu',
     description:
-      'Smooth Operator™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 3403 PIN 632 998 776.',
+      'Smooth Operator™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 3 8594 7255 PIN 271 718 706.',
     thumbnail: smoothOperatorThumb,
   },
 ];
