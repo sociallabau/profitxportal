@@ -193,16 +193,126 @@ export default function Roadmap() {
         <p className="text-xs text-muted-foreground mt-1.5">{progressPct}% complete</p>
       </div>
 
-      <PillarRoadmap
-        completionMap={completionMap}
-        unlockedTiers={unlockedTiers}
-        toggleModule={toggleModule}
-        navigate={navigate}
-        hasPage={hasPage}
-      />
+      <LegacyModulesSection>
+        <PillarRoadmap
+          completionMap={completionMap}
+          unlockedTiers={unlockedTiers}
+          toggleModule={toggleModule}
+          navigate={navigate}
+          hasPage={hasPage}
+        />
+      </LegacyModulesSection>
+
+      <ProfitXRoadmapSection />
     </PageLayout>
   );
 }
+
+function LegacyModulesSection({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-10">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted/20 transition"
+      >
+        <div className="text-left">
+          <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+            {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            Legacy Modules
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5 ml-6">
+            Original curriculum — still available while new modules roll out.
+          </p>
+        </div>
+      </button>
+      {open && <div className="mt-4">{children}</div>}
+    </div>
+  );
+}
+
+const PROFITX_COLUMNS = [
+  { key: 'O', label: 'OFFER' },
+  { key: 'C', label: 'CLIENTS' },
+  { key: 'D', label: 'DELIVERY' },
+];
+
+const PROFITX_MODULES: Record<string, string> = {
+  O1: 'Market & Message', O2: 'Golden Retainer', O3: 'Tier Flow',
+  O4: 'Revenue Architect', O5: 'Premium Positioning', O6: 'Financial Mastery',
+  C1: 'Organic Flywheel', C2: 'Stupidly Simple Ad', C3: 'Proposal Packs',
+  C4: 'Full Funnel Paid Ads', C5: 'Content Authority', C6: 'Client Retention System',
+  D1: 'Delivery Roadmap', D2: 'Onboarding Blueprint', D3: 'Getting Help',
+  D4: 'Build Your A-Team', D5: 'Airtight SOPs', D6: 'Leadership System',
+};
+
+function ProfitXRoadmapSection() {
+  const stages = [
+    { label: '$0–20k', rows: [1, 2, 3], cardClass: 'bg-[#9b8ef0]/90 border-[#9b8ef0]/40', codeBg: 'bg-white/20' },
+    { label: '$30–84k', rows: [4, 5, 6], cardClass: 'bg-[#2a1f5c] border-[#3a2f7c]', codeBg: 'bg-white/10' },
+  ];
+
+  return (
+    <div className="mt-8">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">
+          ProfitX Roadmap<span className="text-primary">™</span>
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          18 modules · two stages · the path from $0 to $84k+ per month
+        </p>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
+        {/* Column headers */}
+        <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 mb-4 pb-3 border-b border-border">
+          <div />
+          {PROFITX_COLUMNS.map(c => (
+            <div key={c.key} className="text-xs font-bold tracking-[0.2em] text-muted-foreground text-center">
+              {c.label}
+            </div>
+          ))}
+        </div>
+
+        {stages.map((stage, sIdx) => (
+          <div key={stage.label} className={sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}>
+            <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 items-center">
+              <div className="text-sm font-bold text-primary">{stage.label}</div>
+              <div className="col-span-3" />
+              {stage.rows.flatMap(row =>
+                PROFITX_COLUMNS.map((col, cIdx) => {
+                  const code = `${col.key}${row}`;
+                  const name = PROFITX_MODULES[code];
+                  return (
+                    <>
+                      {cIdx === 0 && <div key={`spacer-${code}`} />}
+                      <div
+                        key={code}
+                        className={`relative rounded-xl border p-3 opacity-70 cursor-not-allowed ${stage.cardClass}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                            {code}
+                          </span>
+                          <span className="text-sm font-semibold text-white truncate">{name}</span>
+                          <div className="ml-auto w-4 h-4 rounded border border-white/40 shrink-0" />
+                        </div>
+                        <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-background border border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Coming Soon
+                        </span>
+                      </div>
+                    </>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 function PillarRoadmap({
   completionMap,
