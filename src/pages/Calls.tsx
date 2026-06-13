@@ -1,6 +1,6 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { Video, Calendar, ExternalLink } from 'lucide-react';
+import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
 import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
 import momentumCallThumb from '@/assets/momentum-call-thumb.png';
 
@@ -165,6 +165,15 @@ export default function Calls() {
         <p className="text-muted-foreground mt-1">
           Upcoming workshops, Q&amp;As and coaching calls — join live or add to your calendar.
         </p>
+        <a
+          href="https://calendar.google.com/calendar/u/0?cid=Y19lYmM5MWUxODUyYzgyMmEyMmYyNzZmODkzNDFiNjYzYmMwMmJkMmQ3OTMxZjE2Njc3NTA5NDExMTJlNzY3MmZlQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-4 text-sm font-medium px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <CalendarPlus className="w-4 h-4" />
+          Add ProfitX Calendar to Your Calendar
+        </a>
       </div>
 
       {upcoming.length === 0 ? (
