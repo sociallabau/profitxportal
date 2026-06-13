@@ -248,9 +248,10 @@ const PROFITX_MODULES: Record<string, string> = {
 
 function ProfitXRoadmapSection() {
   const stages = [
-    { label: '$0–20k', rows: [1, 2, 3], cardClass: 'bg-[#7c5cff] border-[#7c5cff]', codeBg: 'bg-white/25' },
-    { label: '$30–84k', rows: [4, 5, 6], cardClass: 'bg-[#1e1547] border-[#2a1f5c]', codeBg: 'bg-white/10' },
+    { label: '$0–20k', rows: [1, 2, 3], cardClass: 'bg-[hsl(var(--primary))] border-[hsl(var(--primary))]', codeBg: 'bg-white/20' },
+    { label: '$30–84k', rows: [4, 5, 6], cardClass: 'bg-[hsl(var(--deep-purple))] border-[hsl(var(--deep-purple))]', codeBg: 'bg-white/15' },
   ];
+
 
 
   return (

@@ -1,11 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* === LIGHT THEME — ProfitX cream / violet (default) === */
   :root {
+    /* Surfaces */
+    --background: 38 36% 87%;        /* canvas / tan #E9E1D2 */
+    --foreground: 300 14% 8%;        /* ink #161014 */
+    --card: 36 50% 97%;              /* paper #FBF7F1 */
+    --card-foreground: 300 14% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 300 14% 8%;
+
+    /* Brand */
+    --primary: 266 91% 59%;          /* violet #8536F5 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 263 86% 93%;        /* violet-10 #E9DEFB */
+    --secondary-foreground: 257 63% 29%;
+    --accent: 266 91% 59%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Muted / lines */
+    --muted: 38 41% 92%;             /* lighter hairline area */
+    --muted-foreground: 36 13% 55%;  /* muted tan #9A8F7C */
+    --border: 38 41% 88%;            /* #ECE3D4 */
+    --input: 38 41% 88%;
+    --ring: 266 91% 59%;
+
+    /* Status */
+    --destructive: 4 71% 60%;        /* #E2574E */
+    --destructive-foreground: 0 0% 100%;
+    --success: 144 39% 51%;          /* #4FB477 */
+    --success-foreground: 0 0% 100%;
+    --warning: 39 79% 58%;           /* #E8B23E */
+    --warning-foreground: 300 14% 8%;
+
+    --radius: 0.5rem;                /* 8px components */
+
+    /* Sidebar */
+    --sidebar-background: 36 50% 97%;
+    --sidebar-foreground: 36 13% 35%;
+    --sidebar-primary: 266 91% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 263 86% 93%;
+    --sidebar-accent-foreground: 257 63% 29%;
+    --sidebar-border: 38 41% 88%;
+    --sidebar-ring: 266 91% 59%;
+
+    /* Brand-specific extras */
+    --deep-purple: 257 63% 29%;      /* #3A1C7A — Tier 2 / Scale */
+    --paper: 36 50% 97%;
+    --canvas: 38 36% 87%;
+  }
+
+  /* === DARK THEME — original portal look (opt-in via class="dark") === */
+  .dark {
     --background: 0 0% 7%;
     --foreground: 0 0% 94%;
     --card: 0 0% 11%;
@@ -14,8 +66,8 @@
     --popover-foreground: 0 0% 94%;
     --primary: 275 100% 65%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 91%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 94%;
     --muted: 0 0% 14%;
     --muted-foreground: 0 0% 55%;
     --accent: 275 100% 65%;
@@ -29,7 +81,6 @@
     --border: 0 0% 18%;
     --input: 0 0% 14%;
     --ring: 275 100% 65%;
-    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 11%;
     --sidebar-foreground: 0 0% 55%;
@@ -39,6 +90,8 @@
     --sidebar-accent-foreground: 0 0% 94%;
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 275 100% 65%;
+
+    --deep-purple: 275 100% 30%;
   }
 }
 
@@ -47,9 +100,25 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
-    font-weight: 400;
-    /* Prism texture: multiple faint radial glows at different positions and hues */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 500;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-style: normal;
+  }
+
+  label, .font-semibold {
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    font-style: normal;
+  }
+
+  /* Dark-theme prism glow background (opt-in) */
+  .dark body {
     background-image:
       radial-gradient(ellipse 80% 50% at 15% 20%,  rgba(170, 68,  255, 0.22) 0%, transparent 60%),
       radial-gradient(ellipse 60% 60% at 85% 10%,  rgba(99,  102, 241, 0.18) 0%, transparent 55%),
@@ -58,24 +127,10 @@
       radial-gradient(ellipse 40% 40% at 50% 50%,  rgba(220, 38,  255, 0.08) 0%, transparent 60%);
     background-attachment: fixed;
   }
-
-  h1, h2, h3 {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-style: italic;
-    letter-spacing: -0.02em;
-  }
-
-  h4, h5, h6, label, .font-semibold {
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    font-style: italic;
-    letter-spacing: -0.01em;
-  }
 }
 
-/* Subtle noise grain overlay for extra texture depth */
-body::before {
+/* Noise grain overlay (dark theme only — distracting on cream) */
+.dark body::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -87,32 +142,17 @@ body::before {
   background-size: 180px 180px;
 }
 
-/* Make sure all content sits above the overlay */
-#root {
-  position: relative;
-  z-index: 1;
-}
+#root { position: relative; z-index: 1; }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: hsl(var(--background));
-}
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
-/* Traffic light pulse animation */
+/* Traffic light pulse */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
-.traffic-dot:hover {
-  animation: pulse-dot 1s ease-in-out infinite;
-}
+.traffic-dot:hover { animation: pulse-dot 1s ease-in-out infinite; }
