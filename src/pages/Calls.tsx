@@ -65,6 +65,45 @@ const CALLS: Call[] = [
   },
 ];
 
+/**
+ * Recurring weekly Momentum Call — every Tuesday 7:30–8:15am Brisbane.
+ * We generate the next 3 upcoming occurrences from "now" so the list
+ * auto-rolls forward each week.
+ */
+function generateMomentumCalls(count = 3): Call[] {
+  const calls: Call[] = [];
+  const now = new Date();
+  // Start from today, find next Tuesday at 07:30 local time
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 30, 0);
+  const day = d.getDay(); // 0=Sun ... 2=Tue
+  let daysUntilTue = (2 - day + 7) % 7;
+  // If today is Tuesday and the call already finished (after 8:15am), skip to next week
+  if (daysUntilTue === 0) {
+    const endToday = new Date(d.getTime() + 45 * 60000);
+    if (now.getTime() > endToday.getTime()) daysUntilTue = 7;
+  }
+  d.setDate(d.getDate() + daysUntilTue);
+
+  for (let i = 0; i < count; i++) {
+    const occ = new Date(d);
+    occ.setDate(d.getDate() + i * 7);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const iso = `${occ.getFullYear()}-${pad(occ.getMonth() + 1)}-${pad(occ.getDate())}T07:30:00`;
+    calls.push({
+      title: 'ProfitX — Momentum Call™',
+      category: 'Coaching',
+      start: iso,
+      durationMins: 45,
+      meetUrl: 'https://meet.google.com/nph-fmht-azf',
+      description:
+        'Weekly Momentum Call. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 3 8594 7912 PIN 386 124 991.',
+    });
+  }
+  return calls;
+}
+
+const ALL_CALLS: Call[] = [...CALLS, ...generateMomentumCalls(3)];
+
 const categoryStyles: Record<Call['category'], string> = {
   Workshop: 'bg-warning/15 text-warning border-warning/30',
   'Q&A': 'bg-primary/15 text-primary border-primary/30',
