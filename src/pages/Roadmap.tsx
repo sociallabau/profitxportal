@@ -275,39 +275,36 @@ function ProfitXRoadmapSection() {
         </div>
 
         {stages.map((stage, sIdx) => (
-          <div key={stage.label} className={sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}>
-            <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 items-center">
-              <div className="text-sm font-bold text-primary">{stage.label}</div>
-              <div className="col-span-3" />
+          <div key={stage.label} className={`grid grid-cols-[60px_1fr_1fr_1fr] gap-3 ${sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}`}>
+            <div className="text-sm font-bold text-primary flex items-center">{stage.label}</div>
+            <div className="col-span-3 grid grid-cols-3 gap-3">
               {stage.rows.flatMap(row =>
-                PROFITX_COLUMNS.map((col, cIdx) => {
+                PROFITX_COLUMNS.map(col => {
                   const code = `${col.key}${row}`;
                   const name = PROFITX_MODULES[code];
                   return (
-                    <>
-                      {cIdx === 0 && <div key={`spacer-${code}`} />}
-                      <div
-                        key={code}
-                        className={`relative rounded-xl border p-3 opacity-70 cursor-not-allowed ${stage.cardClass}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
-                            {code}
-                          </span>
-                          <span className="text-sm font-semibold text-white truncate">{name}</span>
-                          <div className="ml-auto w-4 h-4 rounded border border-white/40 shrink-0" />
-                        </div>
-                        <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-background border border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                          Coming Soon
+                    <div
+                      key={code}
+                      className={`relative rounded-xl border p-3 opacity-70 cursor-not-allowed ${stage.cardClass}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                          {code}
                         </span>
+                        <span className="text-sm font-semibold text-white truncate">{name}</span>
+                        <div className="ml-auto w-4 h-4 rounded border border-white/40 shrink-0" />
                       </div>
-                    </>
+                      <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-background border border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Coming Soon
+                      </span>
+                    </div>
                   );
                 })
               )}
             </div>
           </div>
         ))}
+
       </div>
     </div>
   );
