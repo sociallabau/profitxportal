@@ -1,6 +1,6 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { Video, Calendar, ExternalLink } from 'lucide-react';
+import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
 import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
 import momentumCallThumb from '@/assets/momentum-call-thumb.png';
 
