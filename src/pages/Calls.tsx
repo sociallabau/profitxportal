@@ -149,7 +149,7 @@ function googleCalendarUrl(call: Call) {
 
 export default function Calls() {
   const now = Date.now();
-  const upcoming = [...CALLS]
+  const upcoming = [...ALL_CALLS]
     .filter((c) => new Date(c.start).getTime() + c.durationMins * 60000 >= now)
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
