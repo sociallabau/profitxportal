@@ -54,6 +54,15 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/hrh-zzii-fjg',
     description: 'Live Q&A call. Time zone: Australia/Brisbane. Join via Google Meet.',
   },
+  {
+    title: 'ProfitX Workshop — Smooth Operator™',
+    category: 'Workshop',
+    start: '2026-06-24T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/asf-ects-ojs',
+    description:
+      'Smooth Operator™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 3403 PIN 632 998 776.',
+  },
 ];
 
 const categoryStyles: Record<Call['category'], string> = {
