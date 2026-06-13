@@ -296,9 +296,6 @@ function ProfitXRoadmapSection() {
                         <span className="text-sm font-semibold text-white truncate">{name}</span>
                         <div className="ml-auto w-4 h-4 rounded border border-white/40 shrink-0" />
                       </div>
-                      <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-background border border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Coming Soon
-                      </span>
                     </div>
                   );
                 })
