@@ -1,6 +1,8 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Video, Calendar, ExternalLink } from 'lucide-react';
+import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
+import momentumCallThumb from '@/assets/momentum-call-thumb.png';
 
 type Call = {
   title: string;
@@ -11,6 +13,7 @@ type Call = {
   durationMins: number;
   meetUrl: string;
   description?: string;
+  thumbnail?: string;
 };
 
 const CALLS: Call[] = [
@@ -62,6 +65,7 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/asf-ects-ojs',
     description:
       'Smooth Operator™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 3403 PIN 632 998 776.',
+    thumbnail: smoothOperatorThumb,
   },
 ];
 
@@ -97,6 +101,7 @@ function generateMomentumCalls(count = 3): Call[] {
       meetUrl: 'https://meet.google.com/nph-fmht-azf',
       description:
         'Weekly Momentum Call. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 3 8594 7912 PIN 386 124 991.',
+      thumbnail: momentumCallThumb,
     });
   }
   return calls;
@@ -173,8 +178,12 @@ export default function Calls() {
               key={call.meetUrl + call.start}
               className="h-full p-5 flex flex-col gap-4 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all"
             >
-              <div className="aspect-video rounded-lg bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-border flex items-center justify-center">
-                <Video className="w-12 h-12 text-primary/80" />
+              <div className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-border flex items-center justify-center">
+                {call.thumbnail ? (
+                  <img src={call.thumbnail} alt={call.title} className="w-full h-full object-cover" />
+                ) : (
+                  <Video className="w-12 h-12 text-primary/80" />
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
