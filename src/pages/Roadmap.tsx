@@ -257,9 +257,14 @@ function ProfitXRoadmapSection() {
   return (
     <div className="mt-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold">
-          ProfitX Roadmap<span className="text-primary">™</span>
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold">
+            ProfitX Roadmap<span className="text-primary">™</span>
+          </h2>
+          <span className="px-2.5 py-0.5 rounded-full bg-muted border border-border text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Coming Soon
+          </span>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           18 modules · two stages · the path from $0 to $84k+ per month
         </p>
