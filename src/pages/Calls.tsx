@@ -94,13 +94,13 @@ function generateMomentumCalls(count = 3): Call[] {
     const pad = (n: number) => String(n).padStart(2, '0');
     const iso = `${occ.getFullYear()}-${pad(occ.getMonth() + 1)}-${pad(occ.getDate())}T07:30:00`;
     calls.push({
-      title: 'ProfitX — Momentum Call™',
+      title: 'ProfitX - Momentum Call™',
       category: 'Coaching',
       start: iso,
       durationMins: 45,
-      meetUrl: 'https://meet.google.com/nph-fmht-azf',
+      meetUrl: 'https://meet.google.com/szo-giha-ido',
       description:
-        'Weekly Momentum Call. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 3 8594 7912 PIN 386 124 991.',
+        'Weekly Momentum Call. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 6693 PIN 586 616 608.',
       thumbnail: momentumCallThumb,
     });
   }
