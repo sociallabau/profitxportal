@@ -1,6 +1,8 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Video, Calendar, ExternalLink } from 'lucide-react';
+import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
+import momentumCallThumb from '@/assets/momentum-call-thumb.png';
 
 type Call = {
   title: string;
@@ -11,6 +13,7 @@ type Call = {
   durationMins: number;
   meetUrl: string;
   description?: string;
+  thumbnail?: string;
 };
 
 const CALLS: Call[] = [
