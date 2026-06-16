@@ -40,53 +40,6 @@ const ownerItems = [
   { label: 'My Finances', path: '/admin/my-finances', icon: DollarSign },
 ];
 
-function ToolsSection({ active, onClose }: { active: (path: string) => boolean; onClose?: () => void }) {
-  const isToolActive = toolItems.some((item) => active(item.path));
-  const [open, setOpen] = useState(isToolActive);
-
-  return (
-    <div className="space-y-0.5">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          'flex items-center justify-between w-full gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-          isToolActive
-            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-        )}
-      >
-        <span className="flex items-center gap-3">
-          <Wrench className="w-4 h-4 shrink-0" />
-          Tools
-        </span>
-        <ChevronDown
-          className={cn('w-3.5 h-3.5 shrink-0 transition-transform', open && 'rotate-180')}
-        />
-      </button>
-      {open && (
-        <div className="pl-3 space-y-0.5">
-          {toolItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                active(item.path)
-                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              )}
-            >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function NavContent({ onClose }: { onClose?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
