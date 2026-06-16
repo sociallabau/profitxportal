@@ -3,6 +3,7 @@ import {
   Gauge, Route, BarChart3, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X, ExternalLink,
   GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, Wand2, DollarSign,
+  ChevronDown, Wrench,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -14,18 +15,21 @@ export const CIRCLE_URLS = {
   modules: 'https://app.circle.so/sign_in',
 };
 
-const navItems = [
+const mainNavItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
-  { label: 'Content Studio', path: '/content-studio', icon: Sparkles },
-  { label: 'Hot List', path: '/hot-list', icon: Flame },
-  { label: 'Launch HQ', path: '/launch', icon: Rocket },
-  { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Financials', path: '/financials', icon: Wallet },
   { label: 'Vault', path: '/vault', icon: Lock },
   { label: 'Upcoming Calls', path: '/calls', icon: Video },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
+];
+
+const toolItems = [
+  { label: 'Content Studio', path: '/content-studio', icon: Sparkles },
+  { label: 'Hot List', path: '/hot-list', icon: Flame },
+  { label: 'Launch HQ', path: '/launch', icon: Rocket },
+  { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
 ];
 
 const adminItems = [
