@@ -69,7 +69,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => (
+        {mainNavItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
@@ -85,6 +85,8 @@ function NavContent({ onClose }: { onClose?: () => void }) {
             {item.label}
           </Link>
         ))}
+
+        <ToolsSection active={active} onClose={onClose} />
 
         {profile?.is_admin && (
           <div className="pt-3 mt-2 border-t border-border">
