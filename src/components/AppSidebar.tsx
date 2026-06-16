@@ -69,7 +69,40 @@ function NavContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        {mainNavItems.map((item) => (
+        <Link
+          to="/dashboard"
+          onClick={onClose}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            active('/dashboard')
+              ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+          )}
+        >
+          <Gauge className="w-4 h-4 shrink-0" />
+          Dashboard
+        </Link>
+
+        <div className="pl-3 space-y-0.5">
+          {toolItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={onClose}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                active(item.path)
+                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              )}
+            >
+              <item.icon className="w-4 h-4 shrink-0" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+
+        {mainNavItems.slice(1).map((item) => (
           <Link
             key={item.path}
             to={item.path}
@@ -85,8 +118,6 @@ function NavContent({ onClose }: { onClose?: () => void }) {
             {item.label}
           </Link>
         ))}
-
-        <ToolsSection active={active} onClose={onClose} />
 
         {profile?.is_admin && (
           <div className="pt-3 mt-2 border-t border-border">
