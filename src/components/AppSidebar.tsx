@@ -3,6 +3,7 @@ import {
   Gauge, Route, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X,
   Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, DollarSign,
+  Wrench, ChevronDown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
