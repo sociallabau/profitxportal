@@ -3,6 +3,7 @@ import {
   Gauge, Route, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X,
   Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, DollarSign,
+  Wrench, ChevronDown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -82,24 +83,54 @@ function NavContent({ onClose }: { onClose?: () => void }) {
           Dashboard
         </Link>
 
-        <div className="pl-3 space-y-0.5">
-          {toolItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                active(item.path)
-                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+        {(() => {
+          const [toolsOpen, setToolsOpen] = useState(
+            toolItems.some((item) => active(item.path))
+          );
+          return (
+            <div>
+              <button
+                type="button"
+                onClick={() => setToolsOpen(!toolsOpen)}
+                className={cn(
+                  'flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  toolItems.some((item) => active(item.path))
+                    ? 'text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                )}
+              >
+                <Wrench className="w-4 h-4 shrink-0" />
+                <span className="flex-1 text-left">Tools</span>
+                <ChevronDown
+                  className={cn(
+                    'w-3.5 h-3.5 shrink-0 transition-transform',
+                    toolsOpen && 'rotate-180'
+                  )}
+                />
+              </button>
+              {toolsOpen && (
+                <div className="pl-3 space-y-0.5">
+                  {toolItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={onClose}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        active(item.path)
+                          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      )}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
               )}
-            >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
-            </Link>
-          ))}
-        </div>
+            </div>
+          );
+        })()}
 
         {mainNavItems.slice(1).map((item) => (
           <Link
