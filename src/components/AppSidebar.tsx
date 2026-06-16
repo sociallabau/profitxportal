@@ -1,9 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Gauge, Route, BarChart3, Wallet, HeartPulse,
-  SlidersHorizontal, LogOut, Menu, X, ExternalLink,
-  GraduationCap, Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, Wand2, DollarSign,
-  ChevronDown, Wrench,
+  Gauge, Route, Wallet, HeartPulse,
+  SlidersHorizontal, LogOut, Menu, X,
+  Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, DollarSign,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
