@@ -578,8 +578,7 @@ export default function ClientHealth() {
                   );
                 })()}
 
-                  </p>
-                </div>
+
 
                 {/* Financials snapshot — margin focus */}
                 {(() => {
