@@ -188,14 +188,12 @@ export default function Roadmap() {
         </p>
       </div>
 
-      {isInFlow && (
-        <ProfitXRoadmapGrid
-          stages={profitxStages}
-          completionMap={completionMap}
-          hasPage={hasPage}
-          onOpen={(code) => navigate(`/module/${code}`)}
-        />
-      )}
+      <ProfitXRoadmapGrid
+        stages={profitxStages}
+        completionMap={completionMap}
+        hasPage={hasPage}
+        onOpen={(code) => navigate(`/module/${code}`)}
+      />
 
       <LegacyModulesSection defaultOpen={!isInFlow}>
         <PillarRoadmap
