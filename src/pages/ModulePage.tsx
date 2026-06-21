@@ -229,11 +229,15 @@ export default function ModulePage() {
       </div>
 
       {/* Header */}
-      <div className="mb-6">
-        <span className={`text-xs font-bold uppercase tracking-widest ${colors.accent}`}>
-          {modulePage.pillar} Module
-        </span>
-        <h1 className="text-2xl md:text-3xl font-bold mt-2">{modulePage.title}</h1>
+      <div className="relative mb-6 rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 via-card/50 to-primary/5 p-6 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10">
+          <span className={`text-xs font-bold uppercase tracking-widest ${colors.accent}`}>
+            {modulePage.pillar} Module
+          </span>
+          <h1 className="text-2xl md:text-3xl font-bold mt-2">{modulePage.title}</h1>
+        </div>
       </div>
 
       {/* Content Sections */}
@@ -312,7 +316,6 @@ function RenderSection({
       else if (youtubeMatch) embedUrl = `https://www.youtube.com/embed/${youtubeMatch[1]}`;
       return (
         <div className="space-y-2">
-          {section.title && <p className="text-sm font-bold">{section.title}</p>}
           <div className="relative w-full overflow-hidden rounded-xl border border-border bg-black" style={{ paddingTop: '56.25%' }}>
             <iframe
               src={embedUrl}
@@ -481,7 +484,7 @@ function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
         href={url}
         onClick={handlePdfDownload}
         download
-        className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold transition-colors"
+        className="flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold transition-colors"
       >
         <LinkIcon className="w-3.5 h-3.5" />
         {label}
@@ -494,7 +497,7 @@ function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
       href={url}
       target={isInternal ? undefined : '_blank'}
       rel={isInternal ? undefined : 'noopener noreferrer'}
-      className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold transition-colors"
+      className="flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold transition-colors"
     >
       <LinkIcon className="w-3.5 h-3.5" />
       {label}
