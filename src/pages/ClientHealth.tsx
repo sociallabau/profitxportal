@@ -267,8 +267,9 @@ export default function ClientHealth() {
   const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
   const redCount   = clientsWithHealth.filter((c: any) => c.health.band === 'red').length;
-  const readyToUnlock = clientsWithHealth.filter((c: any) => c.readyForGrowth);
-  const readyForScale = clientsWithHealth.filter((c: any) => c.eligibleForScale);
+  const readyForInFlow = clientsWithHealth.filter((c: any) => c.readyForInFlow);
+  const readyForOver20k = clientsWithHealth.filter((c: any) => c.readyForOver20k);
+
 
   const lowSurveys = clientsWithHealth.filter((c: any) => {
     const conf = Number(c.last_confidence ?? 0);
