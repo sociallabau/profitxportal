@@ -125,19 +125,6 @@ export default function Roadmap() {
   });
   const hasPage = (id: string) => modulePages.includes(id);
 
-  const allModules = PILLARS.flatMap(p => p.modules);
-  const totalUnlocked = allModules.filter(m => moduleMatchesTier(m.tier, unlockedTiers)).length;
-  const completedCount = allModules.filter(m => moduleMatchesTier(m.tier, unlockedTiers) && completionMap[m.id]).length;
-  const progressPct = totalUnlocked > 0 ? Math.round((completedCount / totalUnlocked) * 100) : 0;
-
-  // Per-tier progress
-  const tierProgress = TIER_LABELS.map(t => {
-    const tierModules = allModules.filter(m => normalizeTier(m.tier) === normalizeTier(t.id));
-    const completed = tierModules.filter(m => completionMap[m.id]).length;
-    const isUnlocked = unlockedTiers.includes(normalizeTier(t.id));
-    const isActive = normalizeTier(clientTier) === normalizeTier(t.id);
-    return { ...t, total: tierModules.length, completed, isUnlocked, isActive };
-  });
 
   // New tier system: 'starter' (Stage 1 only) vs 'scale' (everything).
   // Treat legacy values as starter unless explicitly 'scale'.
