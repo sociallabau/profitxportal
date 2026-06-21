@@ -246,22 +246,23 @@ export default function ClientHealth() {
       const tier = normalizeTier(c.tier);
       const monthlyRevenue = Number(c.last_total_revenue || 0);
 
-      const eligibleForGrowth = tier === 'onramp' && monthlyRevenue >= 15000;
-      const eligibleForScale  = tier !== 'scale'  && monthlyRevenue >= 32000;
-      const readyForGrowth = eligibleForGrowth || (tier === 'onramp' && allOnRampDone);
+      // Ready to move from Onboarding → In Flow (under $20k) once all on-ramp modules are done.
+      const readyForInFlow = tier === 'onboarding' && allOnRampDone;
+      // Ready to step up from "under $20k" → "over $20k" once they cross $20k/mth.
+      const readyForOver20k = tier === 'in_flow_starter' && monthlyRevenue >= 20000;
 
       return {
         ...c,
         health: calcHealthScore(c),
         conclusion: generateConclusion(c),
-        readyForGrowth,
-        eligibleForGrowth,
-        eligibleForScale,
+        readyForInFlow,
+        readyForOver20k,
         monthlyRevenue,
       };
     }).sort((a: any, b: any) => b.health.score - a.health.score),
     [clients, allCompletions]
   );
+
 
   const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
