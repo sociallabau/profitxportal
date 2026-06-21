@@ -491,16 +491,6 @@ function RenderSection({
 function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
   const isPdf = /\.pdf($|\?)/i.test(url);
   const isInternal = url.startsWith('/');
-  const openExternal = () => {
-    const opened = window.open(url, '_blank');
-    if (opened) {
-      opened.opener = null;
-      return;
-    }
-
-    navigator.clipboard?.writeText(url);
-    toast.info('Link copied — paste it into a new tab to open.');
-  };
 
   const handlePdfDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -539,14 +529,15 @@ function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
 
   if (!isInternal) {
     return (
-      <button
-        type="button"
-        onClick={openExternal}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
         className="flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold transition-colors"
       >
         <LinkIcon className="w-3.5 h-3.5" />
         {label}
-      </button>
+      </a>
     );
   }
 
