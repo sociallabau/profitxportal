@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2, Circle, Lightbulb, AlertTriangle, Link as LinkIcon, ChevronRight, Pencil, Save, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Lightbulb, AlertTriangle, Link as LinkIcon, ChevronRight, Pencil, Save, X, Play } from 'lucide-react';
 import { useState } from 'react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
+import moduleCoverC2 from '@/assets/module-cover-stupidly-simple-ad.jpg';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
@@ -273,6 +274,60 @@ export default function ModulePage() {
   );
 }
 
+const POSTER_MAP: Record<string, string> = {
+  'module-cover-stupidly-simple-ad': moduleCoverC2,
+};
+
+function VideoEmbed({ section }: { section: SectionBlock }) {
+  const [playing, setPlaying] = useState(false);
+  const url: string = section.url || '';
+  const loomMatch = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/);
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  const driveOpenMatch = !driveMatch ? url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/) : null;
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  let embedUrl = url;
+  if (loomMatch) embedUrl = `https://www.loom.com/embed/${loomMatch[1]}`;
+  else if (driveMatch) embedUrl = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  else if (driveOpenMatch) embedUrl = `https://drive.google.com/file/d/${driveOpenMatch[1]}/preview`;
+  else if (youtubeMatch) embedUrl = `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+
+  const posterSrc = section.poster ? POSTER_MAP[section.poster] : undefined;
+
+  if (posterSrc && !playing) {
+    return (
+      <div className="space-y-2">
+        <div
+          className="relative w-full overflow-hidden rounded-xl border border-border cursor-pointer group"
+          style={{ paddingTop: '56.25%' }}
+          onClick={() => setPlaying(true)}
+        >
+          <img src={posterSrc} alt={section.title || 'Video cover'} className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+              <Play className="w-6 h-6 text-primary-foreground ml-1" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative w-full overflow-hidden rounded-xl border border-border bg-black" style={{ paddingTop: '56.25%' }}>
+        <iframe
+          src={embedUrl}
+          title={section.title || 'Module video'}
+          allowFullScreen
+          allow="autoplay; encrypted-media"
+          className="absolute inset-0 h-full w-full"
+        />
+      </div>
+    </div>
+  );
+}
+
 function RenderSection({
   section,
   colors,
@@ -304,29 +359,7 @@ function RenderSection({
       return <h2 className="text-xl font-bold">{section.text}</h2>;
 
     case 'video_embed': {
-      const url: string = section.url || '';
-      const loomMatch = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/);
-      const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-      const driveOpenMatch = !driveMatch ? url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/) : null;
-      const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-      let embedUrl = url;
-      if (loomMatch) embedUrl = `https://www.loom.com/embed/${loomMatch[1]}`;
-      else if (driveMatch) embedUrl = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
-      else if (driveOpenMatch) embedUrl = `https://drive.google.com/file/d/${driveOpenMatch[1]}/preview`;
-      else if (youtubeMatch) embedUrl = `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-      return (
-        <div className="space-y-2">
-          <div className="relative w-full overflow-hidden rounded-xl border border-border bg-black" style={{ paddingTop: '56.25%' }}>
-            <iframe
-              src={embedUrl}
-              title={section.title || 'Module video'}
-              allowFullScreen
-              allow="autoplay; encrypted-media"
-              className="absolute inset-0 h-full w-full"
-            />
-          </div>
-        </div>
-      );
+      return <VideoEmbed section={section} />;
     }
 
     case 'paragraph':
