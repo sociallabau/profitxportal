@@ -39,7 +39,9 @@ function Diamond({ color, glow, dark }: { color: string; glow: string; dark: str
 export default function RevenueLadder({ currentRevenue }: { currentRevenue?: number | null }) {
   const activeIndex =
     currentRevenue && currentRevenue > 0
-      ? TIERS.reduce((best, tier, idx) => (currentRevenue >= tier.threshold ? idx : best), -1)
+      ? currentRevenue < 10000
+        ? 0
+        : TIERS.reduce((best, tier, idx) => (currentRevenue >= tier.threshold ? idx : best), -1)
       : -1;
 
   return (
