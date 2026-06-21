@@ -56,21 +56,19 @@ const TIER_LABELS = [
   { id: 'scale', label: 'Scale', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', activeBg: 'bg-orange-500/20' },
 ];
 
-function normalizeTier(tier: string): string {
-  if (tier === 'on-ramp') return 'onramp';
-  return tier;
-}
-
-function getTierUnlocked(clientTier: string): string[] {
-  const normalized = normalizeTier(clientTier);
-  const canonical = ['onramp', 'growth', 'scale'];
-  return canonical.slice(0, canonical.indexOf(normalized) + 1);
+// Maps the client's account tier to the legacy module difficulty tiers they can access.
+function getUnlockedModuleTiers(clientTier: string): string[] {
+  if (clientTier === 'in_flow_starter' || clientTier === 'in_flow_scale') {
+    return ['on-ramp', 'growth', 'scale'];
+  }
+  // 'onboarding' (and any legacy/unknown value) — On-Ramp legacy modules only.
+  return ['on-ramp'];
 }
 
 function moduleMatchesTier(moduleTier: string, unlockedTiers: string[]): boolean {
-  const normalized = normalizeTier(moduleTier);
-  return unlockedTiers.includes(normalized);
+  return unlockedTiers.includes(moduleTier);
 }
+
 
 // Get all on-ramp module IDs
 const ON_RAMP_MODULE_IDS = PILLARS.flatMap(p => p.modules.filter(m => m.tier === 'on-ramp').map(m => m.id));
