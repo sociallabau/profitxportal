@@ -126,8 +126,9 @@ export default function Roadmap() {
   const hasPage = (id: string) => modulePages.includes(id);
 
 
-  // New tier system: 'starter' (Stage 1 only) vs 'scale' (everything).
-  // Treat legacy values as starter unless explicitly 'scale'.
+  // ProfitX access: locked by default for new accounts.
+  // 'starter' unlocks Stage 1, 'scale' unlocks both. Everything else (incl. legacy 'onramp') = locked.
+  const isStarter = clientTier === 'starter' || clientTier === 'scale';
   const isScale = clientTier === 'scale';
   const profitxStages = [
     {
@@ -136,7 +137,7 @@ export default function Roadmap() {
       rows: [1, 2, 3],
       cardClass: 'bg-[hsl(var(--primary))] border-[hsl(var(--primary))]',
       codeBg: 'bg-white/20',
-      unlocked: true,
+      unlocked: isStarter,
     },
     {
       key: 'stage2' as const,
