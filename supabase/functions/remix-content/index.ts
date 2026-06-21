@@ -218,8 +218,9 @@ Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write
 
     if (!aiResponse.ok) {
       const err = await aiResponse.text()
+      console.error("AI error:", aiResponse.status, err)
       return new Response(
-        JSON.stringify({ error: `AI error: ${err}` }),
+        JSON.stringify({ error: "AI request failed. Try again later." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
@@ -280,8 +281,9 @@ Keep it tight. No fluff, no preamble.`,
     )
 
   } catch (error: any) {
+    console.error("remix-content error:", error?.message || error)
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error" }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   }
