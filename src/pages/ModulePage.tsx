@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Circle, Lightbulb, AlertTriangle, Link as Link
 import { useState } from 'react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
+import moduleCoverC2 from '@/assets/module-cover-stupidly-simple-ad.jpg';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
