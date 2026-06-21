@@ -1,12 +1,12 @@
 const TIERS = [
-  { label: '$10k', sub: 'PER\nMONTH', color: '#9ca3af', glow: 'rgba(156,163,175,0.35)', dark: '#4b5563' },
-  { label: '$20k', sub: 'PER\nMONTH', color: '#10b981', glow: 'rgba(16,185,129,0.35)', dark: '#047857' },
-  { label: '$30k', sub: 'PER\nMONTH', color: '#f59e0b', glow: 'rgba(245,158,11,0.35)', dark: '#b45309' },
-  { label: '$40k', sub: 'PER\nMONTH', color: '#f97316', glow: 'rgba(249,115,22,0.35)', dark: '#c2410c' },
-  { label: '$50k', sub: 'PER\nMONTH', color: '#ef4444', glow: 'rgba(239,68,68,0.35)', dark: '#b91c1c' },
-  { label: '$84k', sub: 'PER\nMONTH', color: '#06b6d4', glow: 'rgba(6,182,212,0.35)', dark: '#0e7490' },
-  { label: '$100k', sub: 'PER\nMONTH', color: '#a855f7', glow: 'rgba(168,85,247,0.35)', dark: '#7e22ce' },
-  { label: 'Black', sub: 'BOOK', color: '#1f2937', glow: 'rgba(31,41,55,0.5)', dark: '#111827' },
+  { label: '$10k', threshold: 10000, sub: 'PER\nMONTH', color: '#9ca3af', glow: 'rgba(156,163,175,0.35)', dark: '#4b5563' },
+  { label: '$20k', threshold: 20000, sub: 'PER\nMONTH', color: '#10b981', glow: 'rgba(16,185,129,0.35)', dark: '#047857' },
+  { label: '$30k', threshold: 30000, sub: 'PER\nMONTH', color: '#f59e0b', glow: 'rgba(245,158,11,0.35)', dark: '#b45309' },
+  { label: '$40k', threshold: 40000, sub: 'PER\nMONTH', color: '#f97316', glow: 'rgba(249,115,22,0.35)', dark: '#c2410c' },
+  { label: '$50k', threshold: 50000, sub: 'PER\nMONTH', color: '#ef4444', glow: 'rgba(239,68,68,0.35)', dark: '#b91c1c' },
+  { label: '$84k', threshold: 84000, sub: 'PER\nMONTH', color: '#06b6d4', glow: 'rgba(6,182,212,0.35)', dark: '#0e7490' },
+  { label: '$100k', threshold: 100000, sub: 'PER\nMONTH', color: '#a855f7', glow: 'rgba(168,85,247,0.35)', dark: '#7e22ce' },
+  { label: 'Black', threshold: 150000, sub: 'BOOK', color: '#1f2937', glow: 'rgba(31,41,55,0.5)', dark: '#111827' },
 ];
 
 function Diamond({ color, glow, dark }: { color: string; glow: string; dark: string }) {
