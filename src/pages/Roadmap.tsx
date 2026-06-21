@@ -167,15 +167,6 @@ export default function Roadmap() {
   ];
 
 
-  const profitxModuleCodes = profitxStages.flatMap(s =>
-    s.rows.flatMap(r => PROFITX_COLUMNS.map(c => ({ code: `${c.key}${r}`, stage: s })))
-  );
-  const unlockedProfitx = profitxModuleCodes.filter(m => m.stage.unlocked);
-  const completedProfitx = unlockedProfitx.filter(m => completionMap[m.code]).length;
-  const progressPct = unlockedProfitx.length > 0
-    ? Math.round((completedProfitx / unlockedProfitx.length) * 100)
-    : 0;
-
   const shouldShowNotice = clientTier === 'onboarding' && !profile?.onboarding_notice_seen && showNotice;
 
   return (
@@ -198,61 +189,12 @@ export default function Roadmap() {
       </div>
 
       {isInFlow && (
-
-        <>
-          {/* Stage indicators */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-            {profitxStages.map(s => {
-              const stageModules = s.rows.flatMap(r => PROFITX_COLUMNS.map(c => `${c.key}${r}`));
-              const done = stageModules.filter(c => completionMap[c]).length;
-              return (
-                <div
-                  key={s.key}
-                  className={`rounded-xl border p-4 ${
-                    s.unlocked
-                      ? 'bg-card border-border'
-                      : 'bg-muted/20 border-border opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-foreground">{s.label}</p>
-                    {s.unlocked ? (
-                      <span className="text-xs text-muted-foreground">{done}/{stageModules.length} done</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Lock className="w-3 h-3" /> Locked
-                      </span>
-                    )}
-                  </div>
-                  {!s.unlocked && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Contact your coach to unlock this stage.
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Overall progress */}
-          <div className="bg-card border border-border rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-foreground">Overall Progress</span>
-              <span className="text-sm font-bold text-primary">{completedProfitx}/{unlockedProfitx.length} modules</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div className="bg-primary rounded-full h-2 transition-all duration-500" style={{ width: `${progressPct}%` }} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">{progressPct}% complete</p>
-          </div>
-
-          <ProfitXRoadmapGrid
-            stages={profitxStages}
-            completionMap={completionMap}
-            hasPage={hasPage}
-            onOpen={(code) => navigate(`/module/${code}`)}
-          />
-        </>
+        <ProfitXRoadmapGrid
+          stages={profitxStages}
+          completionMap={completionMap}
+          hasPage={hasPage}
+          onOpen={(code) => navigate(`/module/${code}`)}
+        />
       )}
 
       <LegacyModulesSection defaultOpen={!isInFlow}>
