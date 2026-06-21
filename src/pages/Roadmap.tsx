@@ -295,8 +295,8 @@ function ProfitXRoadmapGrid({
 }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
-      {/* Column headers */}
-      <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 mb-4 pb-3 border-b border-border">
+      {/* Column headers — desktop only */}
+      <div className="hidden sm:grid grid-cols-[60px_1fr_1fr_1fr] gap-3 mb-4 pb-3 border-b border-border">
         <div />
         {PROFITX_COLUMNS.map(c => (
           <div key={c.key} className="text-xs font-bold tracking-[0.2em] text-muted-foreground text-center">
@@ -308,10 +308,15 @@ function ProfitXRoadmapGrid({
       {stages.map((stage, sIdx) => (
         <div
           key={stage.key}
-          className={`grid grid-cols-[60px_1fr_1fr_1fr] gap-3 ${sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}`}
+          className={`grid grid-cols-1 sm:grid-cols-[60px_1fr_1fr_1fr] gap-3 ${sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}`}
         >
-          <div className="text-sm font-bold text-primary flex items-center">{stage.label.split(' ')[0]}</div>
-          <div className="col-span-3 grid grid-cols-3 gap-3">
+          {/* Stage label */}
+          <div className="text-sm font-bold text-primary flex items-center justify-center sm:justify-start py-1">
+            {stage.label.split(' ')[0]}
+          </div>
+
+          {/* Module grid — 1 col mobile, 3 col desktop */}
+          <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
             {stage.rows.flatMap(row =>
               PROFITX_COLUMNS.map(col => {
                 const code = `${col.key}${row}`;
@@ -326,12 +331,12 @@ function ProfitXRoadmapGrid({
                       key={code}
                       className={`relative rounded-xl border p-3 opacity-50 cursor-not-allowed ${stage.cardClass}`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
                         <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
                           {code}
                         </span>
-                        <span className="text-sm font-semibold text-white truncate">{name}</span>
-                        <Lock className="ml-auto w-3.5 h-3.5 text-white/70 shrink-0" />
+                        <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate">{name}</span>
+                        <Lock className="w-3.5 h-3.5 text-white/70 shrink-0 sm:ml-auto" />
                       </div>
                     </div>
                   );
@@ -341,13 +346,13 @@ function ProfitXRoadmapGrid({
                   <button
                     key={code}
                     onClick={() => onOpen(code)}
-                    className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.02] hover:shadow-lg ${stage.cardClass}`}
+                    className={`relative rounded-xl border p-3 text-center sm:text-left transition-transform hover:scale-[1.02] hover:shadow-lg ${stage.cardClass}`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
                       <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
                         {code}
                       </span>
-                      <span className="text-sm font-semibold text-white truncate flex-1">{name}</span>
+                      <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
                       {isComplete ? (
                         <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
                       ) : !hasContent ? (
