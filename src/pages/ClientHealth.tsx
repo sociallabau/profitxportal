@@ -522,30 +522,62 @@ export default function ClientHealth() {
 
               <div className="p-6 space-y-5">
                 {/* Tier change */}
-                <div className="bg-muted/30 border border-border rounded-xl p-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tier</p>
-                  <div className="flex gap-2">
-                    {TIER_OPTIONS.map((option) => {
-                      const isActive = normalizeTier(selectedClient.tier ?? c.tier) === option.value;
-
-                      return (
+                {(() => {
+                  const currentTier = normalizeTier(selectedClient.tier ?? c.tier);
+                  const isInFlow = currentTier === 'in_flow_starter' || currentTier === 'in_flow_scale';
+                  const btn = (active: boolean) =>
+                    `flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition ${
+                      active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`;
+                  return (
+                    <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stage</p>
+                      <div className="flex gap-2">
                         <button
-                          key={option.value}
-                          onClick={() => changeTier.mutate({ clientId: c.id, tier: option.value })}
+                          onClick={() => changeTier.mutate({ clientId: c.id, tier: 'onboarding' })}
                           disabled={changeTier.isPending}
-                          className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition ${
-                            isActive
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                          }`}
+                          className={btn(currentTier === 'onboarding')}
                         >
-                          {option.label}
+                          Onboarding
                         </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Changing tier unlocks different roadmap modules for this client.
+                        <button
+                          onClick={() => changeTier.mutate({ clientId: c.id, tier: 'in_flow_starter' })}
+                          disabled={changeTier.isPending}
+                          className={btn(isInFlow)}
+                        >
+                          In Flow
+                        </button>
+                      </div>
+
+                      {isInFlow && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">In Flow level</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => changeTier.mutate({ clientId: c.id, tier: 'in_flow_starter' })}
+                              disabled={changeTier.isPending}
+                              className={btn(currentTier === 'in_flow_starter')}
+                            >
+                              Under $20k/mth
+                            </button>
+                            <button
+                              onClick={() => changeTier.mutate({ clientId: c.id, tier: 'in_flow_scale' })}
+                              disabled={changeTier.isPending}
+                              className={btn(currentTier === 'in_flow_scale')}
+                            >
+                              Over $20k/mth
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-muted-foreground">
+                        Onboarding = On-Ramp legacy modules only. In Flow under $20k = first 9 roadmap modules. Over $20k = full roadmap.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                   </p>
                 </div>
 
