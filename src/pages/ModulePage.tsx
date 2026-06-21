@@ -305,29 +305,7 @@ function RenderSection({
       return <h2 className="text-xl font-bold">{section.text}</h2>;
 
     case 'video_embed': {
-      const url: string = section.url || '';
-      const loomMatch = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/);
-      const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-      const driveOpenMatch = !driveMatch ? url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/) : null;
-      const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-      let embedUrl = url;
-      if (loomMatch) embedUrl = `https://www.loom.com/embed/${loomMatch[1]}`;
-      else if (driveMatch) embedUrl = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
-      else if (driveOpenMatch) embedUrl = `https://drive.google.com/file/d/${driveOpenMatch[1]}/preview`;
-      else if (youtubeMatch) embedUrl = `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-      return (
-        <div className="space-y-2">
-          <div className="relative w-full overflow-hidden rounded-xl border border-border bg-black" style={{ paddingTop: '56.25%' }}>
-            <iframe
-              src={embedUrl}
-              title={section.title || 'Module video'}
-              allowFullScreen
-              allow="autoplay; encrypted-media"
-              className="absolute inset-0 h-full w-full"
-            />
-          </div>
-        </div>
-      );
+      return <VideoEmbed section={section} />;
     }
 
     case 'paragraph':
