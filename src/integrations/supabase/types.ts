@@ -682,6 +682,7 @@ export type Database = {
           is_admin: boolean | null
           milestones_hit: number[] | null
           onboarded: boolean | null
+          onboarding_notice_seen: boolean | null
           tier: string | null
           tier_seen: string | null
         }
@@ -696,6 +697,7 @@ export type Database = {
           is_admin?: boolean | null
           milestones_hit?: number[] | null
           onboarded?: boolean | null
+          onboarding_notice_seen?: boolean | null
           tier?: string | null
           tier_seen?: string | null
         }
@@ -710,6 +712,7 @@ export type Database = {
           is_admin?: boolean | null
           milestones_hit?: number[] | null
           onboarded?: boolean | null
+          onboarding_notice_seen?: boolean | null
           tier?: string | null
           tier_seen?: string | null
         }

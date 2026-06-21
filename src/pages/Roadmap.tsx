@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import OnboardingNoticeModal from '@/components/OnboardingNoticeModal';
 
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
@@ -78,12 +79,13 @@ export default function Roadmap() {
   usePageTracking('roadmap');
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [showNotice, setShowNotice] = useState(true);
 
   const { data: profile } = useQuery({
     queryKey: ['profile-tier', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('tier').eq('id', user!.id).single();
+      const { data } = await supabase.from('profiles').select('tier, onboarding_notice_seen').eq('id', user!.id).single();
       return data;
     },
   });
@@ -161,8 +163,14 @@ export default function Roadmap() {
     ? Math.round((completedProfitx / unlockedProfitx.length) * 100)
     : 0;
 
+  const shouldShowNotice = clientTier === 'onboarding' && !profile?.onboarding_notice_seen && showNotice;
+
   return (
     <PageLayout>
+      {shouldShowNotice && (
+        <OnboardingNoticeModal onDismiss={() => setShowNotice(false)} />
+      )}
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold">
           ProfitX Roadmap<span className="text-primary">™</span>
