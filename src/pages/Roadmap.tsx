@@ -184,7 +184,7 @@ export default function Roadmap() {
         <OnboardingNoticeModal onDismiss={() => setShowNotice(false)} />
       )}
 
-      <RevenueLadder />
+      <RevenueLadder currentRevenue={latestMonthly?.total_revenue} />
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold">
