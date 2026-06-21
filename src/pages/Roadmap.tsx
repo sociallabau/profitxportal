@@ -125,73 +125,101 @@ export default function Roadmap() {
   });
   const hasPage = (id: string) => modulePages.includes(id);
 
-  const allModules = PILLARS.flatMap(p => p.modules);
-  const totalUnlocked = allModules.filter(m => moduleMatchesTier(m.tier, unlockedTiers)).length;
-  const completedCount = allModules.filter(m => moduleMatchesTier(m.tier, unlockedTiers) && completionMap[m.id]).length;
-  const progressPct = totalUnlocked > 0 ? Math.round((completedCount / totalUnlocked) * 100) : 0;
 
-  // Per-tier progress
-  const tierProgress = TIER_LABELS.map(t => {
-    const tierModules = allModules.filter(m => normalizeTier(m.tier) === normalizeTier(t.id));
-    const completed = tierModules.filter(m => completionMap[m.id]).length;
-    const isUnlocked = unlockedTiers.includes(normalizeTier(t.id));
-    const isActive = normalizeTier(clientTier) === normalizeTier(t.id);
-    return { ...t, total: tierModules.length, completed, isUnlocked, isActive };
-  });
+  // New tier system: 'starter' (Stage 1 only) vs 'scale' (everything).
+  // Treat legacy values as starter unless explicitly 'scale'.
+  const isScale = clientTier === 'scale';
+  const profitxStages = [
+    {
+      key: 'stage1' as const,
+      label: '$0–20k / month',
+      rows: [1, 2, 3],
+      cardClass: 'bg-[hsl(var(--primary))] border-[hsl(var(--primary))]',
+      codeBg: 'bg-white/20',
+      unlocked: true,
+    },
+    {
+      key: 'stage2' as const,
+      label: '$30–84k / month',
+      rows: [4, 5, 6],
+      cardClass: 'bg-[hsl(var(--deep-purple))] border-[hsl(var(--deep-purple))]',
+      codeBg: 'bg-white/15',
+      unlocked: isScale,
+    },
+  ];
+
+  const profitxModuleCodes = profitxStages.flatMap(s =>
+    s.rows.flatMap(r => PROFITX_COLUMNS.map(c => ({ code: `${c.key}${r}`, stage: s })))
+  );
+  const unlockedProfitx = profitxModuleCodes.filter(m => m.stage.unlocked);
+  const completedProfitx = unlockedProfitx.filter(m => completionMap[m.code]).length;
+  const progressPct = unlockedProfitx.length > 0
+    ? Math.round((completedProfitx / unlockedProfitx.length) * 100)
+    : 0;
 
   return (
     <PageLayout>
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold">Roadmap</h1>
-        <p className="text-sm text-muted-foreground">Work through each module and tick it off when complete.</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">
+          ProfitX Roadmap<span className="text-primary">™</span>
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          18 modules · two stages · the path from $0 to $84k+ per month.
+        </p>
       </div>
 
-      {/* Tier indicators */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {tierProgress.map((t) => (
-          <div
-            key={t.id}
-            className={`rounded-xl border p-3 text-center transition-all ${
-              t.isActive
-                ? `${t.activeBg} ${t.border} ring-1 ring-offset-1 ring-offset-background`
-                : t.isUnlocked
-                ? `${t.bg} ${t.border}`
-                : 'bg-muted/20 border-border opacity-50'
-            }`}
-            
-          >
-            <p className={`text-xs font-bold uppercase tracking-wider ${t.isUnlocked ? t.color : 'text-muted-foreground'}`}>
-              {t.label}
-            </p>
-            {t.isUnlocked ? (
-              <p className="text-xs text-muted-foreground mt-1">
-                {t.completed}/{t.total} done
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
-                <Lock className="w-3 h-3" /> Locked
-              </p>
-            )}
-            {t.isActive && (
-              <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${t.bg} ${t.color}`}>
-                CURRENT
-              </span>
-            )}
-          </div>
-        ))}
+      {/* Stage indicators */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        {profitxStages.map(s => {
+          const stageModules = s.rows.flatMap(r => PROFITX_COLUMNS.map(c => `${c.key}${r}`));
+          const done = stageModules.filter(c => completionMap[c]).length;
+          return (
+            <div
+              key={s.key}
+              className={`rounded-xl border p-4 ${
+                s.unlocked
+                  ? 'bg-card border-border'
+                  : 'bg-muted/20 border-border opacity-60'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-foreground">{s.label}</p>
+                {s.unlocked ? (
+                  <span className="text-xs text-muted-foreground">{done}/{stageModules.length} done</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Locked
+                  </span>
+                )}
+              </div>
+              {!s.unlocked && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Unlocks at $20k+/mth. Update your tier in Settings.
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Overall progress */}
       <div className="bg-card border border-border rounded-xl p-4 mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold text-foreground">Overall Progress</span>
-          <span className="text-sm font-bold text-primary">{completedCount}/{totalUnlocked} modules</span>
+          <span className="text-sm font-bold text-primary">{completedProfitx}/{unlockedProfitx.length} modules</span>
         </div>
         <div className="w-full bg-muted rounded-full h-2">
           <div className="bg-primary rounded-full h-2 transition-all duration-500" style={{ width: `${progressPct}%` }} />
         </div>
         <p className="text-xs text-muted-foreground mt-1.5">{progressPct}% complete</p>
       </div>
+
+      <ProfitXRoadmapGrid
+        stages={profitxStages}
+        completionMap={completionMap}
+        hasPage={hasPage}
+        onOpen={(code) => navigate(`/module/${code}`)}
+      />
 
       <LegacyModulesSection>
         <PillarRoadmap
@@ -202,8 +230,6 @@ export default function Roadmap() {
           hasPage={hasPage}
         />
       </LegacyModulesSection>
-
-      <ProfitXRoadmapSection />
     </PageLayout>
   );
 }
@@ -211,7 +237,7 @@ export default function Roadmap() {
 function LegacyModulesSection({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="mb-10">
+    <div className="mt-10">
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted/20 transition"
@@ -246,73 +272,98 @@ const PROFITX_MODULES: Record<string, string> = {
   D4: 'Build Your A-Team', D5: 'Airtight SOPs', D6: 'Leadership System',
 };
 
-function ProfitXRoadmapSection() {
-  const stages = [
-    { label: '$0–20k', rows: [1, 2, 3], cardClass: 'bg-[hsl(var(--primary))] border-[hsl(var(--primary))]', codeBg: 'bg-white/20' },
-    { label: '$30–84k', rows: [4, 5, 6], cardClass: 'bg-[hsl(var(--deep-purple))] border-[hsl(var(--deep-purple))]', codeBg: 'bg-white/15' },
-  ];
+type Stage = {
+  key: string;
+  label: string;
+  rows: number[];
+  cardClass: string;
+  codeBg: string;
+  unlocked: boolean;
+};
 
-
-
+function ProfitXRoadmapGrid({
+  stages,
+  completionMap,
+  hasPage,
+  onOpen,
+}: {
+  stages: Stage[];
+  completionMap: Record<string, boolean>;
+  hasPage: (id: string) => boolean;
+  onOpen: (code: string) => void;
+}) {
   return (
-    <div className="mt-8">
-      <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">
-            ProfitX Roadmap<span className="text-primary">™</span>
-          </h2>
-          <span className="px-2.5 py-0.5 rounded-full bg-muted border border-border text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Coming Soon
-          </span>
-        </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          18 modules · two stages · the path from $0 to $84k+ per month
-        </p>
+    <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
+      {/* Column headers */}
+      <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 mb-4 pb-3 border-b border-border">
+        <div />
+        {PROFITX_COLUMNS.map(c => (
+          <div key={c.key} className="text-xs font-bold tracking-[0.2em] text-muted-foreground text-center">
+            {c.label}
+          </div>
+        ))}
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
-        {/* Column headers */}
-        <div className="grid grid-cols-[60px_1fr_1fr_1fr] gap-3 mb-4 pb-3 border-b border-border">
-          <div />
-          {PROFITX_COLUMNS.map(c => (
-            <div key={c.key} className="text-xs font-bold tracking-[0.2em] text-muted-foreground text-center">
-              {c.label}
-            </div>
-          ))}
-        </div>
+      {stages.map((stage, sIdx) => (
+        <div
+          key={stage.key}
+          className={`grid grid-cols-[60px_1fr_1fr_1fr] gap-3 ${sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}`}
+        >
+          <div className="text-sm font-bold text-primary flex items-center">{stage.label.split(' ')[0]}</div>
+          <div className="col-span-3 grid grid-cols-3 gap-3">
+            {stage.rows.flatMap(row =>
+              PROFITX_COLUMNS.map(col => {
+                const code = `${col.key}${row}`;
+                const name = PROFITX_MODULES[code];
+                const isComplete = !!completionMap[code];
+                const isLocked = !stage.unlocked;
+                const hasContent = hasPage(code);
 
-        {stages.map((stage, sIdx) => (
-          <div key={stage.label} className={`grid grid-cols-[60px_1fr_1fr_1fr] gap-3 ${sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}`}>
-            <div className="text-sm font-bold text-primary flex items-center">{stage.label}</div>
-            <div className="col-span-3 grid grid-cols-3 gap-3">
-              {stage.rows.flatMap(row =>
-                PROFITX_COLUMNS.map(col => {
-                  const code = `${col.key}${row}`;
-                  const name = PROFITX_MODULES[code];
+                if (isLocked) {
                   return (
                     <div
                       key={code}
-                      className={`relative rounded-xl border p-3 opacity-70 cursor-not-allowed ${stage.cardClass}`}
+                      className={`relative rounded-xl border p-3 opacity-50 cursor-not-allowed ${stage.cardClass}`}
                     >
                       <div className="flex items-center gap-3">
                         <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
                           {code}
                         </span>
                         <span className="text-sm font-semibold text-white truncate">{name}</span>
-                        <div className="ml-auto w-4 h-4 rounded border border-white/40 shrink-0" />
+                        <Lock className="ml-auto w-3.5 h-3.5 text-white/70 shrink-0" />
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
-          </div>
-        ))}
+                }
 
-      </div>
+                return (
+                  <button
+                    key={code}
+                    onClick={() => onOpen(code)}
+                    className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.02] hover:shadow-lg ${stage.cardClass}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                        {code}
+                      </span>
+                      <span className="text-sm font-semibold text-white truncate flex-1">{name}</span>
+                      {isComplete ? (
+                        <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                      ) : !hasContent ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80 shrink-0">Soon</span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
+
 
 
 function PillarRoadmap({

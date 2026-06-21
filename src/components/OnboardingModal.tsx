@@ -12,6 +12,7 @@ export default function OnboardingModal({ onComplete }: Props) {
   const qc = useQueryClient();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
+  const [revenueTier, setRevenueTier] = useState<'starter' | 'scale' | ''>('');
   const [targetMrr, setTargetMrr] = useState('');
 
   const finish = useMutation({
@@ -19,6 +20,7 @@ export default function OnboardingModal({ onComplete }: Props) {
       await supabase.from('profiles').update({
         full_name: name,
         onboarded: true,
+        tier: revenueTier || 'starter',
       }).eq('id', user!.id);
       if (targetMrr) {
         await setGoal.mutateAsync({
@@ -37,7 +39,7 @@ export default function OnboardingModal({ onComplete }: Props) {
   const steps = [
     {
       title: 'Welcome to ProfitX 👋',
-      subtitle: 'Your coaching hub. Let\'s get you set up in 2 steps.',
+      subtitle: 'Your coaching hub. Let\'s get you set up in 3 steps.',
       content: (
         <div>
           <label className="block text-sm font-semibold text-foreground mb-1.5">What's your name?</label>
@@ -47,6 +49,32 @@ export default function OnboardingModal({ onComplete }: Props) {
         </div>
       ),
       canNext: name.trim().length > 0,
+    },
+    {
+      title: `Where are you at, ${name}?`,
+      subtitle: 'Your current monthly revenue unlocks the right roadmap.',
+      content: (
+        <div className="space-y-2">
+          {[
+            { id: 'starter' as const, label: 'Under $20k / month', desc: 'Unlocks the $0–20k roadmap (Stage 1).' },
+            { id: 'scale' as const, label: '$20k+ / month', desc: 'Unlocks the full roadmap ($0–84k).' },
+          ].map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => setRevenueTier(opt.id)}
+              className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                revenueTier === opt.id
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border bg-input hover:border-primary/40'
+              }`}
+            >
+              <p className="text-sm font-semibold text-foreground">{opt.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      ),
+      canNext: revenueTier !== '',
     },
     {
       title: `Let's set your goal, ${name} 🎯`,
