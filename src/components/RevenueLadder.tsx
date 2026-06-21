@@ -1,12 +1,12 @@
 const TIERS = [
-  { label: '$10k', sub: 'PER\nMONTH', color: '#9ca3af', glow: 'rgba(156,163,175,0.35)', dark: '#4b5563' },
-  { label: '$20k', sub: 'PER\nMONTH', color: '#10b981', glow: 'rgba(16,185,129,0.35)', dark: '#047857' },
-  { label: '$30k', sub: 'PER\nMONTH', color: '#f59e0b', glow: 'rgba(245,158,11,0.35)', dark: '#b45309' },
-  { label: '$40k', sub: 'PER\nMONTH', color: '#f97316', glow: 'rgba(249,115,22,0.35)', dark: '#c2410c' },
-  { label: '$50k', sub: 'PER\nMONTH', color: '#ef4444', glow: 'rgba(239,68,68,0.35)', dark: '#b91c1c' },
-  { label: '$84k', sub: 'PER\nMONTH', color: '#06b6d4', glow: 'rgba(6,182,212,0.35)', dark: '#0e7490' },
-  { label: '$100k', sub: 'PER\nMONTH', color: '#a855f7', glow: 'rgba(168,85,247,0.35)', dark: '#7e22ce' },
-  { label: 'Black', sub: 'BOOK', color: '#1f2937', glow: 'rgba(31,41,55,0.5)', dark: '#111827' },
+  { label: '$10k', threshold: 10000, sub: 'PER\nMONTH', color: '#9ca3af', glow: 'rgba(156,163,175,0.35)', dark: '#4b5563' },
+  { label: '$20k', threshold: 20000, sub: 'PER\nMONTH', color: '#10b981', glow: 'rgba(16,185,129,0.35)', dark: '#047857' },
+  { label: '$30k', threshold: 30000, sub: 'PER\nMONTH', color: '#f59e0b', glow: 'rgba(245,158,11,0.35)', dark: '#b45309' },
+  { label: '$40k', threshold: 40000, sub: 'PER\nMONTH', color: '#f97316', glow: 'rgba(249,115,22,0.35)', dark: '#c2410c' },
+  { label: '$50k', threshold: 50000, sub: 'PER\nMONTH', color: '#ef4444', glow: 'rgba(239,68,68,0.35)', dark: '#b91c1c' },
+  { label: '$84k', threshold: 84000, sub: 'PER\nMONTH', color: '#06b6d4', glow: 'rgba(6,182,212,0.35)', dark: '#0e7490' },
+  { label: '$100k', threshold: 100000, sub: 'PER\nMONTH', color: '#a855f7', glow: 'rgba(168,85,247,0.35)', dark: '#7e22ce' },
+  { label: 'Black', threshold: 150000, sub: 'BOOK', color: '#1f2937', glow: 'rgba(31,41,55,0.5)', dark: '#111827' },
 ];
 
 function Diamond({ color, glow, dark }: { color: string; glow: string; dark: string }) {
@@ -36,7 +36,12 @@ function Diamond({ color, glow, dark }: { color: string; glow: string; dark: str
   );
 }
 
-export default function RevenueLadder() {
+export default function RevenueLadder({ currentRevenue }: { currentRevenue?: number | null }) {
+  const activeIndex =
+    currentRevenue && currentRevenue > 0
+      ? TIERS.reduce((best, tier, idx) => (currentRevenue >= tier.threshold ? idx : best), -1)
+      : -1;
+
   return (
     <div className="w-full mb-8">
       {/* Title */}
@@ -54,8 +59,18 @@ export default function RevenueLadder() {
 
       {/* Diamonds row */}
       <div className="flex items-start justify-center gap-2 sm:gap-3 overflow-x-auto pb-2 px-2">
-        {TIERS.map((tier) => (
-          <div key={tier.label} className="flex flex-col items-center min-w-[52px] sm:min-w-[64px]">
+        {TIERS.map((tier, idx) => (
+          <div key={tier.label} className="relative flex flex-col items-center min-w-[52px] sm:min-w-[64px]">
+            {/* Active neon dot */}
+            {idx === activeIndex && (
+              <div
+                className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 w-3 h-3 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: '#fff',
+                  boxShadow: `0 0 6px 2px ${tier.color}, 0 0 12px 4px ${tier.glow}, 0 0 20px 6px ${tier.glow}`,
+                }}
+              />
+            )}
             <Diamond color={tier.color} glow={tier.glow} dark={tier.dark} />
             <div
               className="mt-2 w-full rounded-lg px-1.5 py-1.5 text-center"

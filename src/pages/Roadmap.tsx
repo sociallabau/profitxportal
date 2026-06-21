@@ -94,7 +94,19 @@ export default function Roadmap() {
   const clientTier = profile?.tier || 'onboarding';
   const unlockedTiers = getUnlockedModuleTiers(clientTier);
 
-
+  const { data: latestMonthly } = useQuery({
+    queryKey: ['latest-monthly-total', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_totals')
+        .select('total_revenue')
+        .eq('user_id', user!.id)
+        .order('month', { ascending: false })
+        .limit(1);
+      return data?.[0] ?? null;
+    },
+  });
 
   const { data: completions = [] } = useQuery({
     queryKey: ['module-completions', user?.id],
@@ -172,7 +184,7 @@ export default function Roadmap() {
         <OnboardingNoticeModal onDismiss={() => setShowNotice(false)} />
       )}
 
-      <RevenueLadder />
+      <RevenueLadder currentRevenue={latestMonthly?.total_revenue} />
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold">
