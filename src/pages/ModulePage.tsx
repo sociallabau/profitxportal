@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2, Circle, Lightbulb, AlertTriangle, Link as LinkIcon, ChevronRight, Pencil, Save, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Lightbulb, AlertTriangle, Link as LinkIcon, ChevronRight, Pencil, Save, X, Play } from 'lucide-react';
 import { useState } from 'react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
