@@ -354,18 +354,18 @@ export default function ClientHealth() {
         </div>
       )}
 
-      {/* Unlock Growth notification */}
-      {readyToUnlock.length > 0 && (
+      {/* Ready to graduate from Onboarding → In Flow (under $20k) */}
+      {readyForInFlow.length > 0 && (
         <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpCircle className="w-5 h-5 text-purple-400" />
-            <h2 className="text-sm font-bold text-purple-400">Ready to Unlock Growth Tier</h2>
+            <h2 className="text-sm font-bold text-purple-400">Ready to Move to In Flow</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            {readyToUnlock.length === 1 ? 'This client is' : `${readyToUnlock.length} clients are`} eligible for Growth — hit $15k+/month or finished all On-Ramp modules.
+            {readyForInFlow.length === 1 ? 'This client has' : `${readyForInFlow.length} clients have`} finished all On-Ramp modules — ready to graduate from Onboarding.
           </p>
           <div className="space-y-2">
-            {readyToUnlock.map((client: any) => (
+            {readyForInFlow.map((client: any) => (
               <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
                 <div>
                   <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
@@ -374,10 +374,10 @@ export default function ClientHealth() {
                   )}
                 </div>
                 <button
-                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'growth' })}
+                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_starter' })}
                   className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition"
                 >
-                  Unlock Growth →
+                  Move to In Flow →
                 </button>
               </div>
             ))}
@@ -385,30 +385,32 @@ export default function ClientHealth() {
         </div>
       )}
 
-      {readyForScale.length > 0 && (
+      {/* Ready to step up from under $20k → over $20k */}
+      {readyForOver20k.length > 0 && (
         <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6">
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpCircle className="w-5 h-5 text-orange-400" />
-            <h2 className="text-sm font-bold text-orange-400">Ready to Unlock Scale Tier</h2>
+            <h2 className="text-sm font-bold text-orange-400">Ready to Step Up — Over $20k/mth</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            {readyForScale.length === 1 ? 'This client has' : `${readyForScale.length} clients have`} hit $32k+/month — eligible for Scale.
+            {readyForOver20k.length === 1 ? 'This client has' : `${readyForOver20k.length} clients have`} crossed $20k/month — unlock the full roadmap.
           </p>
           <div className="space-y-2">
-            {readyForScale.map((client: any) => (
+            {readyForOver20k.map((client: any) => (
               <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
                 <div>
                   <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
                   <span className="ml-2 text-xs text-muted-foreground">${Number(client.monthlyRevenue).toLocaleString()}/mo</span>
                 </div>
                 <button
-                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'scale' })}
+                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_scale' })}
                   className="px-3 py-1 text-xs font-bold rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition"
                 >
-                  Unlock Scale →
+                  Unlock Over $20k →
                 </button>
               </div>
             ))}
+
           </div>
         </div>
       )}
