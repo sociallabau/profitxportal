@@ -195,7 +195,7 @@ export default function Roadmap() {
               </div>
               {!s.unlocked && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Unlocks at $20k+/mth. Update your tier in Settings.
+                  Contact your coach to unlock this stage.
                 </p>
               )}
             </div>
