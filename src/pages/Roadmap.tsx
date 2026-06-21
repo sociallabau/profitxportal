@@ -85,13 +85,15 @@ export default function Roadmap() {
     queryKey: ['profile-tier', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('tier').eq('id', user!.id).single();
+      const { data } = await supabase.from('profiles').select('tier, onboarded').eq('id', user!.id).single();
       return data;
     },
   });
 
   const clientTier = profile?.tier || 'onramp';
-  const unlockedTiers = getTierUnlocked(clientTier);
+  const isOnboarded = !!profile?.onboarded;
+  const unlockedTiers = isOnboarded ? getTierUnlocked(clientTier) : ['onramp'];
+
 
   const { data: completions = [] } = useQuery({
     queryKey: ['module-completions', user?.id],
@@ -165,64 +167,70 @@ export default function Roadmap() {
           ProfitX Roadmap<span className="text-primary">™</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          18 modules · two stages · the path from $0 to $84k+ per month.
+          {isOnboarded
+            ? '18 modules · two stages · the path from $0 to $84k+ per month.'
+            : 'Start with your On-Ramp modules below. The full roadmap unlocks after your onboarding call.'}
         </p>
       </div>
 
-      {/* Stage indicators */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-        {profitxStages.map(s => {
-          const stageModules = s.rows.flatMap(r => PROFITX_COLUMNS.map(c => `${c.key}${r}`));
-          const done = stageModules.filter(c => completionMap[c]).length;
-          return (
-            <div
-              key={s.key}
-              className={`rounded-xl border p-4 ${
-                s.unlocked
-                  ? 'bg-card border-border'
-                  : 'bg-muted/20 border-border opacity-60'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-foreground">{s.label}</p>
-                {s.unlocked ? (
-                  <span className="text-xs text-muted-foreground">{done}/{stageModules.length} done</span>
-                ) : (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> Locked
-                  </span>
-                )}
-              </div>
-              {!s.unlocked && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Contact your coach to unlock this stage.
-                </p>
-              )}
+      {isOnboarded && (
+        <>
+          {/* Stage indicators */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            {profitxStages.map(s => {
+              const stageModules = s.rows.flatMap(r => PROFITX_COLUMNS.map(c => `${c.key}${r}`));
+              const done = stageModules.filter(c => completionMap[c]).length;
+              return (
+                <div
+                  key={s.key}
+                  className={`rounded-xl border p-4 ${
+                    s.unlocked
+                      ? 'bg-card border-border'
+                      : 'bg-muted/20 border-border opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-foreground">{s.label}</p>
+                    {s.unlocked ? (
+                      <span className="text-xs text-muted-foreground">{done}/{stageModules.length} done</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Locked
+                      </span>
+                    )}
+                  </div>
+                  {!s.unlocked && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Contact your coach to unlock this stage.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Overall progress */}
+          <div className="bg-card border border-border rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-foreground">Overall Progress</span>
+              <span className="text-sm font-bold text-primary">{completedProfitx}/{unlockedProfitx.length} modules</span>
             </div>
-          );
-        })}
-      </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div className="bg-primary rounded-full h-2 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5">{progressPct}% complete</p>
+          </div>
 
-      {/* Overall progress */}
-      <div className="bg-card border border-border rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-semibold text-foreground">Overall Progress</span>
-          <span className="text-sm font-bold text-primary">{completedProfitx}/{unlockedProfitx.length} modules</span>
-        </div>
-        <div className="w-full bg-muted rounded-full h-2">
-          <div className="bg-primary rounded-full h-2 transition-all duration-500" style={{ width: `${progressPct}%` }} />
-        </div>
-        <p className="text-xs text-muted-foreground mt-1.5">{progressPct}% complete</p>
-      </div>
+          <ProfitXRoadmapGrid
+            stages={profitxStages}
+            completionMap={completionMap}
+            hasPage={hasPage}
+            onOpen={(code) => navigate(`/module/${code}`)}
+          />
+        </>
+      )}
 
-      <ProfitXRoadmapGrid
-        stages={profitxStages}
-        completionMap={completionMap}
-        hasPage={hasPage}
-        onOpen={(code) => navigate(`/module/${code}`)}
-      />
-
-      <LegacyModulesSection>
+      <LegacyModulesSection defaultOpen={!isOnboarded}>
         <PillarRoadmap
           completionMap={completionMap}
           unlockedTiers={unlockedTiers}
@@ -235,8 +243,9 @@ export default function Roadmap() {
   );
 }
 
-function LegacyModulesSection({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function LegacyModulesSection({ children, defaultOpen = false }: { children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+
   return (
     <div className="mt-10">
       <button
