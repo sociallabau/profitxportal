@@ -279,67 +279,104 @@ function ProfitXRoadmapGrid({
         ))}
       </div>
 
-      {stages.map((stage, sIdx) => (
-        <div
-          key={stage.key}
-          className={`grid grid-cols-1 sm:grid-cols-[60px_1fr_1fr_1fr] gap-3 ${sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}`}
-        >
-          {/* Stage label */}
-          <div className="text-sm font-bold text-primary flex items-center justify-center sm:justify-start py-1">
-            {stage.label.split(' ')[0]}
+      {stages.map((stage, sIdx) => {
+        const renderTile = (code: string, name: string) => {
+          const isComplete = !!completionMap[code];
+          const isLocked = !stage.unlocked;
+          const hasContent = hasPage(code);
+
+          if (isLocked) {
+            return (
+              <div
+                key={code}
+                className={`relative rounded-xl border p-3 opacity-50 cursor-not-allowed ${stage.cardClass}`}
+              >
+                <div className="flex flex-row items-center gap-2 sm:gap-3 text-left">
+                  <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                    {code}
+                  </span>
+                  <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <Lock className="w-3.5 h-3.5 text-white/70 shrink-0" />
+                </div>
+              </div>
+            );
+          }
+
+          if (!hasContent) {
+            return (
+              <div
+                key={code}
+                className={`relative rounded-xl border p-3 text-left opacity-70 ${stage.cardClass}`}
+              >
+                <div className="flex flex-row items-center gap-2 sm:gap-3">
+                  <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                    {code}
+                  </span>
+                  <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80 shrink-0">Coming Soon</span>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={code}
+              onClick={() => onOpen(code)}
+              className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.02] hover:shadow-lg ${stage.cardClass}`}
+            >
+              <div className="flex flex-row items-center gap-2 sm:gap-3">
+                <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                  {code}
+                </span>
+                <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                {isComplete && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+              </div>
+            </button>
+          );
+        };
+
+        return (
+          <div key={stage.key} className={sIdx > 0 ? 'mt-6 pt-6 border-t border-border' : ''}>
+            {/* Stage label */}
+            <div className="text-sm font-bold text-primary mb-3 sm:mb-0 sm:hidden">
+              {stage.label}
+            </div>
+
+            {/* Mobile: grouped by category */}
+            <div className="sm:hidden space-y-5">
+              {PROFITX_COLUMNS.map(col => (
+                <div key={col.key}>
+                  <div className="text-xs font-bold tracking-[0.2em] text-muted-foreground mb-2">
+                    {col.label}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {stage.rows.map(row => {
+                      const code = `${col.key}${row}`;
+                      return renderTile(code, PROFITX_MODULES[code]);
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: row layout with stage label column */}
+            <div className="hidden sm:grid grid-cols-[60px_1fr_1fr_1fr] gap-3">
+              <div className="text-sm font-bold text-primary flex items-center py-1">
+                {stage.label.split(' ')[0]}
+              </div>
+              <div className="col-span-3 grid grid-cols-3 gap-3">
+                {stage.rows.flatMap(row =>
+                  PROFITX_COLUMNS.map(col => {
+                    const code = `${col.key}${row}`;
+                    return renderTile(code, PROFITX_MODULES[code]);
+                  })
+                )}
+              </div>
+            </div>
           </div>
-
-          {/* Module grid — 1 col mobile, 3 col desktop */}
-          <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {stage.rows.flatMap(row =>
-              PROFITX_COLUMNS.map(col => {
-                const code = `${col.key}${row}`;
-                const name = PROFITX_MODULES[code];
-                const isComplete = !!completionMap[code];
-                const isLocked = !stage.unlocked;
-                const hasContent = hasPage(code);
-
-                if (isLocked) {
-                  return (
-                    <div
-                      key={code}
-                      className={`relative rounded-xl border p-3 opacity-50 cursor-not-allowed ${stage.cardClass}`}
-                    >
-                      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-left">
-                        <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
-                          {code}
-                        </span>
-                        <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate">{name}</span>
-                        <Lock className="w-3.5 h-3.5 text-white/70 shrink-0 sm:ml-auto" />
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <button
-                    key={code}
-                    onClick={() => onOpen(code)}
-                    className={`relative rounded-xl border p-3 text-center sm:text-left transition-transform hover:scale-[1.02] hover:shadow-lg ${stage.cardClass}`}
-                  >
-                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
-                      <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
-                        {code}
-                      </span>
-                      <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
-                      {isComplete ? (
-                        <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                      ) : !hasContent ? (
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80 shrink-0">Soon</span>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
