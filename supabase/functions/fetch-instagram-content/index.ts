@@ -92,8 +92,9 @@ Deno.serve(async (req) => {
 
     if (!apifyResponse.ok) {
       const errText = await apifyResponse.text()
+      console.error("Apify error:", apifyResponse.status, errText)
       return new Response(
-        JSON.stringify({ error: `Apify error: ${apifyResponse.status} - ${errText}` }),
+        JSON.stringify({ error: "Content fetch failed. Try again later." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
