@@ -9,19 +9,24 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 const TIER_OPTIONS = [
-  { value: 'onramp', label: 'On-Ramp' },
-  { value: 'growth', label: 'Growth' },
-  { value: 'scale', label: 'Scale' },
+  { value: 'onboarding', label: 'Onboarding' },
+  { value: 'in_flow_starter', label: 'In Flow · Under $20k/mth' },
+  { value: 'in_flow_scale', label: 'In Flow · Over $20k/mth' },
 ] as const;
 
+// Maps any legacy tier value to the new tier system so older rows still display correctly.
 function normalizeTier(tier?: string | null) {
-  if (!tier || tier === 'on-ramp') return 'onramp';
+  if (!tier) return 'onboarding';
+  if (tier === 'onramp' || tier === 'on-ramp') return 'onboarding';
+  if (tier === 'growth') return 'in_flow_starter';
+  if (tier === 'scale' || tier === 'starter') return 'in_flow_scale';
   return tier;
 }
 
 function formatTierLabel(tier?: string | null) {
-  return TIER_OPTIONS.find((option) => option.value === normalizeTier(tier))?.label ?? 'On-Ramp';
+  return TIER_OPTIONS.find((option) => option.value === normalizeTier(tier))?.label ?? 'Onboarding';
 }
+
 
 // On-ramp module IDs — must match Roadmap.tsx
 const ON_RAMP_MODULE_IDS = [
@@ -241,28 +246,30 @@ export default function ClientHealth() {
       const tier = normalizeTier(c.tier);
       const monthlyRevenue = Number(c.last_total_revenue || 0);
 
-      const eligibleForGrowth = tier === 'onramp' && monthlyRevenue >= 15000;
-      const eligibleForScale  = tier !== 'scale'  && monthlyRevenue >= 32000;
-      const readyForGrowth = eligibleForGrowth || (tier === 'onramp' && allOnRampDone);
+      // Ready to move from Onboarding → In Flow (under $20k) once all on-ramp modules are done.
+      const readyForInFlow = tier === 'onboarding' && allOnRampDone;
+      // Ready to step up from "under $20k" → "over $20k" once they cross $20k/mth.
+      const readyForOver20k = tier === 'in_flow_starter' && monthlyRevenue >= 20000;
 
       return {
         ...c,
         health: calcHealthScore(c),
         conclusion: generateConclusion(c),
-        readyForGrowth,
-        eligibleForGrowth,
-        eligibleForScale,
+        readyForInFlow,
+        readyForOver20k,
         monthlyRevenue,
       };
     }).sort((a: any, b: any) => b.health.score - a.health.score),
     [clients, allCompletions]
   );
 
+
   const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
   const redCount   = clientsWithHealth.filter((c: any) => c.health.band === 'red').length;
-  const readyToUnlock = clientsWithHealth.filter((c: any) => c.readyForGrowth);
-  const readyForScale = clientsWithHealth.filter((c: any) => c.eligibleForScale);
+  const readyForInFlow = clientsWithHealth.filter((c: any) => c.readyForInFlow);
+  const readyForOver20k = clientsWithHealth.filter((c: any) => c.readyForOver20k);
+
 
   const lowSurveys = clientsWithHealth.filter((c: any) => {
     const conf = Number(c.last_confidence ?? 0);
@@ -347,18 +354,18 @@ export default function ClientHealth() {
         </div>
       )}
 
-      {/* Unlock Growth notification */}
-      {readyToUnlock.length > 0 && (
+      {/* Ready to graduate from Onboarding → In Flow (under $20k) */}
+      {readyForInFlow.length > 0 && (
         <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpCircle className="w-5 h-5 text-purple-400" />
-            <h2 className="text-sm font-bold text-purple-400">Ready to Unlock Growth Tier</h2>
+            <h2 className="text-sm font-bold text-purple-400">Ready to Move to In Flow</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            {readyToUnlock.length === 1 ? 'This client is' : `${readyToUnlock.length} clients are`} eligible for Growth — hit $15k+/month or finished all On-Ramp modules.
+            {readyForInFlow.length === 1 ? 'This client has' : `${readyForInFlow.length} clients have`} finished all On-Ramp modules — ready to graduate from Onboarding.
           </p>
           <div className="space-y-2">
-            {readyToUnlock.map((client: any) => (
+            {readyForInFlow.map((client: any) => (
               <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
                 <div>
                   <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
@@ -367,10 +374,10 @@ export default function ClientHealth() {
                   )}
                 </div>
                 <button
-                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'growth' })}
+                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_starter' })}
                   className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition"
                 >
-                  Unlock Growth →
+                  Move to In Flow →
                 </button>
               </div>
             ))}
@@ -378,30 +385,32 @@ export default function ClientHealth() {
         </div>
       )}
 
-      {readyForScale.length > 0 && (
+      {/* Ready to step up from under $20k → over $20k */}
+      {readyForOver20k.length > 0 && (
         <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6">
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpCircle className="w-5 h-5 text-orange-400" />
-            <h2 className="text-sm font-bold text-orange-400">Ready to Unlock Scale Tier</h2>
+            <h2 className="text-sm font-bold text-orange-400">Ready to Step Up — Over $20k/mth</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            {readyForScale.length === 1 ? 'This client has' : `${readyForScale.length} clients have`} hit $32k+/month — eligible for Scale.
+            {readyForOver20k.length === 1 ? 'This client has' : `${readyForOver20k.length} clients have`} crossed $20k/month — unlock the full roadmap.
           </p>
           <div className="space-y-2">
-            {readyForScale.map((client: any) => (
+            {readyForOver20k.map((client: any) => (
               <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
                 <div>
                   <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
                   <span className="ml-2 text-xs text-muted-foreground">${Number(client.monthlyRevenue).toLocaleString()}/mo</span>
                 </div>
                 <button
-                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'scale' })}
+                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_scale' })}
                   className="px-3 py-1 text-xs font-bold rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition"
                 >
-                  Unlock Scale →
+                  Unlock Over $20k →
                 </button>
               </div>
             ))}
+
           </div>
         </div>
       )}
@@ -513,32 +522,63 @@ export default function ClientHealth() {
 
               <div className="p-6 space-y-5">
                 {/* Tier change */}
-                <div className="bg-muted/30 border border-border rounded-xl p-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tier</p>
-                  <div className="flex gap-2">
-                    {TIER_OPTIONS.map((option) => {
-                      const isActive = normalizeTier(selectedClient.tier ?? c.tier) === option.value;
-
-                      return (
+                {(() => {
+                  const currentTier = normalizeTier(selectedClient.tier ?? c.tier);
+                  const isInFlow = currentTier === 'in_flow_starter' || currentTier === 'in_flow_scale';
+                  const btn = (active: boolean) =>
+                    `flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition ${
+                      active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`;
+                  return (
+                    <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stage</p>
+                      <div className="flex gap-2">
                         <button
-                          key={option.value}
-                          onClick={() => changeTier.mutate({ clientId: c.id, tier: option.value })}
+                          onClick={() => changeTier.mutate({ clientId: c.id, tier: 'onboarding' })}
                           disabled={changeTier.isPending}
-                          className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition ${
-                            isActive
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                          }`}
+                          className={btn(currentTier === 'onboarding')}
                         >
-                          {option.label}
+                          Onboarding
                         </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Changing tier unlocks different roadmap modules for this client.
-                  </p>
-                </div>
+                        <button
+                          onClick={() => changeTier.mutate({ clientId: c.id, tier: 'in_flow_starter' })}
+                          disabled={changeTier.isPending}
+                          className={btn(isInFlow)}
+                        >
+                          In Flow
+                        </button>
+                      </div>
+
+                      {isInFlow && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">In Flow level</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => changeTier.mutate({ clientId: c.id, tier: 'in_flow_starter' })}
+                              disabled={changeTier.isPending}
+                              className={btn(currentTier === 'in_flow_starter')}
+                            >
+                              Under $20k/mth
+                            </button>
+                            <button
+                              onClick={() => changeTier.mutate({ clientId: c.id, tier: 'in_flow_scale' })}
+                              disabled={changeTier.isPending}
+                              className={btn(currentTier === 'in_flow_scale')}
+                            >
+                              Over $20k/mth
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-muted-foreground">
+                        Onboarding = On-Ramp legacy modules only. In Flow under $20k = first 9 roadmap modules. Over $20k = full roadmap.
+                      </p>
+                    </div>
+                  );
+                })()}
+
+
 
                 {/* Financials snapshot — margin focus */}
                 {(() => {

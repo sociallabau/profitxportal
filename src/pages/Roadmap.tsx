@@ -56,21 +56,19 @@ const TIER_LABELS = [
   { id: 'scale', label: 'Scale', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', activeBg: 'bg-orange-500/20' },
 ];
 
-function normalizeTier(tier: string): string {
-  if (tier === 'on-ramp') return 'onramp';
-  return tier;
-}
-
-function getTierUnlocked(clientTier: string): string[] {
-  const normalized = normalizeTier(clientTier);
-  const canonical = ['onramp', 'growth', 'scale'];
-  return canonical.slice(0, canonical.indexOf(normalized) + 1);
+// Maps the client's account tier to the legacy module difficulty tiers they can access.
+function getUnlockedModuleTiers(clientTier: string): string[] {
+  if (clientTier === 'in_flow_starter' || clientTier === 'in_flow_scale') {
+    return ['on-ramp', 'growth', 'scale'];
+  }
+  // 'onboarding' (and any legacy/unknown value) — On-Ramp legacy modules only.
+  return ['on-ramp'];
 }
 
 function moduleMatchesTier(moduleTier: string, unlockedTiers: string[]): boolean {
-  const normalized = normalizeTier(moduleTier);
-  return unlockedTiers.includes(normalized);
+  return unlockedTiers.includes(moduleTier);
 }
+
 
 // Get all on-ramp module IDs
 const ON_RAMP_MODULE_IDS = PILLARS.flatMap(p => p.modules.filter(m => m.tier === 'on-ramp').map(m => m.id));
@@ -85,14 +83,14 @@ export default function Roadmap() {
     queryKey: ['profile-tier', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('tier, onboarded').eq('id', user!.id).single();
+      const { data } = await supabase.from('profiles').select('tier').eq('id', user!.id).single();
       return data;
     },
   });
 
-  const clientTier = profile?.tier || 'onramp';
-  const isOnboarded = !!profile?.onboarded;
-  const unlockedTiers = isOnboarded ? getTierUnlocked(clientTier) : ['onramp'];
+  const clientTier = profile?.tier || 'onboarding';
+  const unlockedTiers = getUnlockedModuleTiers(clientTier);
+
 
 
   const { data: completions = [] } = useQuery({
@@ -128,10 +126,12 @@ export default function Roadmap() {
   const hasPage = (id: string) => modulePages.includes(id);
 
 
-  // ProfitX access: locked by default for new accounts.
-  // 'starter' unlocks Stage 1, 'scale' unlocks both. Everything else (incl. legacy 'onramp') = locked.
-  const isStarter = clientTier === 'starter' || clientTier === 'scale';
-  const isScale = clientTier === 'scale';
+  // ProfitX access driven by the new client tier system:
+  // - 'in_flow_starter' unlocks Stage 1 (first 9 modules)
+  // - 'in_flow_scale' unlocks both stages
+  // - 'onboarding' = no ProfitX access (whole section is hidden below)
+  const isInFlow = clientTier === 'in_flow_starter' || clientTier === 'in_flow_scale';
+  const isFullScale = clientTier === 'in_flow_scale';
   const profitxStages = [
     {
       key: 'stage1' as const,
@@ -139,7 +139,7 @@ export default function Roadmap() {
       rows: [1, 2, 3],
       cardClass: 'bg-[hsl(var(--primary))] border-[hsl(var(--primary))]',
       codeBg: 'bg-white/20',
-      unlocked: isStarter,
+      unlocked: isInFlow,
     },
     {
       key: 'stage2' as const,
@@ -147,9 +147,10 @@ export default function Roadmap() {
       rows: [4, 5, 6],
       cardClass: 'bg-[hsl(var(--deep-purple))] border-[hsl(var(--deep-purple))]',
       codeBg: 'bg-white/15',
-      unlocked: isScale,
+      unlocked: isFullScale,
     },
   ];
+
 
   const profitxModuleCodes = profitxStages.flatMap(s =>
     s.rows.flatMap(r => PROFITX_COLUMNS.map(c => ({ code: `${c.key}${r}`, stage: s })))
@@ -167,13 +168,14 @@ export default function Roadmap() {
           ProfitX Roadmap<span className="text-primary">™</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {isOnboarded
+          {isInFlow
             ? '18 modules · two stages · the path from $0 to $84k+ per month.'
-            : 'Start with your On-Ramp modules below. The full roadmap unlocks after your onboarding call.'}
+            : 'Start with your On-Ramp modules below. The full roadmap unlocks once you graduate to In Flow.'}
         </p>
       </div>
 
-      {isOnboarded && (
+      {isInFlow && (
+
         <>
           {/* Stage indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
@@ -230,7 +232,7 @@ export default function Roadmap() {
         </>
       )}
 
-      <LegacyModulesSection defaultOpen={!isOnboarded}>
+      <LegacyModulesSection defaultOpen={!isInFlow}>
         <PillarRoadmap
           completionMap={completionMap}
           unlockedTiers={unlockedTiers}
