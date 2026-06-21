@@ -14,9 +14,12 @@ import { toast } from 'sonner';
 
 const PILLAR_COLORS: Record<string, { accent: string; bg: string; border: string }> = {
   build: { accent: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
-  traffic: { accent: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+  traffic: { accent: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' },
   sales: { accent: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' },
   scale: { accent: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
+  offer: { accent: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' },
+  clients: { accent: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' },
+  delivery: { accent: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' },
 };
 
 const SECTION_NUMBERS = ['①', '②', '③', '④'];
@@ -226,14 +229,11 @@ export default function ModulePage() {
       </div>
 
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <span className={`text-xs font-bold uppercase tracking-widest ${colors.accent}`}>
           {modulePage.pillar} Module
         </span>
         <h1 className="text-2xl md:text-3xl font-bold mt-2">{modulePage.title}</h1>
-        {modulePage.subtitle && (
-          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">{modulePage.subtitle}</p>
-        )}
       </div>
 
       {/* Content Sections */}
@@ -481,9 +481,9 @@ function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
         href={url}
         onClick={handlePdfDownload}
         download
-        className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
+        className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold transition-colors"
       >
-        <LinkIcon className="w-4 h-4" />
+        <LinkIcon className="w-3.5 h-3.5" />
         {label}
       </a>
     );
@@ -494,9 +494,9 @@ function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
       href={url}
       target={isInternal ? undefined : '_blank'}
       rel={isInternal ? undefined : 'noopener noreferrer'}
-      className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-sm font-semibold transition-colors"
+      className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold transition-colors"
     >
-      <LinkIcon className="w-4 h-4" />
+      <LinkIcon className="w-3.5 h-3.5" />
       {label}
     </a>
   );
