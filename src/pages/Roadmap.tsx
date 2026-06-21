@@ -168,13 +168,14 @@ export default function Roadmap() {
           ProfitX Roadmap<span className="text-primary">™</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {isOnboarded
+          {isInFlow
             ? '18 modules · two stages · the path from $0 to $84k+ per month.'
-            : 'Start with your On-Ramp modules below. The full roadmap unlocks after your onboarding call.'}
+            : 'Start with your On-Ramp modules below. The full roadmap unlocks once you graduate to In Flow.'}
         </p>
       </div>
 
-      {isOnboarded && (
+      {isInFlow && (
+
         <>
           {/* Stage indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
