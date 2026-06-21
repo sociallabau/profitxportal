@@ -5,6 +5,7 @@ import { useState } from 'react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import moduleCoverC2 from '@/assets/module-cover-stupidly-simple-ad.jpg';
+import moduleCoverC1 from '@/assets/module-cover-5ps-framework.jpg';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
@@ -276,6 +277,7 @@ export default function ModulePage() {
 
 const POSTER_MAP: Record<string, string> = {
   'module-cover-stupidly-simple-ad': moduleCoverC2,
+  'module-cover-5ps-framework': moduleCoverC1,
 };
 
 function VideoEmbed({ section }: { section: SectionBlock }) {
