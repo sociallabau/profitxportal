@@ -81,19 +81,6 @@ export default function ModulePage() {
     },
   });
 
-  const { data: moduleCompletion } = useQuery({
-    queryKey: ['module-completions', user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('checklist_progress')
-        .select('task_key, completed')
-        .eq('user_id', user!.id)
-        .eq('task_key', moduleId!)
-        .maybeSingle();
-      return data;
-    },
-  });
 
   const completionMap: Record<string, boolean> = Object.fromEntries(
     completions.map((c: any) => [c.task_key, c.completed])
@@ -109,19 +96,6 @@ export default function ModulePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['module-checklist'] }),
   });
 
-  const markComplete = useMutation({
-    mutationFn: async () => {
-      await supabase.from('checklist_progress').upsert(
-        { user_id: user!.id, task_key: moduleId!, completed: true, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id,task_key' }
-      );
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['module-completions'] });
-      toast.success('Module marked as complete!');
-      navigate('/roadmap');
-    },
-  });
 
   const savePage = useMutation({
     mutationFn: async () => {
@@ -154,7 +128,7 @@ export default function ModulePage() {
   };
 
   const colors = PILLAR_COLORS[modulePage?.pillar || 'build'];
-  const isModuleComplete = !!moduleCompletion?.completed;
+
 
   if (isLoading) {
     return (
@@ -256,21 +230,6 @@ export default function ModulePage() {
         ))}
       </div>
 
-      {/* Mark Complete */}
-      <div className="mt-10 pt-6 border-t border-border max-w-3xl">
-        <Button
-          onClick={() => markComplete.mutate()}
-          disabled={isModuleComplete || markComplete.isPending}
-          className={isModuleComplete ? 'bg-green-600 hover:bg-green-600' : ''}
-          size="lg"
-        >
-          {isModuleComplete ? (
-            <><CheckCircle2 className="w-5 h-5 mr-2" /> Module Complete</>
-          ) : (
-            <>Mark Module Complete <ChevronRight className="w-4 h-4 ml-1" /></>
-          )}
-        </Button>
-      </div>
     </PageLayout>
   );
 }
