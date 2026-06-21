@@ -79,6 +79,7 @@ export default function Roadmap() {
   usePageTracking('roadmap');
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [showNotice, setShowNotice] = useState(true);
 
   const { data: profile } = useQuery({
     queryKey: ['profile-tier', user?.id],
