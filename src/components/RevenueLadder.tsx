@@ -36,7 +36,12 @@ function Diamond({ color, glow, dark }: { color: string; glow: string; dark: str
   );
 }
 
-export default function RevenueLadder() {
+export default function RevenueLadder({ currentRevenue }: { currentRevenue?: number | null }) {
+  const activeIndex =
+    currentRevenue && currentRevenue > 0
+      ? TIERS.reduce((best, tier, idx) => (currentRevenue >= tier.threshold ? idx : best), -1)
+      : -1;
+
   return (
     <div className="w-full mb-8">
       {/* Title */}
@@ -54,8 +59,18 @@ export default function RevenueLadder() {
 
       {/* Diamonds row */}
       <div className="flex items-start justify-center gap-2 sm:gap-3 overflow-x-auto pb-2 px-2">
-        {TIERS.map((tier) => (
-          <div key={tier.label} className="flex flex-col items-center min-w-[52px] sm:min-w-[64px]">
+        {TIERS.map((tier, idx) => (
+          <div key={tier.label} className="relative flex flex-col items-center min-w-[52px] sm:min-w-[64px]">
+            {/* Active neon dot */}
+            {idx === activeIndex && (
+              <div
+                className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 w-3 h-3 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: '#fff',
+                  boxShadow: `0 0 6px 2px ${tier.color}, 0 0 12px 4px ${tier.glow}, 0 0 20px 6px ${tier.glow}`,
+                }}
+              />
+            )}
             <Diamond color={tier.color} glow={tier.glow} dark={tier.dark} />
             <div
               className="mt-2 w-full rounded-lg px-1.5 py-1.5 text-center"
