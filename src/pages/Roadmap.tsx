@@ -84,7 +84,7 @@ export default function Roadmap() {
     queryKey: ['profile-tier', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('tier').eq('id', user!.id).single();
+      const { data } = await supabase.from('profiles').select('tier, onboarding_notice_seen').eq('id', user!.id).single();
       return data;
     },
   });
