@@ -468,12 +468,10 @@ export default function ClientHealth() {
                 </div>
 
                 <div className="hidden sm:flex items-center gap-6 text-xs text-muted-foreground shrink-0">
-                  <span>Score: <strong className={s.text}>{health.score}/100</strong></span>
-                  {client.last_total_revenue > 0 && <span>Rev: ${Number(client.last_total_revenue).toLocaleString()}</span>}
-                  {client.modules_completed > 0 && <span>{client.modules_completed} modules</span>}
+                  <span>{formatTierLabel(client.tier)}</span>
                   {client.days_since_last_login !== null && (
                     <span className={Number(client.days_since_last_login) > 14 ? 'text-orange-400' : ''}>
-                      Login: {client.days_since_last_login}d ago
+                      Last login: {client.days_since_last_login}d ago
                     </span>
                   )}
                 </div>
