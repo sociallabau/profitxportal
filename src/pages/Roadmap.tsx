@@ -163,8 +163,14 @@ export default function Roadmap() {
     ? Math.round((completedProfitx / unlockedProfitx.length) * 100)
     : 0;
 
+  const shouldShowNotice = clientTier === 'onboarding' && !profile?.onboarding_notice_seen && showNotice;
+
   return (
     <PageLayout>
+      {shouldShowNotice && (
+        <OnboardingNoticeModal onDismiss={() => setShowNotice(false)} />
+      )}
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold">
           ProfitX Roadmap<span className="text-primary">™</span>
