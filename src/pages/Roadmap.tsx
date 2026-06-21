@@ -232,7 +232,7 @@ export default function Roadmap() {
         </>
       )}
 
-      <LegacyModulesSection defaultOpen={!isOnboarded}>
+      <LegacyModulesSection defaultOpen={!isInFlow}>
         <PillarRoadmap
           completionMap={completionMap}
           unlockedTiers={unlockedTiers}
