@@ -83,14 +83,14 @@ export default function Roadmap() {
     queryKey: ['profile-tier', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('tier, onboarded').eq('id', user!.id).single();
+      const { data } = await supabase.from('profiles').select('tier').eq('id', user!.id).single();
       return data;
     },
   });
 
-  const clientTier = profile?.tier || 'onramp';
-  const isOnboarded = !!profile?.onboarded;
-  const unlockedTiers = isOnboarded ? getTierUnlocked(clientTier) : ['onramp'];
+  const clientTier = profile?.tier || 'onboarding';
+  const unlockedTiers = getUnlockedModuleTiers(clientTier);
+
 
 
   const { data: completions = [] } = useQuery({
