@@ -301,8 +301,8 @@ function VideoEmbed({ section }: { section: SectionBlock }) {
           style={{ paddingTop: '56.25%' }}
           onClick={() => setPlaying(true)}
         >
-          <img src={posterSrc} alt={section.title || 'Video cover'} className="absolute inset-0 w-full h-full object-contain" />
-          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors" />
+          <img src={posterSrc} alt={section.title || 'Video cover'} className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
               <Play className="w-6 h-6 text-primary-foreground ml-1" />
