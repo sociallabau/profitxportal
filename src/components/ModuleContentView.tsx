@@ -224,15 +224,27 @@ function RenderSection({
       );
     case 'link_placeholder':
       return section.url ? (
-        <a
-          href={section.url}
-          target={section.url.startsWith('/') ? undefined : '_blank'}
-          rel={section.url.startsWith('/') ? undefined : 'noopener noreferrer'}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
-        >
-          <LinkIcon className="w-4 h-4" />
-          {section.label}
-        </a>
+        section.url.startsWith('/') ? (
+          <a
+            href={section.url}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
+          >
+            <LinkIcon className="w-4 h-4" />
+            {section.label}
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              const opened = window.open(section.url, '_blank');
+              if (opened) opened.opener = null;
+            }}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
+          >
+            <LinkIcon className="w-4 h-4" />
+            {section.label}
+          </button>
+        )
       ) : (
         <div className="rounded-xl border border-dashed border-border p-4 flex items-center gap-3 opacity-60">
           <LinkIcon className="w-4 h-4 text-muted-foreground" />
