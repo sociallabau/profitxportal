@@ -75,6 +75,16 @@ export default function RevenueLadder({ currentRevenue }: { currentRevenue?: num
                 </p>
               ))}
             </div>
+            {/* Active neon dot */}
+            {idx === activeIndex && (
+              <div
+                className="mt-2 w-3 h-3 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: '#fff',
+                  boxShadow: `0 0 6px 2px ${tier.color}, 0 0 12px 4px ${tier.glow}, 0 0 20px 6px ${tier.glow}`,
+                }}
+              />
+            )}
           </div>
         ))}
       </div>
