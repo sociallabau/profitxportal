@@ -222,33 +222,64 @@ function RenderSection({
           })}
         </div>
       );
-    case 'link_placeholder':
-      return section.url ? (
-        section.url.startsWith('/') ? (
-          <a
-            href={section.url}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
-          >
-            <LinkIcon className="w-4 h-4" />
-            {section.label}
-          </a>
-        ) : (
-          <a
-            href={section.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
-          >
-            <LinkIcon className="w-4 h-4" />
-            {section.label}
-          </a>
-        )
+    case 'link_placeholder': {
+      if (!section.url) {
+        return (
+          <div className="rounded-xl border border-dashed border-border p-4 flex items-center gap-3 opacity-60">
+            <LinkIcon className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">{section.label}</span>
+          </div>
+        );
+      }
+      const igMatch = section.url.match(/instagram\.com\/(p|reel|tv)\/([^/?#]+)/i);
+      if (igMatch) {
+        const embed = `https://www.instagram.com/${igMatch[1]}/${igMatch[2]}/embed`;
+        return (
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-border">
+              <span className="text-xs font-semibold text-foreground truncate">{section.label}</span>
+              <a
+                href={section.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] uppercase tracking-wider text-primary hover:underline shrink-0"
+              >
+                Open ↗
+              </a>
+            </div>
+            <iframe
+              src={embed}
+              loading="lazy"
+              allow="encrypted-media"
+              allowFullScreen
+              className="w-full bg-background"
+              style={{ height: 540, border: 0 }}
+              title={section.label}
+            />
+          </div>
+        );
+      }
+      return section.url.startsWith('/') ? (
+        <a
+          href={section.url}
+          className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
+        >
+          <LinkIcon className="w-4 h-4" />
+          {section.label}
+        </a>
       ) : (
-        <div className="rounded-xl border border-dashed border-border p-4 flex items-center gap-3 opacity-60">
-          <LinkIcon className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">{section.label}</span>
-        </div>
+        <a
+          href={section.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
+        >
+          <LinkIcon className="w-4 h-4" />
+          {section.label}
+        </a>
       );
+    }
+
     case 'next_module':
       return (
         <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">

@@ -488,9 +488,44 @@ function RenderSection({
   }
 }
 
+function getInstagramEmbedUrl(url: string): string | null {
+  const m = url.match(/instagram\.com\/(p|reel|tv)\/([^/?#]+)/i);
+  if (!m) return null;
+  return `https://www.instagram.com/${m[1]}/${m[2]}/embed`;
+}
+
 function LinkPlaceholderButton({ url, label }: { url: string; label: string }) {
   const isPdf = /\.pdf($|\?)/i.test(url);
   const isInternal = url.startsWith('/');
+  const instagramEmbed = getInstagramEmbedUrl(url);
+
+  if (instagramEmbed) {
+    return (
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-border">
+          <span className="text-xs font-semibold text-foreground truncate">{label}</span>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] uppercase tracking-wider text-primary hover:underline shrink-0"
+          >
+            Open ↗
+          </a>
+        </div>
+        <iframe
+          src={instagramEmbed}
+          loading="lazy"
+          allow="encrypted-media"
+          allowFullScreen
+          className="w-full bg-background"
+          style={{ height: 540, border: 0 }}
+          title={label}
+        />
+      </div>
+    );
+  }
+
 
   const handlePdfDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
