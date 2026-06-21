@@ -469,6 +469,7 @@ export default function ClientHealth() {
 
                 <div className="hidden sm:flex items-center gap-6 text-xs text-muted-foreground shrink-0">
                   <span>{formatTierLabel(client.tier)}</span>
+                  <span>${Number(client.last_total_revenue || 0).toLocaleString()}/mo</span>
                   {client.days_since_last_login !== null && (
                     <span className={Number(client.days_since_last_login) > 14 ? 'text-orange-400' : ''}>
                       Last login: {client.days_since_last_login}d ago
