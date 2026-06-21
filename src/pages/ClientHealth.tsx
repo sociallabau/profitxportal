@@ -9,19 +9,24 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 const TIER_OPTIONS = [
-  { value: 'onramp', label: 'On-Ramp' },
-  { value: 'growth', label: 'Growth' },
-  { value: 'scale', label: 'Scale' },
+  { value: 'onboarding', label: 'Onboarding' },
+  { value: 'in_flow_starter', label: 'In Flow · Under $20k/mth' },
+  { value: 'in_flow_scale', label: 'In Flow · Over $20k/mth' },
 ] as const;
 
+// Maps any legacy tier value to the new tier system so older rows still display correctly.
 function normalizeTier(tier?: string | null) {
-  if (!tier || tier === 'on-ramp') return 'onramp';
+  if (!tier) return 'onboarding';
+  if (tier === 'onramp' || tier === 'on-ramp') return 'onboarding';
+  if (tier === 'growth') return 'in_flow_starter';
+  if (tier === 'scale' || tier === 'starter') return 'in_flow_scale';
   return tier;
 }
 
 function formatTierLabel(tier?: string | null) {
-  return TIER_OPTIONS.find((option) => option.value === normalizeTier(tier))?.label ?? 'On-Ramp';
+  return TIER_OPTIONS.find((option) => option.value === normalizeTier(tier))?.label ?? 'Onboarding';
 }
+
 
 // On-ramp module IDs — must match Roadmap.tsx
 const ON_RAMP_MODULE_IDS = [
