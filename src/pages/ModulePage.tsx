@@ -277,6 +277,7 @@ export default function ModulePage() {
 
 const POSTER_MAP: Record<string, string> = {
   'module-cover-stupidly-simple-ad': moduleCoverC2,
+  'module-cover-5ps-framework': moduleCoverC1,
 };
 
 function VideoEmbed({ section }: { section: SectionBlock }) {
