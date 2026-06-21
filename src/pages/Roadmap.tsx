@@ -172,6 +172,8 @@ export default function Roadmap() {
         <OnboardingNoticeModal onDismiss={() => setShowNotice(false)} />
       )}
 
+      <RevenueLadder />
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold">
           ProfitX Roadmap<span className="text-primary">™</span>
