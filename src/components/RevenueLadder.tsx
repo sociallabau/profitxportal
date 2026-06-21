@@ -60,12 +60,12 @@ export default function RevenueLadder({ currentRevenue }: { currentRevenue?: num
       </div>
 
       {/* Diamonds row */}
-      <div className="flex items-start justify-center gap-2 sm:gap-3 overflow-x-auto pb-2 px-2">
+      <div className="grid grid-cols-4 gap-2 sm:flex sm:items-start sm:justify-center sm:gap-3 sm:overflow-x-auto sm:pb-2 sm:px-2">
         {TIERS.map((tier, idx) => (
-          <div key={tier.label} className="relative flex flex-col items-center min-w-[52px] sm:min-w-[64px]">
+          <div key={tier.label} className="relative flex flex-col items-center">
             <Diamond color={tier.color} glow={tier.glow} dark={tier.dark} />
             <div
-              className="mt-2 w-full rounded-lg px-1.5 py-1.5 text-center"
+              className="mt-2 w-full rounded-lg px-1 py-1 sm:px-1.5 sm:py-1.5 text-center"
               style={{ backgroundColor: tier.color }}
             >
               <p className="text-[10px] sm:text-xs font-bold text-white leading-tight">
