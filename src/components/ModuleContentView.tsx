@@ -233,17 +233,15 @@ function RenderSection({
             {section.label}
           </a>
         ) : (
-          <button
-            type="button"
-            onClick={() => {
-              const opened = window.open(section.url, '_blank');
-              if (opened) opened.opener = null;
-            }}
+          <a
+            href={section.url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm font-semibold transition-colors"
           >
             <LinkIcon className="w-4 h-4" />
             {section.label}
-          </button>
+          </a>
         )
       ) : (
         <div className="rounded-xl border border-dashed border-border p-4 flex items-center gap-3 opacity-60">
