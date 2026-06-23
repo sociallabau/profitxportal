@@ -1,6 +1,8 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
+
 import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
 import vaultQaApril from '@/assets/vault-qa-april.jpg';
