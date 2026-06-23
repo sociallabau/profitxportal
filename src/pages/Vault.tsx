@@ -8,12 +8,13 @@ import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
 import vaultQaMay from '@/assets/vault-qa-may.jpg';
 import vaultQaJune from '@/assets/vault-qa-june.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
+import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
 
 type Template = { label: string; url: string };
 
 type VaultItem = {
   title: string;
-  category: 'Q&A' | 'Workshop' | 'Lesson';
+  category: 'Q&A' | 'Workshop' | 'Lesson' | 'Momentum Call';
   date?: string;
   url: string;
   thumbnail: string;
@@ -23,6 +24,14 @@ type VaultItem = {
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Momentum Call — Paid Ads, Ad Creatives & Metrics',
+    category: 'Momentum Call',
+    date: 'Jun 23',
+    url: 'https://drive.google.com/file/d/1BKWdivnL93FX4wq6KQLQH3-fG46hGsWy/view?usp=sharing',
+    thumbnail: vaultMomentumJun23,
+    transcriptUrl: 'https://docs.google.com/document/d/1WGZDRGfcyVGUcfarTUSlKYBgTA6NP3JIh7G65hjLzL0/edit?usp=sharing',
+  },
   {
     title: 'Q&A — June 10th',
     category: 'Q&A',
@@ -84,6 +93,7 @@ const categoryStyles: Record<VaultItem['category'], string> = {
   'Q&A': 'bg-primary/15 text-primary border-primary/30',
   Workshop: 'bg-warning/15 text-warning border-warning/30',
   Lesson: 'bg-success/15 text-success border-success/30',
+  'Momentum Call': 'bg-accent/15 text-accent-foreground border-accent/40',
 };
 
 export default function Vault() {
