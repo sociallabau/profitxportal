@@ -96,107 +96,118 @@ const categoryStyles: Record<VaultItem['category'], string> = {
   'Momentum Call': 'bg-accent/15 text-accent-foreground border-accent/40',
 };
 
+const SECTIONS: { heading: string; categories: VaultItem['category'][] }[] = [
+  { heading: 'Momentum Calls', categories: ['Momentum Call'] },
+  { heading: 'Q&A Calls', categories: ['Q&A'] },
+  { heading: 'Workshops', categories: ['Workshop', 'Lesson'] },
+];
+
 export default function Vault() {
   return (
     <PageLayout>
       <div className="mb-6">
         <h1 className="text-3xl font-bold italic text-foreground">Vault</h1>
-        <p className="text-muted-foreground mt-1">Recordings of Q&As, workshops and lessons — watch any time.</p>
+        <p className="text-muted-foreground mt-1">Recordings of momentum calls, Q&As and workshops — watch any time.</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {ITEMS.map((item) => (
-          <Card
-            key={item.url}
-            className="h-full overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col group"
-          >
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
-            >
-              <div className="relative aspect-video overflow-hidden bg-muted">
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  width={1024}
-                  height={576}
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <PlayCircle className="w-14 h-14 text-white drop-shadow-lg" />
-                </div>
-              </div>
-            </a>
-            <div className="p-5 flex flex-col gap-2 flex-1">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[item.category]}`}
-                >
-                  {item.category}
-                </span>
-                {item.date && (
-                  <span className="text-xs text-muted-foreground">{item.date}</span>
-                )}
-              </div>
-              <h3 className="font-semibold text-foreground leading-snug">
-                {item.title}
-              </h3>
-              <div className="mt-auto pt-2 flex flex-col gap-1.5">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
-                </a>
-                {item.workbookUrl && (
-                  <a
-                    href={item.workbookUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+      <div className="flex flex-col gap-10">
+        {SECTIONS.map((section) => {
+          const items = ITEMS.filter((i) => section.categories.includes(i.category));
+          if (items.length === 0) return null;
+          return (
+            <section key={section.heading}>
+              <h2 className="text-xl font-bold text-foreground mb-4">{section.heading}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((item) => (
+                  <Card
+                    key={item.url}
+                    className="h-full overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col group"
                   >
-                    <BookOpen className="w-3 h-3" />
-                    Workbook
-                  </a>
-                )}
-                {item.transcriptUrl && (
-                  <a
-                    href={item.transcriptUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <FileText className="w-3 h-3" />
-                    Transcript & summary
-                  </a>
-                )}
-                {item.templates && item.templates.length > 0 && (
-                  <div className="pt-1.5 mt-1 border-t border-border/50 flex flex-col gap-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">Templates</span>
-                    {item.templates.map((tpl) => (
-                      <a
-                        key={tpl.url}
-                        href={tpl.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <FileSpreadsheet className="w-3 h-3" />
-                        {tpl.label}
-                      </a>
-                    ))}
-                  </div>
-                )}
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="block">
+                      <div className="relative aspect-video overflow-hidden bg-muted">
+                        <img
+                          src={item.thumbnail}
+                          alt={item.title}
+                          width={1024}
+                          height={576}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <PlayCircle className="w-14 h-14 text-white drop-shadow-lg" />
+                        </div>
+                      </div>
+                    </a>
+                    <div className="p-5 flex flex-col gap-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[item.category]}`}
+                        >
+                          {item.category}
+                        </span>
+                        {item.date && (
+                          <span className="text-xs text-muted-foreground">{item.date}</span>
+                        )}
+                      </div>
+                      <h3 className="font-semibold text-foreground leading-snug">{item.title}</h3>
+                      <div className="mt-auto pt-2 flex flex-col gap-1.5">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
+                        </a>
+                        {item.workbookUrl && (
+                          <a
+                            href={item.workbookUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <BookOpen className="w-3 h-3" />
+                            Workbook
+                          </a>
+                        )}
+                        {item.transcriptUrl && (
+                          <a
+                            href={item.transcriptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <FileText className="w-3 h-3" />
+                            Transcript & summary
+                          </a>
+                        )}
+                        {item.templates && item.templates.length > 0 && (
+                          <div className="pt-1.5 mt-1 border-t border-border/50 flex flex-col gap-1.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">Templates</span>
+                            {item.templates.map((tpl) => (
+                              <a
+                                key={tpl.url}
+                                href={tpl.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <FileSpreadsheet className="w-3 h-3" />
+                                {tpl.label}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
-            </div>
-          </Card>
-        ))}
+            </section>
+          );
+        })}
       </div>
     </PageLayout>
   );
 }
+
