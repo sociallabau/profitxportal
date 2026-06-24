@@ -202,6 +202,17 @@ export default function Vault() {
                                 Transcript & summary
                               </a>
                             )}
+                            {item.gptUrl && (
+                              <a
+                                href={item.gptUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                {item.gptLabel ?? 'Custom GPT'}
+                              </a>
+                            )}
                             {item.templates && item.templates.length > 0 && (
                               <div className="pt-1.5 mt-1 border-t border-border/50 flex flex-col gap-1.5">
                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">Templates</span>
