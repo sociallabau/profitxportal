@@ -46,7 +46,7 @@ const ITEMS: VaultItem[] = [
     transcriptUrl: 'https://docs.google.com/document/d/1nnxYqHz9HpyN5tW9ZB9KUTyR521cjVFOJwQGqmxRhfM/edit?usp=sharing',
   },
   {
-    title: 'Workshop — Content Strategy Mapper',
+    title: 'Workshop — Smooth Operator™',
     category: 'Workshop',
     url: 'https://drive.google.com/file/d/1gL1dwbaRYRkPNfKGwUGLKB4MQtLMlj4G/view?usp=sharing',
     thumbnail: vaultContentStrategy,
