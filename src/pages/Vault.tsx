@@ -23,6 +23,8 @@ type VaultItem = {
   thumbnail: string;
   workbookUrl?: string;
   transcriptUrl?: string;
+  gptUrl?: string;
+  gptLabel?: string;
   templates?: Template[];
 };
 
