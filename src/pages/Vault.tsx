@@ -47,6 +47,18 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Workshop — Profit By Design™',
+  {
+    title: 'Workshop — Content Strategy Mapper',
+    category: 'Workshop',
+    url: 'https://drive.google.com/file/d/1gL1dwbaRYRkPNfKGwUGLKB4MQtLMlj4G/view?usp=sharing',
+    thumbnail: vaultContentStrategy,
+    workbookUrl: 'https://drive.google.com/file/d/1sVIsKqFUE5L1zVDsZ2rBPV-8KhnZ9yOU/view?usp=sharing',
+    transcriptUrl: 'https://docs.google.com/document/d/1BnNkY-G22_N2dOBXi-T-9YRwIUqA1Gqypi0kO_qKFI8/edit?usp=sharing',
+    gptUrl: 'https://chatgpt.com/g/g-6a30873896388191b5615dc3b54654c0-content-strategy-mapper',
+    gptLabel: 'Strategy Session GPT',
+  },
+  {
+    title: 'Workshop — Profit By Design™',
     category: 'Workshop',
     date: 'May 27',
     url: 'https://fathom.video/share/eszuA_bGgedERbyHpaVHWpp2jQ1zyfsr',
