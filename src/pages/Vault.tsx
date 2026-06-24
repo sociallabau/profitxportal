@@ -1,7 +1,7 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
+import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText, ChevronDown, Sparkles } from 'lucide-react';
 
 import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
@@ -11,6 +11,7 @@ import vaultQaMay from '@/assets/vault-qa-may.jpg';
 import vaultQaJune from '@/assets/vault-qa-june.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
+import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
 
 type Template = { label: string; url: string };
 
@@ -22,6 +23,8 @@ type VaultItem = {
   thumbnail: string;
   workbookUrl?: string;
   transcriptUrl?: string;
+  gptUrl?: string;
+  gptLabel?: string;
   templates?: Template[];
 };
 
@@ -41,6 +44,16 @@ const ITEMS: VaultItem[] = [
     url: 'https://drive.google.com/file/d/1dgxq-QSDq60T_a-6MA9FGIozpl0gjgdq/view?usp=sharing',
     thumbnail: vaultQaJune,
     transcriptUrl: 'https://docs.google.com/document/d/1nnxYqHz9HpyN5tW9ZB9KUTyR521cjVFOJwQGqmxRhfM/edit?usp=sharing',
+  },
+  {
+    title: 'Workshop — Content Strategy Mapper',
+    category: 'Workshop',
+    url: 'https://drive.google.com/file/d/1gL1dwbaRYRkPNfKGwUGLKB4MQtLMlj4G/view?usp=sharing',
+    thumbnail: vaultContentStrategy,
+    workbookUrl: 'https://drive.google.com/file/d/1sVIsKqFUE5L1zVDsZ2rBPV-8KhnZ9yOU/view?usp=sharing',
+    transcriptUrl: 'https://docs.google.com/document/d/1BnNkY-G22_N2dOBXi-T-9YRwIUqA1Gqypi0kO_qKFI8/edit?usp=sharing',
+    gptUrl: 'https://chatgpt.com/g/g-6a30873896388191b5615dc3b54654c0-content-strategy-mapper',
+    gptLabel: 'Strategy Session GPT',
   },
   {
     title: 'Workshop — Profit By Design™',
@@ -187,6 +200,17 @@ export default function Vault() {
                               >
                                 <FileText className="w-3 h-3" />
                                 Transcript & summary
+                              </a>
+                            )}
+                            {item.gptUrl && (
+                              <a
+                                href={item.gptUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                {item.gptLabel ?? 'Custom GPT'}
                               </a>
                             )}
                             {item.templates && item.templates.length > 0 && (
