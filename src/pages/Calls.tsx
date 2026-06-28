@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
 import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
 import momentumCallThumb from '@/assets/momentum-call-thumb.png';
+import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 
 type Call = {
   title: string;
