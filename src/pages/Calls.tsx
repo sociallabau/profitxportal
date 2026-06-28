@@ -78,6 +78,15 @@ const CALLS: Call[] = [
       'Hot Seat session with Elijah Arnold. Time zone: Australia/Brisbane. Join via Google Meet.',
     thumbnail: hotSeatElijahThumb,
   },
+  {
+    title: 'ProfitX Workshop - TBA',
+    category: 'Workshop',
+    start: '2026-07-22T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/',
+    description:
+      'ProfitX Workshop — topic TBA. Time zone: Australia/Brisbane. Join via Google Meet.',
+  },
 ];
 
 /**
