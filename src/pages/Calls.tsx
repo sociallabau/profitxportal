@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
 import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
 import momentumCallThumb from '@/assets/momentum-call-thumb.png';
+import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 
 type Call = {
   title: string;
@@ -66,6 +67,16 @@ const CALLS: Call[] = [
     description:
       'Smooth Operator™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 3 8594 7255 PIN 271 718 706.',
     thumbnail: smoothOperatorThumb,
+  },
+  {
+    title: 'ProfitX - Hot Seat - Elijah Arnold',
+    category: 'Coaching',
+    start: '2026-07-07T17:00:00',
+    durationMins: 60,
+    meetUrl: 'https://meet.google.com/',
+    description:
+      'Hot Seat session with Elijah Arnold. Time zone: Australia/Brisbane. Join via Google Meet.',
+    thumbnail: hotSeatElijahThumb,
   },
 ];
 
