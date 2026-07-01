@@ -204,17 +204,11 @@ export default function MonthlyTotals() {
             <p className="text-xs text-muted-foreground mt-1">This will be posted to the Wins Wall automatically 🏆</p>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1.5">What do you need from Dan this month?</label>
+            <label className="block text-sm font-semibold text-foreground mb-1.5">What's your next important task?</label>
             <textarea value={form.needs_this_month} onChange={e => set('needs_this_month', e.target.value)} rows={2}
-              placeholder="e.g. Help structuring my offer, accountability on posting, reviewing my ad creative..."
+              placeholder="e.g. Launch new offer page, book 5 discovery calls, ship 10 pieces of content..."
               className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition resize-none" />
           </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-5 space-y-6">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">How are you feeling?</h3>
-          <ScoreSlider label="Business confidence" sublabel="How confident are you about the direction of your business right now?" value={form.business_confidence} onChange={v => set('business_confidence', v)} />
-          <ScoreSlider label="Coaching satisfaction" sublabel="How much value are you getting from ProfitX?" value={form.nps} onChange={v => set('nps', v)} />
         </div>
 
         <div className="flex items-center justify-between">
