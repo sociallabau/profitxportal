@@ -307,6 +307,21 @@ export default function ClientHealth() {
         <p className="text-sm text-muted-foreground">Click any client to view their full profile and manage their tier.</p>
       </div>
 
+      {user?.id === OWNER_USER_ID && (() => {
+        const totalMrr = clientsWithHealth.reduce((sum: number, c: any) => sum + (Number(c.last_mrr) || 0), 0);
+        const contributors = clientsWithHealth.filter((c: any) => Number(c.last_mrr) > 0).length;
+        return (
+          <div className="bg-gradient-to-br from-primary/20 to-purple-600/10 border border-primary/40 rounded-xl p-5 mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="w-5 h-5 text-primary" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Total ProfitX MRR — Retainers (Owner Only)</h2>
+            </div>
+            <p className="text-3xl font-bold text-foreground">${totalMrr.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/mth</span></p>
+            <p className="text-xs text-muted-foreground mt-1">Pooled from {contributors} student{contributors === 1 ? '' : 's'}' latest monthly check-in. Use for marketing / social proof.</p>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { label: 'On Track',   count: greenCount, band: 'green' as const },
