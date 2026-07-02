@@ -742,29 +742,52 @@ export default function ClientHealth() {
 
 function TotalNewMrrCard() {
   const { data: rows = [] } = useQuery({
-    queryKey: ['owner-total-new-mrr'],
+    queryKey: ['owner-total-mrr-growth'],
     queryFn: async () => {
       const { data } = await supabase
         .from('monthly_totals')
-        .select('user_id, new_clients_total_value, new_clients_is_mrr');
+        .select('user_id, month, mrr, mrr_manual, new_clients_total_value, new_clients_is_mrr')
+        .order('month', { ascending: true });
       return data ?? [];
     },
   });
-  const totalNewMrr = rows
-    .filter((r: any) => r.new_clients_is_mrr)
-    .reduce((sum: number, r: any) => sum + (Number(r.new_clients_total_value) || 0), 0);
-  const contributors = new Set(
-    rows.filter((r: any) => r.new_clients_is_mrr && Number(r.new_clients_total_value) > 0).map((r: any) => r.user_id)
-  ).size;
+
+  // Per-student MRR growth: (latest MRR − first MRR), floored at 0. Sums total MRR
+  // students have gained since their first submission — "how much MRR I've helped my clients add".
+  const byUser: Record<string, { first: number; last: number }> = {};
+  for (const r of rows as any[]) {
+    const m = Number(r.mrr_manual ?? r.mrr ?? 0) || 0;
+    const u = r.user_id;
+    if (!byUser[u]) byUser[u] = { first: m, last: m };
+    else byUser[u].last = m; // rows are sorted ascending, so the last one wins
+  }
+  const perUserGrowth = Object.entries(byUser).map(([u, v]) => ({ u, growth: Math.max(v.last - v.first, 0) }));
+  const totalGrowth = perUserGrowth.reduce((s, x) => s + x.growth, 0);
+  const contributors = perUserGrowth.filter((x) => x.growth > 0).length;
+  const studentCount = Object.keys(byUser).length;
+
+  // Secondary metric: cumulative new-client revenue booked across every submission.
+  const totalNewClientRevenue = (rows as any[]).reduce((s, r) => s + (Number(r.new_clients_total_value) || 0), 0);
+
   return (
     <div className="bg-gradient-to-br from-primary/20 to-purple-600/10 border border-primary/40 rounded-xl p-5 mb-6">
       <div className="flex items-center gap-2 mb-1">
         <DollarSign className="w-5 h-5 text-primary" />
-        <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Total ProfitX MRR Generated — Retainers (Owner Only)</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Total ProfitX MRR Generated (Owner Only)</h2>
       </div>
-      <p className="text-3xl font-bold text-foreground">${totalNewMrr.toLocaleString()}<span className="text-sm font-normal text-muted-foreground"> new MRR</span></p>
-      <p className="text-xs text-muted-foreground mt-1">Sum of every new-client value students marked as recurring MRR in their monthly submissions. Pooled from {contributors} student{contributors === 1 ? '' : 's'}.</p>
+      <p className="text-3xl font-bold text-foreground">
+        ${totalGrowth.toLocaleString()}
+        <span className="text-sm font-normal text-muted-foreground"> MRR gained</span>
+      </p>
+      <p className="text-xs text-muted-foreground mt-1">
+        Sum of every student's MRR growth from their first submission to their latest. {contributors} of {studentCount} student{studentCount === 1 ? '' : 's'} showing MRR growth.
+      </p>
+      <div className="mt-3 pt-3 border-t border-primary/20 flex items-baseline gap-2">
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">New client revenue booked:</span>
+        <span className="text-lg font-bold text-foreground">${totalNewClientRevenue.toLocaleString()}</span>
+      </div>
     </div>
   );
 }
+
 
