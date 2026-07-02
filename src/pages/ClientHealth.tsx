@@ -739,3 +739,32 @@ export default function ClientHealth() {
     </PageLayout>
   );
 }
+
+function TotalNewMrrCard() {
+  const { data: rows = [] } = useQuery({
+    queryKey: ['owner-total-new-mrr'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_totals')
+        .select('user_id, new_clients_total_value, new_clients_is_mrr');
+      return data ?? [];
+    },
+  });
+  const totalNewMrr = rows
+    .filter((r: any) => r.new_clients_is_mrr)
+    .reduce((sum: number, r: any) => sum + (Number(r.new_clients_total_value) || 0), 0);
+  const contributors = new Set(
+    rows.filter((r: any) => r.new_clients_is_mrr && Number(r.new_clients_total_value) > 0).map((r: any) => r.user_id)
+  ).size;
+  return (
+    <div className="bg-gradient-to-br from-primary/20 to-purple-600/10 border border-primary/40 rounded-xl p-5 mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <DollarSign className="w-5 h-5 text-primary" />
+        <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Total ProfitX MRR Generated — Retainers (Owner Only)</h2>
+      </div>
+      <p className="text-3xl font-bold text-foreground">${totalNewMrr.toLocaleString()}<span className="text-sm font-normal text-muted-foreground"> new MRR</span></p>
+      <p className="text-xs text-muted-foreground mt-1">Sum of every new-client value students marked as recurring MRR in their monthly submissions. Pooled from {contributors} student{contributors === 1 ? '' : 's'}.</p>
+    </div>
+  );
+}
+
