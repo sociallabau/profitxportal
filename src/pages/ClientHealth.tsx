@@ -194,13 +194,14 @@ export default function ClientHealth() {
     queryFn: async () => {
       const { data } = await supabase
         .from('monthly_totals')
-        .select('month, mrr_manual, mrr, oneoff_revenue, total_revenue, expenses, business_confidence, nps, content_posts, leads_generated, new_clients')
+        .select('month, mrr_manual, mrr, oneoff_revenue, total_revenue, expenses, content_posts, leads_generated, new_clients, new_clients_total_value, new_clients_is_mrr')
         .eq('user_id', selectedClient!.id)
         .order('month', { ascending: false })
         .limit(6);
       return data ?? [];
     },
   });
+
 
   const { data: clientCompletions = [] } = useQuery({
     queryKey: ['client-completions', selectedClient?.id],
@@ -272,13 +273,6 @@ export default function ClientHealth() {
   const readyForOver20k = clientsWithHealth.filter((c: any) => c.readyForOver20k);
 
 
-  const lowSurveys = clientsWithHealth.filter((c: any) => {
-    const conf = Number(c.last_confidence ?? 0);
-    const nps = Number(c.last_nps ?? 0);
-    const hasConf = c.last_confidence !== null && c.last_confidence !== undefined;
-    const hasNps = c.last_nps !== null && c.last_nps !== undefined;
-    return (hasConf && conf > 0 && conf <= LOW_CONFIDENCE) || (hasNps && nps > 0 && nps <= LOW_NPS);
-  });
 
   const { data: pageViewAgg = [] } = useQuery({
     queryKey: ['page-view-agg'],
@@ -307,20 +301,8 @@ export default function ClientHealth() {
         <p className="text-sm text-muted-foreground">Click any client to view their full profile and manage their tier.</p>
       </div>
 
-      {user?.id === OWNER_USER_ID && (() => {
-        const totalMrr = clientsWithHealth.reduce((sum: number, c: any) => sum + (Number(c.last_mrr) || 0), 0);
-        const contributors = clientsWithHealth.filter((c: any) => Number(c.last_mrr) > 0).length;
-        return (
-          <div className="bg-gradient-to-br from-primary/20 to-purple-600/10 border border-primary/40 rounded-xl p-5 mb-6">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="w-5 h-5 text-primary" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Total ProfitX MRR — Retainers (Owner Only)</h2>
-            </div>
-            <p className="text-3xl font-bold text-foreground">${totalMrr.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/mth</span></p>
-            <p className="text-xs text-muted-foreground mt-1">Pooled from {contributors} student{contributors === 1 ? '' : 's'}' latest monthly check-in. Use for marketing / social proof.</p>
-          </div>
-        );
-      })()}
+      {user?.id === OWNER_USER_ID && <TotalNewMrrCard />}
+
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
@@ -757,3 +739,32 @@ export default function ClientHealth() {
     </PageLayout>
   );
 }
+
+function TotalNewMrrCard() {
+  const { data: rows = [] } = useQuery({
+    queryKey: ['owner-total-new-mrr'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_totals')
+        .select('user_id, new_clients_total_value, new_clients_is_mrr');
+      return data ?? [];
+    },
+  });
+  const totalNewMrr = rows
+    .filter((r: any) => r.new_clients_is_mrr)
+    .reduce((sum: number, r: any) => sum + (Number(r.new_clients_total_value) || 0), 0);
+  const contributors = new Set(
+    rows.filter((r: any) => r.new_clients_is_mrr && Number(r.new_clients_total_value) > 0).map((r: any) => r.user_id)
+  ).size;
+  return (
+    <div className="bg-gradient-to-br from-primary/20 to-purple-600/10 border border-primary/40 rounded-xl p-5 mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <DollarSign className="w-5 h-5 text-primary" />
+        <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Total ProfitX MRR Generated — Retainers (Owner Only)</h2>
+      </div>
+      <p className="text-3xl font-bold text-foreground">${totalNewMrr.toLocaleString()}<span className="text-sm font-normal text-muted-foreground"> new MRR</span></p>
+      <p className="text-xs text-muted-foreground mt-1">Sum of every new-client value students marked as recurring MRR in their monthly submissions. Pooled from {contributors} student{contributors === 1 ? '' : 's'}.</p>
+    </div>
+  );
+}
+
