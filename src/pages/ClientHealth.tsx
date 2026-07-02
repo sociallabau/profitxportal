@@ -338,37 +338,6 @@ export default function ClientHealth() {
         })}
       </div>
 
-      {/* Low survey-score alerts */}
-      {lowSurveys.length > 0 && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-            <h2 className="text-sm font-bold text-red-400">Low Survey Scores — Reach Out</h2>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            {lowSurveys.length === 1 ? 'This client' : `${lowSurveys.length} clients`} reported low business confidence (≤{LOW_CONFIDENCE}/10) or coaching satisfaction (≤{LOW_NPS}/10).
-          </p>
-          <div className="space-y-2">
-            {lowSurveys.map((client: any) => {
-              const conf = Number(client.last_confidence ?? 0);
-              const nps = Number(client.last_nps ?? 0);
-              const flags: string[] = [];
-              if (conf > 0 && conf <= LOW_CONFIDENCE) flags.push(`Confidence ${conf}/10`);
-              if (nps > 0 && nps <= LOW_NPS) flags.push(`Coaching ${nps}/10`);
-              return (
-                <button
-                  key={client.id}
-                  onClick={() => setSelectedClient(client)}
-                  className="w-full flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border hover:border-red-500/40 transition text-left"
-                >
-                  <span className="text-sm font-semibold text-foreground">{client.full_name || 'Unnamed Client'}</span>
-                  <span className="text-xs text-red-400 font-medium">{flags.join(' · ')}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Ready to graduate from Onboarding → In Flow (under $20k) */}
       {readyForInFlow.length > 0 && (
@@ -728,40 +697,6 @@ export default function ClientHealth() {
                 </div>
 
 
-                {/* Wellbeing scores */}
-                {(c.last_confidence || c.last_nps) && (
-                  <div className="bg-card border border-border rounded-xl p-4">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Wellbeing</p>
-                    <div className="space-y-2">
-                      {c.last_confidence && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-foreground">Business confidence</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-muted rounded-full h-1.5">
-                              <div className="h-1.5 rounded-full bg-blue-400" style={{ width: `${(c.last_confidence/10)*100}%` }} />
-                            </div>
-                            <span className={`text-sm font-bold ${c.last_confidence >= 7 ? 'text-green-400' : c.last_confidence >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
-                              {c.last_confidence}/10
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      {c.last_nps && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-foreground">Coaching satisfaction</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-muted rounded-full h-1.5">
-                              <div className="h-1.5 rounded-full bg-purple-400" style={{ width: `${(c.last_nps/10)*100}%` }} />
-                            </div>
-                            <span className={`text-sm font-bold ${c.last_nps >= 7 ? 'text-green-400' : c.last_nps >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
-                              {c.last_nps}/10
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Roadmap progress */}
                 <div className="bg-card border border-border rounded-xl p-4">
@@ -786,13 +721,6 @@ export default function ClientHealth() {
                   )}
                 </div>
 
-                {/* What they need */}
-                {c.last_needs && (
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <p className="text-xs text-primary font-semibold mb-1">They need from you:</p>
-                    <p className="text-sm text-foreground italic">"{c.last_needs}"</p>
-                  </div>
-                )}
 
                 {/* Insight */}
                 <div className="p-4 bg-muted/20 border border-border rounded-xl">
@@ -815,9 +743,6 @@ export default function ClientHealth() {
                             <span className="text-foreground">${r.toLocaleString()} rev</span>
                             <span className="text-foreground">{row.content_posts ?? '—'} posts</span>
                             <span className="text-green-400">{row.new_clients ?? '—'} clients</span>
-                            <span className={`font-semibold ${(row.business_confidence || 0) >= 7 ? 'text-green-400' : 'text-yellow-400'}`}>
-                              {row.business_confidence ? `${row.business_confidence}/10` : '—'}
-                            </span>
                           </div>
                         );
                       })}
