@@ -72,7 +72,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX - Hot Seat - Elijah Arnold (Director @ Social Lab)',
     category: 'Coaching',
-    start: '2026-07-07T07:00:00',
+    start: '2026-07-08T07:00:00',
     durationMins: 60,
     meetUrl: 'https://meet.google.com/kdn-nbhx-xce',
     description:
