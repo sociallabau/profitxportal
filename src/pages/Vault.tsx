@@ -11,6 +11,7 @@ import vaultQaMay from '@/assets/vault-qa-may.jpg';
 import vaultQaJune from '@/assets/vault-qa-june.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
+import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg';
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
 
 type Template = { label: string; url: string };
@@ -29,6 +30,12 @@ type VaultItem = {
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Momentum Call — Team Building, Hiring, Accountability & Expectations',
+    category: 'Momentum Call',
+    url: 'https://drive.google.com/file/d/13zzS10OTydl8sJ-Fyo3_fA1KSvIHIPP6/view?usp=sharing',
+    thumbnail: vaultMomentumTeamBuilding,
+  },
   {
     title: 'Momentum Call — Paid Ads, Ad Creatives & Metrics',
     category: 'Momentum Call',
