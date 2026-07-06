@@ -4,6 +4,7 @@ import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
 import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
 import momentumCallThumb from '@/assets/momentum-call-thumb.png';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
+import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 
 type Call = {
   title: string;
