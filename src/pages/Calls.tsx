@@ -4,6 +4,7 @@ import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
 import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
 import momentumCallThumb from '@/assets/momentum-call-thumb.png';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
+import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 
 type Call = {
   title: string;
@@ -69,13 +70,13 @@ const CALLS: Call[] = [
     thumbnail: smoothOperatorThumb,
   },
   {
-    title: 'ProfitX - Hot Seat - Elijah Arnold',
+    title: 'ProfitX - Hot Seat - Elijah Arnold (Director @ Social Lab)',
     category: 'Coaching',
     start: '2026-07-07T07:00:00',
     durationMins: 60,
-    meetUrl: 'https://meet.google.com/',
+    meetUrl: 'https://meet.google.com/kdn-nbhx-xce',
     description:
-      'Hot Seat session with Elijah Arnold. Time zone: Australia/Brisbane. Join via Google Meet.',
+      'Hot Seat call with Elijah Arnold — Director @ Social Lab. Content pillars & strategy for clients, organic vs ads, structuring campaigns. Time zone: Australia/Brisbane. Join via Google Meet.',
     thumbnail: hotSeatElijahThumb,
   },
   {
@@ -85,19 +86,26 @@ const CALLS: Call[] = [
     durationMins: 90,
     meetUrl: 'https://meet.google.com/juk-skti-xkr',
     description:
-      'Pay To Play™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 7711 PIN 718 677 495.',
+      'Pay To Play™ Workshop — Ads for yourself, ads for clients, tracking & metrics, reporting. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 7711 PIN 718 677 495.',
+    thumbnail: payToPlayThumb,
   },
 ];
 
 /**
- * Recurring Momentum Calls — Mondays 5:30–6:15pm Brisbane.
+ * Recurring Momentum Calls — Tuesdays 7:30–8:15am Brisbane.
  */
 const MOMENTUM_DATES = [
-  '2026-06-29',
-  '2026-07-06',
-  '2026-07-13',
-  '2026-07-20',
-  '2026-07-27',
+  '2026-06-16',
+  '2026-06-23',
+  '2026-06-30',
+  '2026-07-07',
+  '2026-07-14',
+  '2026-07-21',
+  '2026-07-28',
+  '2026-08-04',
+  '2026-08-11',
+  '2026-08-18',
+  '2026-08-25',
 ];
 
 const MOMENTUM_CALLS: Call[] = MOMENTUM_DATES.map((date) => ({
