@@ -71,7 +71,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX - Hot Seat - Elijah Arnold',
     category: 'Coaching',
-    start: '2026-07-07T17:00:00',
+    start: '2026-07-07T07:00:00',
     durationMins: 60,
     meetUrl: 'https://meet.google.com/',
     description:
@@ -79,13 +79,13 @@ const CALLS: Call[] = [
     thumbnail: hotSeatElijahThumb,
   },
   {
-    title: 'ProfitX Workshop - TBA',
+    title: 'ProfitX Workshop - Pay To Play™',
     category: 'Workshop',
     start: '2026-07-22T07:00:00',
     durationMins: 90,
-    meetUrl: 'https://meet.google.com/',
+    meetUrl: 'https://meet.google.com/juk-skti-xkr',
     description:
-      'ProfitX Workshop — topic TBA. Time zone: Australia/Brisbane. Join via Google Meet.',
+      'Pay To Play™ Workshop. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 7711 PIN 718 677 495.',
   },
 ];
 
@@ -103,7 +103,7 @@ const MOMENTUM_DATES = [
 const MOMENTUM_CALLS: Call[] = MOMENTUM_DATES.map((date) => ({
   title: 'ProfitX - Momentum Call™',
   category: 'Coaching',
-  start: `${date}T17:30:00`,
+  start: `${date}T07:30:00`,
   durationMins: 45,
   meetUrl: 'https://meet.google.com/szo-giha-ido',
   description:
