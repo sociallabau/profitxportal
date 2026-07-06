@@ -164,10 +164,21 @@ function googleCalendarUrl(call: Call) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+function brisbaneDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-AU', {
+    timeZone: 'Australia/Brisbane',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 export default function Calls() {
-  const now = Date.now();
+  const todayBrisbane = brisbaneDateKey();
   const upcoming = [...ALL_CALLS]
-    .filter((c) => new Date(c.start).getTime() + c.durationMins * 60000 >= now)
+    .filter((c) => c.start.slice(0, 10) >= todayBrisbane)
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
   return (
