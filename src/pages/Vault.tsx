@@ -24,7 +24,9 @@ type VaultItem = {
   url: string;
   thumbnail: string;
   workbookUrl?: string;
+  workbookLabel?: string;
   transcriptUrl?: string;
+  transcriptLabel?: string;
   gptUrl?: string;
   gptLabel?: string;
   templates?: Template[];
