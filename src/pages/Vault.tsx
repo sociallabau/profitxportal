@@ -223,7 +223,7 @@ export default function Vault() {
                                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                               >
                                 <FileText className="w-3 h-3" />
-                                Transcript & summary
+                                {item.transcriptLabel ?? 'Transcript & summary'}
                               </a>
                             )}
                             {item.gptUrl && (
