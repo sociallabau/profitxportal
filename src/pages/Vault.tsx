@@ -13,23 +13,37 @@ import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
 import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg';
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
+import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 
 type Template = { label: string; url: string };
 
 type VaultItem = {
   title: string;
-  category: 'Q&A' | 'Workshop' | 'Lesson' | 'Momentum Call';
+  category: 'Q&A' | 'Workshop' | 'Lesson' | 'Momentum Call' | 'Hot Seat';
   date?: string;
   url: string;
   thumbnail: string;
   workbookUrl?: string;
+  workbookLabel?: string;
   transcriptUrl?: string;
+  transcriptLabel?: string;
   gptUrl?: string;
   gptLabel?: string;
   templates?: Template[];
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Hot Seat — Elijah Arnold (Director @ Social Lab)',
+    category: 'Hot Seat',
+    date: 'Jul 8',
+    url: 'https://drive.google.com/file/d/135nNXlAhgg0mTkRYYx4Ih4P1ktKWWJ0X/view?usp=sharing',
+    thumbnail: hotSeatElijahThumb,
+    transcriptUrl: 'https://docs.google.com/document/d/1Thzxbdc9Ib3k2Vw0mxFZaPjwmy62IZJzkv5YMPltGx8/edit?usp=sharing',
+    transcriptLabel: 'Summary',
+    workbookUrl: 'https://drive.google.com/file/d/1RHX3xTT7F2TdpdTOgRcQgUxIRRpyNoU0/view?usp=sharing',
+    workbookLabel: 'Chat notes',
+  },
   {
     title: 'Momentum Call — Team Building, Hiring, Accountability & Expectations',
     category: 'Momentum Call',
@@ -116,13 +130,16 @@ const categoryStyles: Record<VaultItem['category'], string> = {
   Workshop: 'bg-warning/15 text-warning border-warning/30',
   Lesson: 'bg-success/15 text-success border-success/30',
   'Momentum Call': 'bg-accent/15 text-accent-foreground border-accent/40',
+  'Hot Seat': 'bg-destructive/15 text-destructive border-destructive/30',
 };
 
 const SECTIONS: { heading: string; categories: VaultItem['category'][] }[] = [
   { heading: 'Momentum Calls', categories: ['Momentum Call'] },
+  { heading: 'Hot Seat', categories: ['Hot Seat'] },
   { heading: 'Q&A Calls', categories: ['Q&A'] },
   { heading: 'Workshops', categories: ['Workshop', 'Lesson'] },
 ];
+
 
 export default function Vault() {
   return (
@@ -195,7 +212,7 @@ export default function Vault() {
                                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                               >
                                 <BookOpen className="w-3 h-3" />
-                                Workbook
+                                {item.workbookLabel ?? 'Workbook'}
                               </a>
                             )}
                             {item.transcriptUrl && (
@@ -206,7 +223,7 @@ export default function Vault() {
                                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                               >
                                 <FileText className="w-3 h-3" />
-                                Transcript & summary
+                                {item.transcriptLabel ?? 'Transcript & summary'}
                               </a>
                             )}
                             {item.gptUrl && (
