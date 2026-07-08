@@ -40,7 +40,9 @@ const ITEMS: VaultItem[] = [
     url: 'https://drive.google.com/file/d/135nNXlAhgg0mTkRYYx4Ih4P1ktKWWJ0X/view?usp=sharing',
     thumbnail: hotSeatElijahThumb,
     transcriptUrl: 'https://docs.google.com/document/d/1Thzxbdc9Ib3k2Vw0mxFZaPjwmy62IZJzkv5YMPltGx8/edit?usp=sharing',
+    transcriptLabel: 'Summary',
     workbookUrl: 'https://drive.google.com/file/d/1RHX3xTT7F2TdpdTOgRcQgUxIRRpyNoU0/view?usp=sharing',
+    workbookLabel: 'Chat notes',
   },
   {
     title: 'Momentum Call — Team Building, Hiring, Accountability & Expectations',
