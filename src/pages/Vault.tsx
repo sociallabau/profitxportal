@@ -32,6 +32,15 @@ type VaultItem = {
 
 const ITEMS: VaultItem[] = [
   {
+    title: 'Hot Seat — Elijah Arnold (Director @ Social Lab)',
+    category: 'Hot Seat',
+    date: 'Jul 8',
+    url: 'https://drive.google.com/file/d/135nNXlAhgg0mTkRYYx4Ih4P1ktKWWJ0X/view?usp=sharing',
+    thumbnail: hotSeatElijahThumb,
+    transcriptUrl: 'https://docs.google.com/document/d/1Thzxbdc9Ib3k2Vw0mxFZaPjwmy62IZJzkv5YMPltGx8/edit?usp=sharing',
+    workbookUrl: 'https://drive.google.com/file/d/1RHX3xTT7F2TdpdTOgRcQgUxIRRpyNoU0/view?usp=sharing',
+  },
+  {
     title: 'Momentum Call — Team Building, Hiring, Accountability & Expectations',
     category: 'Momentum Call',
     url: 'https://drive.google.com/file/d/13zzS10OTydl8sJ-Fyo3_fA1KSvIHIPP6/view?usp=sharing',
