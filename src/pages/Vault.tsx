@@ -19,7 +19,7 @@ type Template = { label: string; url: string };
 
 type VaultItem = {
   title: string;
-  category: 'Q&A' | 'Workshop' | 'Lesson' | 'Momentum Call';
+  category: 'Q&A' | 'Workshop' | 'Lesson' | 'Momentum Call' | 'Hot Seat';
   date?: string;
   url: string;
   thumbnail: string;
