@@ -117,7 +117,15 @@ const categoryStyles: Record<VaultItem['category'], string> = {
   Workshop: 'bg-warning/15 text-warning border-warning/30',
   Lesson: 'bg-success/15 text-success border-success/30',
   'Momentum Call': 'bg-accent/15 text-accent-foreground border-accent/40',
+  'Hot Seat': 'bg-destructive/15 text-destructive border-destructive/30',
 };
+
+const SECTIONS: { heading: string; categories: VaultItem['category'][] }[] = [
+  { heading: 'Momentum Calls', categories: ['Momentum Call'] },
+  { heading: 'Hot Seat', categories: ['Hot Seat'] },
+  { heading: 'Q&A Calls', categories: ['Q&A'] },
+  { heading: 'Workshops', categories: ['Workshop', 'Lesson'] },
+];
 
 const SECTIONS: { heading: string; categories: VaultItem['category'][] }[] = [
   { heading: 'Momentum Calls', categories: ['Momentum Call'] },
