@@ -13,6 +13,7 @@ import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
 import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg';
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
+import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 
 type Template = { label: string; url: string };
 
