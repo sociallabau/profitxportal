@@ -127,11 +127,6 @@ const SECTIONS: { heading: string; categories: VaultItem['category'][] }[] = [
   { heading: 'Workshops', categories: ['Workshop', 'Lesson'] },
 ];
 
-const SECTIONS: { heading: string; categories: VaultItem['category'][] }[] = [
-  { heading: 'Momentum Calls', categories: ['Momentum Call'] },
-  { heading: 'Q&A Calls', categories: ['Q&A'] },
-  { heading: 'Workshops', categories: ['Workshop', 'Lesson'] },
-];
 
 export default function Vault() {
   return (
