@@ -89,6 +89,24 @@ const CALLS: Call[] = [
       'Pay To Play™ Workshop — Ads for yourself, ads for clients, tracking & metrics, reporting. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 7711 PIN 718 677 495.',
     thumbnail: payToPlayThumb,
   },
+  {
+    title: 'ProfitX - Paid Ad Powerup™',
+    category: 'Workshop',
+    start: '2026-08-05T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/nvk-msus-ciu',
+    description:
+      'Paid Ad Powerup™ Workshop — create some paid ads you want to run for yourself prior and bring them along to workshop and improve them together. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 4385 PIN 896 755 264.',
+  },
+  {
+    title: 'ProfitX - Organic Content Snowball™',
+    category: 'Workshop',
+    start: '2026-08-19T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/sfx-eqyd-gkw',
+    description:
+      'Organic Content Snowball™ Workshop — key points TBA. Time zone: Australia/Brisbane. Join via Google Meet, or dial +61 2 9051 4914 PIN 510 348 311.',
+  },
 ];
 
 /**
