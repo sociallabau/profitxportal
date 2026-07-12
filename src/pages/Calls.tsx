@@ -5,6 +5,8 @@ import smoothOperatorThumb from '@/assets/smooth-operator-thumb.png';
 import momentumCallThumb from '@/assets/momentum-call-thumb.png';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
+import paidAdPowerupThumb from '@/assets/paid-ad-powerup-thumb.png';
+import organicContentSnowballThumb from '@/assets/organic-content-snowball-thumb.png';
 
 type Call = {
   title: string;
