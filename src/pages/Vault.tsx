@@ -68,6 +68,20 @@ const ITEMS: VaultItem[] = [
     transcriptUrl: 'https://docs.google.com/document/d/1nnxYqHz9HpyN5tW9ZB9KUTyR521cjVFOJwQGqmxRhfM/edit?usp=sharing',
   },
   {
+    title: 'Workshop — Pay To Play™',
+    category: 'Workshop',
+    date: 'Jul 22',
+    url: 'https://drive.google.com/file/d/1MZa8VCzbeSpIjyXzA3us7ZAH5enzBrcG/view?usp=sharing',
+    thumbnail: payToPlayThumb,
+    workbookUrl: 'https://drive.google.com/file/d/1coCIkrVQS99d9Wz8hLmPl1b6d1nzcn8F/view?usp=sharing',
+    workbookLabel: 'Workbook (blank)',
+    transcriptUrl: 'https://docs.google.com/document/d/1xt63AsqskPFQx3yDG0tLasAZKQsMQ16h-3dIeXMoqTY/edit?usp=sharing',
+    templates: [
+      { label: 'Workbook (worked example)', url: 'https://drive.google.com/file/d/175Yei1TzkI6k8xQiSKyAs7jP17swIBon/view?usp=sharing' },
+      { label: 'Lead Tracker Template', url: 'https://docs.google.com/spreadsheets/d/1hjSAx0srg9jrmNW1Bm-7y5zTxZt7WwRE/edit?usp=sharing' },
+    ],
+  },
+  {
     title: 'Workshop — Smooth Operator™',
     category: 'Workshop',
     url: 'https://drive.google.com/file/d/1gL1dwbaRYRkPNfKGwUGLKB4MQtLMlj4G/view?usp=sharing',
