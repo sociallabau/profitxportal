@@ -260,6 +260,39 @@ export default function Dashboard() {
         <YearlyCalendar />
       </div>
 
+      {/* Revenue growth */}
+      <div className="bg-card border border-border rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Revenue Growth</h2>
+          </div>
+          <button onClick={() => navigate('/financials')} className="text-xs text-primary hover:underline">View financials →</button>
+        </div>
+        {revenueSeries.length === 0 ? (
+          <div className="text-center py-10 text-sm text-muted-foreground">
+            No monthly check-ins yet. Submit your first monthly report to start tracking growth.
+          </div>
+        ) : (
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueSeries} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
+                <Tooltip
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                  formatter={(v: any) => [`$${Number(v).toLocaleString()}`, 'Revenue']}
+                />
+                <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+
+
       {/* Recent wins — hype */}
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
