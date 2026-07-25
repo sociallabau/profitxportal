@@ -152,10 +152,14 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
     const k = c.start.slice(0, 10);
     if (k >= days[0].key && k <= days[20].key) (byDay[k] ||= []).push(c);
   });
-  const catColor: Record<Call['category'], string> = {
-    Workshop: 'bg-orange-400/80 text-orange-950',
-    'Q&A': 'bg-blue-400/80 text-blue-950',
-    Coaching: 'bg-primary/80 text-primary-foreground',
+  const catColor = (c: Call) => {
+    if (c.category === 'Workshop') {
+      return c.workshopType === 'learn'
+        ? 'bg-sky-400/80 text-sky-950'
+        : 'bg-orange-400/80 text-orange-950';
+    }
+    if (c.category === 'Q&A') return 'bg-blue-400/80 text-blue-950';
+    return 'bg-primary/80 text-primary-foreground';
   };
 
   return (
