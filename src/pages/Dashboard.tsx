@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video } from 'lucide-react';
+import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import PageLayout from '@/components/PageLayout';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
 import { useRequireAuth } from '@/hooks/useAuth';
