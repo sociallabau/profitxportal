@@ -146,6 +146,7 @@ export default function Dashboard() {
   const cycle = currentCycle();
   const PhaseIcon = PHASE_META[cycle.phase].icon;
   const upcomingCalls = getUpcomingCalls(2);
+  const threeWeekCalls = getUpcomingCalls();
 
   const { data: wins = [] } = useQuery({
     queryKey: ['dashboard-wins', user?.id],
