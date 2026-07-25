@@ -93,7 +93,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX - Paid Ad Powerup™',
     category: 'Workshop',
-    workshopType: 'learn',
+    workshopType: 'do',
     start: '2026-08-05T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/nvk-msus-ciu',
