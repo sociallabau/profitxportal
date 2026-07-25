@@ -14,9 +14,9 @@ import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 type Phase = 'Build' | 'Implement' | 'Reflect';
 const PHASES: Phase[] = ['Build', 'Implement', 'Reflect'];
 const PHASE_META: Record<Phase, { icon: any; blurb: string; color: string; bg: string }> = {
-  Build:     { icon: Hammer,  blurb: 'Lay the foundations. Design offers, ads and systems.', color: 'text-orange-400', bg: 'from-orange-500/25 to-orange-500/5' },
-  Implement: { icon: Rocket,  blurb: 'Push hard. Launch, execute and gather real data.',    color: 'text-blue-400',   bg: 'from-blue-500/25 to-blue-500/5' },
-  Reflect:   { icon: Compass, blurb: 'Review the quarter. Refine, reset, re-align.',        color: 'text-green-400',  bg: 'from-green-500/25 to-green-500/5' },
+  Build:     { icon: Hammer,  blurb: 'Learn or improve the core components of a ProfitX Business.', color: 'text-orange-400', bg: 'from-orange-500/25 to-orange-500/5' },
+  Implement: { icon: Rocket,  blurb: 'Implement the components into your business. Take massive action.', color: 'text-blue-400', bg: 'from-blue-500/25 to-blue-500/5' },
+  Reflect:   { icon: Compass, blurb: 'Reflect on how the implementation went. Set direction for the next quarter.', color: 'text-green-400', bg: 'from-green-500/25 to-green-500/5' },
 };
 
 // One-day intensives — March, July, November (each year)
