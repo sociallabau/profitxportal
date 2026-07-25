@@ -82,6 +82,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX Workshop - Pay To Play™',
     category: 'Workshop',
+    workshopType: 'do',
     start: '2026-07-22T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/juk-skti-xkr',
@@ -92,6 +93,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX - Paid Ad Powerup™',
     category: 'Workshop',
+    workshopType: 'learn',
     start: '2026-08-05T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/nvk-msus-ciu',
@@ -102,6 +104,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX - Organic Content Snowball™',
     category: 'Workshop',
+    workshopType: 'do',
     start: '2026-08-19T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/sfx-eqyd-gkw',
