@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video } from 'lucide-react';
+import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import PageLayout from '@/components/PageLayout';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
 import { useRequireAuth } from '@/hooks/useAuth';
@@ -161,15 +162,40 @@ export default function Dashboard() {
     },
   });
 
+  const { data: revenueSeries = [] } = useQuery({
+    queryKey: ['dashboard-revenue', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_totals')
+        .select('month, mrr, total_revenue')
+        .eq('user_id', user!.id)
+        .order('month', { ascending: true });
+      return (data ?? []).map((r: any) => ({
+        month: new Date(r.month).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
+        revenue: Number(r.total_revenue) || Number(r.mrr) || 0,
+      }));
+    },
+  });
+
   return (
     <PageLayout>
       <AnnouncementsModal />
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">
-          Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}.
-        </h1>
-        <p className="text-sm text-muted-foreground">Here's where ProfitX is right now.</p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}.
+          </h1>
+          <p className="text-sm text-muted-foreground">Here's where ProfitX is right now.</p>
+        </div>
+        <button
+          onClick={() => navigate('/submissions/monthly')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-lg shadow-primary/20"
+        >
+          <FileText className="w-4 h-4" />
+          Submit Monthly Report
+        </button>
       </div>
 
       {/* Upcoming calls bar */}
@@ -233,6 +259,39 @@ export default function Dashboard() {
       <div className="mb-6">
         <YearlyCalendar />
       </div>
+
+      {/* Revenue growth */}
+      <div className="bg-card border border-border rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Revenue Growth</h2>
+          </div>
+          <button onClick={() => navigate('/financials')} className="text-xs text-primary hover:underline">View financials →</button>
+        </div>
+        {revenueSeries.length === 0 ? (
+          <div className="text-center py-10 text-sm text-muted-foreground">
+            No monthly check-ins yet. Submit your first monthly report to start tracking growth.
+          </div>
+        ) : (
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueSeries} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
+                <Tooltip
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                  formatter={(v: any) => [`$${Number(v).toLocaleString()}`, 'Revenue']}
+                />
+                <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+
 
       {/* Recent wins — hype */}
       <div className="bg-card border border-border rounded-xl p-5">
