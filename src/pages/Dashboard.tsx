@@ -182,11 +182,20 @@ export default function Dashboard() {
     <PageLayout>
       <AnnouncementsModal />
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">
-          Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}.
-        </h1>
-        <p className="text-sm text-muted-foreground">Here's where ProfitX is right now.</p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}.
+          </h1>
+          <p className="text-sm text-muted-foreground">Here's where ProfitX is right now.</p>
+        </div>
+        <button
+          onClick={() => navigate('/submissions/monthly')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-lg shadow-primary/20"
+        >
+          <FileText className="w-4 h-4" />
+          Submit Monthly Report
+        </button>
       </div>
 
       {/* Upcoming calls bar */}
