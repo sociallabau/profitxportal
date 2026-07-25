@@ -330,6 +330,9 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Next 3 weeks calendar */}
+      <ThreeWeekCalendar calls={threeWeekCalls} />
+
       {/* Yearly calendar */}
       <div className="mb-6">
         <YearlyCalendar />
