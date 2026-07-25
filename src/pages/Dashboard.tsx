@@ -170,8 +170,8 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
           <h2 className="text-sm font-semibold text-foreground">Next 3 Weeks</h2>
         </div>
         <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Workshop</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> Q&A</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Do Workshop</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400" /> Learn Workshop</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> Coaching</span>
         </div>
       </div>
