@@ -137,6 +137,80 @@ function YearlyCalendar() {
   );
 }
 
+function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
+  const todayKey = brisbaneDateKey();
+  const [ty, tm, td] = todayKey.split('-').map(Number);
+  const start = new Date(Date.UTC(ty, tm - 1, td));
+  const days = Array.from({ length: 21 }, (_, i) => {
+    const d = new Date(start);
+    d.setUTCDate(start.getUTCDate() + i);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    return { date: d, key, dayNum: d.getUTCDate(), weekday: d.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' }) };
+  });
+  const byDay: Record<string, Call[]> = {};
+  calls.forEach((c) => {
+    const k = c.start.slice(0, 10);
+    if (k >= days[0].key && k <= days[20].key) (byDay[k] ||= []).push(c);
+  });
+  const catColor: Record<Call['category'], string> = {
+    Workshop: 'bg-orange-400/80 text-orange-950',
+    'Q&A': 'bg-blue-400/80 text-blue-950',
+    Coaching: 'bg-primary/80 text-primary-foreground',
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 mb-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Next 3 Weeks</h2>
+        </div>
+        <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Workshop</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> Q&A</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> Coaching</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1.5">
+        {days.map((d) => {
+          const isToday = d.key === todayKey;
+          const events = byDay[d.key] ?? [];
+          return (
+            <div
+              key={d.key}
+              className={`min-h-[74px] rounded-lg border p-1.5 flex flex-col gap-1 ${
+                isToday ? 'border-primary bg-primary/10' : 'border-border bg-background/40'
+              }`}
+            >
+              <div className="flex items-baseline justify-between">
+                <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{d.weekday}</span>
+                <span className={`text-xs font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>{d.dayNum}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {events.map((e) => {
+                  const t = new Date(e.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                  return (
+                    <a
+                      key={e.meetUrl + e.start}
+                      href={e.meetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`${e.title} · ${t}`}
+                      className={`text-[9px] leading-tight rounded px-1 py-0.5 truncate font-semibold ${catColor[e.category]} hover:opacity-90`}
+                    >
+                      {t} {e.title.replace(/^ProfitX\s*[-—]\s*(Workshop\s*[-—]\s*)?/i, '')}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useRequireAuth();
   const { data: profile } = useProfile();
@@ -146,6 +220,7 @@ export default function Dashboard() {
   const cycle = currentCycle();
   const PhaseIcon = PHASE_META[cycle.phase].icon;
   const upcomingCalls = getUpcomingCalls(2);
+  const threeWeekCalls = getUpcomingCalls();
 
   const { data: wins = [] } = useQuery({
     queryKey: ['dashboard-wins', user?.id],
@@ -254,6 +329,9 @@ export default function Dashboard() {
           })}
         </div>
       </div>
+
+      {/* Next 3 weeks calendar */}
+      <ThreeWeekCalendar calls={threeWeekCalls} />
 
       {/* Yearly calendar */}
       <div className="mb-6">
