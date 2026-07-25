@@ -200,7 +200,7 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`${e.title} · ${t}`}
-                      className={`text-[9px] leading-tight rounded px-1 py-0.5 truncate font-semibold ${catColor[e.category]} hover:opacity-90`}
+                      className={`text-[9px] leading-tight rounded px-1 py-0.5 truncate font-semibold ${catColor(e)} hover:opacity-90`}
                     >
                       {t} {e.title.replace(/^ProfitX\s*[-—]\s*(Workshop\s*[-—]\s*)?/i, '')}
                     </a>
