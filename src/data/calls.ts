@@ -8,6 +8,8 @@ import organicContentSnowballThumb from '@/assets/organic-content-snowball-thumb
 export type Call = {
   title: string;
   category: 'Workshop' | 'Q&A' | 'Coaching';
+  /** For workshops: 'learn' = light blue, 'do' = orange. Alternates fortnightly. */
+  workshopType?: 'learn' | 'do';
   /** ISO start datetime, Brisbane local time assumed (e.g. "2026-07-22T07:00:00") */
   start: string;
   durationMins: number;
