@@ -8,6 +8,8 @@ import organicContentSnowballThumb from '@/assets/organic-content-snowball-thumb
 export type Call = {
   title: string;
   category: 'Workshop' | 'Q&A' | 'Coaching';
+  /** For workshops: 'learn' = light blue, 'do' = orange. Alternates fortnightly. */
+  workshopType?: 'learn' | 'do';
   /** ISO start datetime, Brisbane local time assumed (e.g. "2026-07-22T07:00:00") */
   start: string;
   durationMins: number;
@@ -80,6 +82,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX Workshop - Pay To Play™',
     category: 'Workshop',
+    workshopType: 'do',
     start: '2026-07-22T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/juk-skti-xkr',
@@ -90,6 +93,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX - Paid Ad Powerup™',
     category: 'Workshop',
+    workshopType: 'learn',
     start: '2026-08-05T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/nvk-msus-ciu',
@@ -100,6 +104,7 @@ const CALLS: Call[] = [
   {
     title: 'ProfitX - Organic Content Snowball™',
     category: 'Workshop',
+    workshopType: 'do',
     start: '2026-08-19T07:00:00',
     durationMins: 90,
     meetUrl: 'https://meet.google.com/sfx-eqyd-gkw',

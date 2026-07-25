@@ -152,10 +152,14 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
     const k = c.start.slice(0, 10);
     if (k >= days[0].key && k <= days[20].key) (byDay[k] ||= []).push(c);
   });
-  const catColor: Record<Call['category'], string> = {
-    Workshop: 'bg-orange-400/80 text-orange-950',
-    'Q&A': 'bg-blue-400/80 text-blue-950',
-    Coaching: 'bg-primary/80 text-primary-foreground',
+  const catColor = (c: Call) => {
+    if (c.category === 'Workshop') {
+      return c.workshopType === 'learn'
+        ? 'bg-sky-400/80 text-sky-950'
+        : 'bg-orange-400/80 text-orange-950';
+    }
+    if (c.category === 'Q&A') return 'bg-blue-400/80 text-blue-950';
+    return 'bg-primary/80 text-primary-foreground';
   };
 
   return (
@@ -166,8 +170,8 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
           <h2 className="text-sm font-semibold text-foreground">Next 3 Weeks</h2>
         </div>
         <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Workshop</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> Q&A</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Do Workshop</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400" /> Learn Workshop</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> Coaching</span>
         </div>
       </div>
@@ -196,7 +200,7 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`${e.title} · ${t}`}
-                      className={`text-[9px] leading-tight rounded px-1 py-0.5 truncate font-semibold ${catColor[e.category]} hover:opacity-90`}
+                      className={`text-[9px] leading-tight rounded px-1 py-0.5 truncate font-semibold ${catColor(e)} hover:opacity-90`}
                     >
                       {t} {e.title.replace(/^ProfitX\s*[-—]\s*(Workshop\s*[-—]\s*)?/i, '')}
                     </a>
