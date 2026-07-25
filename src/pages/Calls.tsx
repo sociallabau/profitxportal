@@ -47,16 +47,8 @@ function googleCalendarUrl(call: Call) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-function brisbaneDateKey(date = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-AU', {
-    timeZone: 'Australia/Brisbane',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
-}
+
+
 
 export default function Calls() {
   const todayBrisbane = brisbaneDateKey();
