@@ -162,6 +162,22 @@ export default function Dashboard() {
     },
   });
 
+  const { data: revenueSeries = [] } = useQuery({
+    queryKey: ['dashboard-revenue', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_totals')
+        .select('month, mrr, total_revenue')
+        .eq('user_id', user!.id)
+        .order('month', { ascending: true });
+      return (data ?? []).map((r: any) => ({
+        month: new Date(r.month).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
+        revenue: Number(r.total_revenue) || Number(r.mrr) || 0,
+      }));
+    },
+  });
+
   return (
     <PageLayout>
       <AnnouncementsModal />
