@@ -39,7 +39,7 @@ const ITEMS: VaultItem[] = [
     title: 'Momentum Call - Paid Ads Help',
     category: 'Momentum Call',
     url: 'https://drive.google.com/file/d/12OC-POZS8tdv625XWVmsD-hWHbaRE690/view',
-    thumbnail: vaultMomentumPaidAds,
+    thumbnail: vaultMomentumPaidAds.url,
     transcriptUrl: 'https://docs.google.com/document/d/1iqz8FemCgnmQASG6SVRe6jyWvjGg2ibi6Oy9N8UlDvA/edit?tab=t.3098yypf2lxi',
   },
   {
