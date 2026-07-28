@@ -9,6 +9,7 @@ import vaultQaApril from '@/assets/vault-qa-april.jpg';
 import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
 import vaultQaMay from '@/assets/vault-qa-may.jpg';
 import vaultQaJune from '@/assets/vault-qa-june.jpg';
+import vaultMomentumPaidAds from '@/assets/vault-momentum-paid-ads.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
 import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg';
@@ -35,10 +36,10 @@ type VaultItem = {
 
 const ITEMS: VaultItem[] = [
   {
-    title: 'Momentum Call — Latest',
+    title: 'Momentum Call - Paid Ads Help',
     category: 'Momentum Call',
     url: 'https://drive.google.com/file/d/12OC-POZS8tdv625XWVmsD-hWHbaRE690/view',
-    thumbnail: vaultMomentumTeamBuilding,
+    thumbnail: vaultMomentumPaidAds,
     transcriptUrl: 'https://docs.google.com/document/d/1iqz8FemCgnmQASG6SVRe6jyWvjGg2ibi6Oy9N8UlDvA/edit?tab=t.3098yypf2lxi',
   },
   {
