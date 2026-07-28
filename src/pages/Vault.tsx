@@ -35,6 +35,13 @@ type VaultItem = {
 
 const ITEMS: VaultItem[] = [
   {
+    title: 'Momentum Call — Latest',
+    category: 'Momentum Call',
+    url: 'https://drive.google.com/file/d/12OC-POZS8tdv625XWVmsD-hWHbaRE690/view',
+    thumbnail: vaultMomentumTeamBuilding,
+    transcriptUrl: 'https://docs.google.com/document/d/1iqz8FemCgnmQASG6SVRe6jyWvjGg2ibi6Oy9N8UlDvA/edit?tab=t.3098yypf2lxi',
+  },
+  {
     title: 'Hot Seat — Elijah Arnold (Director @ Social Lab)',
     category: 'Hot Seat',
     date: 'Jul 8',
@@ -45,6 +52,7 @@ const ITEMS: VaultItem[] = [
     workbookUrl: 'https://drive.google.com/file/d/1RHX3xTT7F2TdpdTOgRcQgUxIRRpyNoU0/view?usp=sharing',
     workbookLabel: 'Chat notes',
   },
+
   {
     title: 'Momentum Call — Team Building, Hiring, Accountability & Expectations',
     category: 'Momentum Call',
