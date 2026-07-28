@@ -9,6 +9,7 @@ import vaultQaApril from '@/assets/vault-qa-april.jpg';
 import vaultPaidAds from '@/assets/vault-paid-ads.jpg';
 import vaultQaMay from '@/assets/vault-qa-may.jpg';
 import vaultQaJune from '@/assets/vault-qa-june.jpg';
+import vaultMomentumPaidAds from '@/assets/vault-momentum-paid-ads.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
 import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg';
