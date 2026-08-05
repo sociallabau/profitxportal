@@ -26,6 +26,7 @@ type VaultItem = {
   date?: string;
   url: string;
   thumbnail: string;
+  sortDate?: string;
   workbookUrl?: string;
   workbookLabel?: string;
   transcriptUrl?: string;
@@ -38,6 +39,7 @@ type VaultItem = {
 const ITEMS: VaultItem[] = [
   {
     title: 'Momentum Call - Paid Ads Help',
+    sortDate: '2026-07-28',
     category: 'Momentum Call',
     url: 'https://drive.google.com/file/d/12OC-POZS8tdv625XWVmsD-hWHbaRE690/view',
     thumbnail: vaultMomentumPaidAds.url,
@@ -45,6 +47,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Hot Seat — Elijah Arnold (Director @ Social Lab)',
+    sortDate: '2026-07-08',
     category: 'Hot Seat',
     date: 'Jul 8',
     url: 'https://drive.google.com/file/d/135nNXlAhgg0mTkRYYx4Ih4P1ktKWWJ0X/view?usp=sharing',
@@ -57,12 +60,14 @@ const ITEMS: VaultItem[] = [
 
   {
     title: 'Momentum Call — Team Building, Hiring, Accountability & Expectations',
+    sortDate: '2026-07-14',
     category: 'Momentum Call',
     url: 'https://drive.google.com/file/d/13zzS10OTydl8sJ-Fyo3_fA1KSvIHIPP6/view?usp=sharing',
     thumbnail: vaultMomentumTeamBuilding,
   },
   {
     title: 'Momentum Call — Paid Ads, Ad Creatives & Metrics',
+    sortDate: '2026-06-23',
     category: 'Momentum Call',
     date: 'Jun 23',
     url: 'https://drive.google.com/file/d/1BKWdivnL93FX4wq6KQLQH3-fG46hGsWy/view?usp=sharing',
@@ -71,6 +76,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Q&A — June 10th',
+    sortDate: '2026-06-10',
     category: 'Q&A',
     date: 'Jun 10',
     url: 'https://drive.google.com/file/d/1dgxq-QSDq60T_a-6MA9FGIozpl0gjgdq/view?usp=sharing',
@@ -79,6 +85,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Workshop — Pay To Play™',
+    sortDate: '2026-07-22',
     category: 'Workshop',
     date: 'Jul 22',
     url: 'https://drive.google.com/file/d/1MZa8VCzbeSpIjyXzA3us7ZAH5enzBrcG/view?usp=sharing',
@@ -93,6 +100,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Workshop — Paid Ad Powerup™',
+    sortDate: '2026-08-05',
     category: 'Workshop',
     date: 'Aug 5',
     url: 'https://drive.google.com/file/d/1pD_JKTFzN2GjyRE3gLvPtjzdsBAMoa6E/view?usp=sharing',
@@ -104,6 +112,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Workshop — Smooth Operator™',
+    sortDate: '2026-06-17',
     category: 'Workshop',
     url: 'https://drive.google.com/file/d/1gL1dwbaRYRkPNfKGwUGLKB4MQtLMlj4G/view?usp=sharing',
     thumbnail: vaultContentStrategy,
@@ -114,6 +123,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Workshop — Profit By Design™',
+    sortDate: '2026-05-27',
     category: 'Workshop',
     date: 'May 27',
     url: 'https://fathom.video/share/eszuA_bGgedERbyHpaVHWpp2jQ1zyfsr',
@@ -126,6 +136,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Q&A — May 13th',
+    sortDate: '2026-05-13',
     category: 'Q&A',
     date: 'May 13',
     url: 'https://fathom.video/share/PGSbzCgBaxAVwbQa8Ra_TdGUr3Ba75LR',
@@ -133,6 +144,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Lesson — Paid Advertising (Meta Ads)',
+    sortDate: '2026-04-01',
     category: 'Lesson',
     url: 'https://fathom.video/share/Py4yTENtyK8bmzL7tg6H3Qsd5_GbE63f',
     thumbnail: vaultPaidAds,
@@ -140,6 +152,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Q&A — April 14th',
+    sortDate: '2026-04-14',
     category: 'Q&A',
     date: 'Apr 14',
     url: 'https://fathom.video/share/fNxXUxTxAaazuGGzzdSocVzQ_JmqKmFm',
@@ -147,6 +160,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Lesson — Organic Content Flow',
+    sortDate: '2026-03-01',
     category: 'Lesson',
     url: 'https://fathom.video/share/DcMunbGJxo_LVJ3kUveZHXqCgCm7UsTc',
     thumbnail: vaultOrganic,
@@ -154,6 +168,7 @@ const ITEMS: VaultItem[] = [
   },
   {
     title: 'Q&A — March 18th',
+    sortDate: '2026-03-18',
     category: 'Q&A',
     date: 'Mar 18',
     url: 'https://fathom.video/share/cxFvsiwisUVxLfxqN_edSJC7XjXysuWb',
@@ -186,7 +201,7 @@ export default function Vault() {
       </div>
       <div className="flex flex-col gap-10">
         {SECTIONS.map((section) => {
-          const items = ITEMS.filter((i) => section.categories.includes(i.category));
+          const items = ITEMS.filter((i) => section.categories.includes(i.category)).slice().sort((a, b) => (b.sortDate ?? '').localeCompare(a.sortDate ?? ''));
           if (items.length === 0) return null;
           return (
             <Collapsible key={section.heading} defaultOpen>
