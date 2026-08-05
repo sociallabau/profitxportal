@@ -14,6 +14,7 @@ import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
 import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg';
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
+import vaultPaidAdPowerup from '@/assets/vault-paid-ad-powerup.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 
@@ -89,6 +90,17 @@ const ITEMS: VaultItem[] = [
       { label: 'Workbook (worked example)', url: 'https://drive.google.com/file/d/175Yei1TzkI6k8xQiSKyAs7jP17swIBon/view?usp=sharing' },
       { label: 'Lead Tracker Template', url: 'https://docs.google.com/spreadsheets/d/1hjSAx0srg9jrmNW1Bm-7y5zTxZt7WwRE/edit?usp=sharing' },
     ],
+  },
+  {
+    title: 'Workshop — Paid Ad Powerup™',
+    category: 'Workshop',
+    date: 'Aug 5',
+    url: 'https://drive.google.com/file/d/1pD_JKTFzN2GjyRE3gLvPtjzdsBAMoa6E/view?usp=sharing',
+    thumbnail: vaultPaidAdPowerup,
+    transcriptUrl: 'https://docs.google.com/document/d/1Ab6f9JWaXEP6yE5Jxi0JQPXFPA-cYlx6yuXFY4qyN3c/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+    workbookUrl: 'https://ripe-age-78d.notion.site/FILMING-39cf13ad5f5d8014a528dd50a9178dbf',
+    workbookLabel: 'Reference Script',
   },
   {
     title: 'Workshop — Smooth Operator™',
