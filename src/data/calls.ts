@@ -4,6 +4,8 @@ import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 import paidAdPowerupThumb from '@/assets/paid-ad-powerup-thumb.png';
 import organicContentSnowballThumb from '@/assets/organic-content-snowball-thumb.png';
+import next90Thumb from '@/assets/next-90-thumb.png';
+import deliveryMagicThumb from '@/assets/delivery-magic-thumb.png';
 
 export type Call = {
   title: string;
@@ -120,6 +122,7 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/jxe-afed-aon',
     description:
       'September — reflect & refine month. What we’ve been doing, what’s working, and setting direction for the next 90 days.',
+    thumbnail: next90Thumb,
   },
   {
     title: 'ProfitX - Delivery Magic™ Workshop',
@@ -130,6 +133,7 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/csy-zpkv-vkn',
     description:
       'Planning & managing clients’ socials, with guest Chloe. Time zone: Australia/Brisbane.',
+    thumbnail: deliveryMagicThumb,
   },
 ];
 
