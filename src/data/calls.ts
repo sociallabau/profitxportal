@@ -4,6 +4,8 @@ import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 import paidAdPowerupThumb from '@/assets/paid-ad-powerup-thumb.png';
 import organicContentSnowballThumb from '@/assets/organic-content-snowball-thumb.png';
+import next90Thumb from '@/assets/next-90-thumb.png';
+import deliveryMagicThumb from '@/assets/delivery-magic-thumb.png';
 
 export type Call = {
   title: string;
