@@ -111,6 +111,26 @@ const CALLS: Call[] = [
     description: 'Organic Content Snowball™ Workshop.',
     thumbnail: organicContentSnowballThumb,
   },
+  {
+    title: 'ProfitX - Next 90™ Workshop',
+    category: 'Workshop',
+    workshopType: 'learn',
+    start: '2026-09-02T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/jxe-afed-aon',
+    description:
+      'September — reflect & refine month. What we’ve been doing, what’s working, and setting direction for the next 90 days.',
+  },
+  {
+    title: 'ProfitX - Delivery Magic™ Workshop',
+    category: 'Workshop',
+    workshopType: 'do',
+    start: '2026-09-16T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/csy-zpkv-vkn',
+    description:
+      'Planning & managing clients’ socials, with guest Chloe. Time zone: Australia/Brisbane.',
+  },
 ];
 
 const MOMENTUM_DATES = [
@@ -125,7 +145,13 @@ const MOMENTUM_DATES = [
   '2026-08-11',
   '2026-08-18',
   '2026-08-25',
+  '2026-09-01',
+  '2026-09-08',
+  '2026-09-15',
+  '2026-09-22',
+  '2026-09-29',
 ];
+
 
 const MOMENTUM_CALLS: Call[] = MOMENTUM_DATES.map((date) => ({
   title: 'ProfitX - Momentum Call™',
