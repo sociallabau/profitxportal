@@ -27,7 +27,17 @@ export default function MonthlyTotals() {
   const { user } = useRequireAuth();
   usePageTracking('monthly-totals');
   const qc = useQueryClient();
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    return {
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleString('default', { month: 'long', year: 'numeric' }),
+    };
+  });
 
   const [form, setForm] = useState({
     oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '',
