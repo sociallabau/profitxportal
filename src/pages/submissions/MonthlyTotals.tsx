@@ -111,14 +111,25 @@ export default function MonthlyTotals() {
     },
   });
 
-  const monthLabel = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+  const monthLabel = monthOptions.find(m => m.value === currentMonth)?.label ?? currentMonth;
 
   return (
     <PageLayout>
       <h1 className="text-2xl font-bold mb-1">Monthly Check-In</h1>
-      <p className="text-sm text-muted-foreground mb-6">
+      <p className="text-sm text-muted-foreground mb-4">
         {monthLabel} — takes 3 minutes. Updates your dashboard and lets Dan prep for your next call.
       </p>
+
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-foreground mb-1.5">Which month are you submitting for?</label>
+        <select
+          value={currentMonth}
+          onChange={e => setCurrentMonth(e.target.value)}
+          className="px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+        >
+          {monthOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+      </div>
 
       <div className="space-y-5">
         <div className="bg-card border border-border rounded-xl p-5">
