@@ -38,6 +38,15 @@ type VaultItem = {
 
 const ITEMS: VaultItem[] = [
   {
+    title: 'Momentum Call - Agreements, Paid Ads, Hiring Editors',
+    sortDate: '2026-08-10',
+    category: 'Momentum Call',
+    url: 'https://drive.google.com/file/d/1hYygX0ANWeI_4Wdcac4vKJtU2jW7adQB/view?usp=sharing',
+    thumbnail: vaultMomentumPaidAds,
+    transcriptUrl: 'https://docs.google.com/document/d/1HMz0IUUczCf6Jj7c-kqEmlEK3vz2luzWnfuTFUG5wAI/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+  },
+  {
     title: 'Momentum Call - Paid Ads Help',
     sortDate: '2026-07-28',
     category: 'Momentum Call',
@@ -45,6 +54,7 @@ const ITEMS: VaultItem[] = [
     thumbnail: vaultMomentumPaidAds,
     transcriptUrl: 'https://docs.google.com/document/d/1iqz8FemCgnmQASG6SVRe6jyWvjGg2ibi6Oy9N8UlDvA/edit?tab=t.3098yypf2lxi',
   },
+
   {
     title: 'Hot Seat — Elijah Arnold (Director @ Social Lab)',
     sortDate: '2026-07-08',
