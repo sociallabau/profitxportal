@@ -16,6 +16,7 @@ import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg
 import vaultMomentumEditingTeamBuilding from '@/assets/vault-momentum-editing-team-building.jpg';
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
 import vaultPaidAdPowerup from '@/assets/vault-paid-ad-powerup.jpg';
+import vaultOrganicContentSnowball from '@/assets/vault-organic-content-snowball.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 
@@ -129,6 +130,21 @@ const ITEMS: VaultItem[] = [
     transcriptLabel: 'Notes',
     workbookUrl: 'https://ripe-age-78d.notion.site/FILMING-39cf13ad5f5d8014a528dd50a9178dbf',
     workbookLabel: 'Reference Script',
+  },
+  {
+    title: 'Workshop — Organic Content Snowball™',
+    sortDate: '2026-08-19',
+    category: 'Workshop',
+    date: 'Aug 19',
+    url: 'https://drive.google.com/file/d/1JvminvG4kmCw2YW1ZN7a1sI62Skxbco3/view?usp=sharing',
+    thumbnail: vaultOrganicContentSnowball,
+    transcriptUrl: 'https://docs.google.com/document/d/1nlTj3kq6RPMVgurbq4QbwRmizavVOfC6XmtqMWM5B68/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Organic-Content-Snowball-3c0bdcf32ce4800ebc8dede4ecf65f89?source=copy_link',
+    workbookLabel: 'Workshop Workbook',
+    templates: [
+      { label: 'Social Lab Planner', url: 'https://ripe-age-78d.notion.site/Social-Lab-Content-Plan-3c0f13ad5f5d809ea9d9d29be7b58c7b' },
+    ],
   },
   {
     title: 'Workshop — Smooth Operator™',
