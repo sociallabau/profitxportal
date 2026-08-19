@@ -132,6 +132,21 @@ const ITEMS: VaultItem[] = [
     workbookLabel: 'Reference Script',
   },
   {
+    title: 'Workshop — Organic Content Snowball™',
+    sortDate: '2026-08-19',
+    category: 'Workshop',
+    date: 'Aug 19',
+    url: 'https://drive.google.com/file/d/1JvminvG4kmCw2YW1ZN7a1sI62Skxbco3/view?usp=sharing',
+    thumbnail: vaultOrganicContentSnowball,
+    transcriptUrl: 'https://docs.google.com/document/d/1nlTj3kq6RPMVgurbq4QbwRmizavVOfC6XmtqMWM5B68/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Organic-Content-Snowball-3c0bdcf32ce4800ebc8dede4ecf65f89?source=copy_link',
+    workbookLabel: 'Workshop Workbook',
+    templates: [
+      { label: 'Social Lab Planner', url: 'https://ripe-age-78d.notion.site/Social-Lab-Content-Plan-3c0f13ad5f5d809ea9d9d29be7b58c7b' },
+    ],
+  },
+  {
     title: 'Workshop — Smooth Operator™',
     sortDate: '2026-06-17',
     category: 'Workshop',
