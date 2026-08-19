@@ -16,6 +16,7 @@ import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg
 import vaultMomentumEditingTeamBuilding from '@/assets/vault-momentum-editing-team-building.jpg';
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
 import vaultPaidAdPowerup from '@/assets/vault-paid-ad-powerup.jpg';
+import vaultOrganicContentSnowball from '@/assets/vault-organic-content-snowball.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 
