@@ -44,6 +44,8 @@ const ITEMS: VaultItem[] = [
     category: 'Momentum Call',
     url: 'https://drive.google.com/file/d/1fJwBGtiCMOBDNvd5WyEfI95Hq7l_diJf/view?usp=sharing',
     thumbnail: vaultMomentumEditingTeamBuilding,
+    transcriptUrl: 'https://docs.google.com/document/d/1u-EAADftNxoKFIj5pGhah_eJGtvLK9e3Eii0L5QKxTA/edit?usp=sharing',
+    transcriptLabel: 'Notes',
   },
   {
     title: 'Momentum Call - Agreements, Paid Ads, Hiring Editors',
