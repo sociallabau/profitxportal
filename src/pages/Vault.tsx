@@ -13,6 +13,7 @@ import vaultMomentumPaidAds from '@/assets/vault-momentum-paid-ads.jpg';
 import vaultProfitByDesign from '@/assets/vault-profit-by-design.jpg';
 import vaultMomentumJun23 from '@/assets/vault-momentum-jun23.jpg';
 import vaultMomentumTeamBuilding from '@/assets/vault-momentum-team-building.jpg';
+import vaultMomentumEditingTeamBuilding from '@/assets/vault-momentum-editing-team-building.jpg';
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
 import vaultPaidAdPowerup from '@/assets/vault-paid-ad-powerup.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
@@ -37,6 +38,13 @@ type VaultItem = {
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Momentum Call - Editing Team Building',
+    sortDate: '2026-08-17',
+    category: 'Momentum Call',
+    url: 'https://drive.google.com/file/d/1fJwBGtiCMOBDNvd5WyEfI95Hq7l_diJf/view?usp=sharing',
+    thumbnail: vaultMomentumEditingTeamBuilding,
+  },
   {
     title: 'Momentum Call - Agreements, Paid Ads, Hiring Editors',
     sortDate: '2026-08-10',
