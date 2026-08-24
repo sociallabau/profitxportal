@@ -16,13 +16,14 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('onboarded, is_admin')
+        .select('onboarded, is_admin, access_revoked')
         .eq('id', session.user.id)
         .maybeSingle();
 
       if (cancelled) return;
       // Admins skip onboarding gate
       if (profile?.is_admin) { setStatus('ready'); return; }
+      if ((profile as any)?.access_revoked) { setStatus('revoked'); return; }
       setStatus(profile?.onboarded ? 'ready' : 'needs-onboarding');
     })();
     return () => { cancelled = true; };
