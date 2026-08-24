@@ -672,6 +672,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_revoked: boolean
           business_overview: string | null
           circle_url: string | null
           coach_notes: string | null
@@ -687,6 +688,7 @@ export type Database = {
           tier_seen: string | null
         }
         Insert: {
+          access_revoked?: boolean
           business_overview?: string | null
           circle_url?: string | null
           coach_notes?: string | null
@@ -702,6 +704,7 @@ export type Database = {
           tier_seen?: string | null
         }
         Update: {
+          access_revoked?: boolean
           business_overview?: string | null
           circle_url?: string | null
           coach_notes?: string | null
