@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const [status, setStatus] = useState<'loading' | 'unauthenticated' | 'needs-onboarding' | 'ready'>('loading');
+  const [status, setStatus] = useState<'loading' | 'unauthenticated' | 'needs-onboarding' | 'revoked' | 'ready'>('loading');
 
   useEffect(() => {
     let cancelled = false;
