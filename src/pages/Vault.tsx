@@ -17,6 +17,7 @@ import vaultMomentumEditingTeamBuilding from '@/assets/vault-momentum-editing-te
 import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
 import vaultPaidAdPowerup from '@/assets/vault-paid-ad-powerup.jpg';
 import vaultOrganicContentSnowball from '@/assets/vault-organic-content-snowball.jpg';
+import vaultSpringPlanning from '@/assets/vault-spring-planning.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 
@@ -155,6 +156,18 @@ const ITEMS: VaultItem[] = [
     templates: [
       { label: 'Social Lab Planner', url: 'https://ripe-age-78d.notion.site/Social-Lab-Content-Plan-3c0f13ad5f5d809ea9d9d29be7b58c7b' },
     ],
+  },
+  {
+    title: 'Workshop — Spring Planning™ + Editing Flow',
+    sortDate: '2026-09-02',
+    category: 'Workshop',
+    date: 'Sep 2',
+    url: 'https://drive.google.com/file/d/1V8ws2rkSoxfd6PeHGERqlFg2yP3hv6ps/view?usp=sharing',
+    thumbnail: vaultSpringPlanning,
+    transcriptUrl: 'https://docs.google.com/document/d/1Ixi4c7ePysoE5Q1-I8lmx683VdWLMSiWx7ibnvh3AWs/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Spring-Planning-3cabdcf32ce48049a791ed93d41acfba?source=copy_link',
+    workbookLabel: 'Workshop Workbook',
   },
   {
     title: 'Workshop — Smooth Operator™',
