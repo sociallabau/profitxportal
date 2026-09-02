@@ -40,6 +40,16 @@ type VaultItem = {
 
 const ITEMS: VaultItem[] = [
   {
+    title: 'Momentum Call',
+    sortDate: '2026-08-31',
+    category: 'Momentum Call',
+    date: 'Aug 31',
+    url: 'https://drive.google.com/file/d/1eG9R6QTOiOkhJDygeJb0auk8LrYxAmMT/view?usp=sharing',
+    thumbnail: vaultMomentumJun23,
+    transcriptUrl: 'https://docs.google.com/document/d/1UfgFvRlGadb-_kQscpE6k0Uo85-KehK-csiNxq0VItg/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+  },
+  {
     title: 'Momentum Call - Editing Team Building',
     sortDate: '2026-08-17',
     category: 'Momentum Call',
