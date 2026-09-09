@@ -6,6 +6,9 @@ import paidAdPowerupThumb from '@/assets/paid-ad-powerup-thumb.png';
 import organicContentSnowballThumb from '@/assets/organic-content-snowball-thumb.png';
 import next90Thumb from '@/assets/next-90-thumb.png';
 import deliveryMagicThumb from '@/assets/delivery-magic-thumb.png';
+import theSystemThumb from '@/assets/the-system-thumb.png';
+import adMetricsThumb from '@/assets/ad-metrics-thumb.png';
+import christmasThumb from '@/assets/christmas-comes-early-thumb.png';
 
 export type Call = {
   title: string;
@@ -144,6 +147,7 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/gxw-ttdk-ykq',
     description:
       'How to run a ProfitX video business — generating leads, sales and delivery systems.',
+    thumbnail: theSystemThumb,
   },
   {
     title: 'ProfitX Workshop - Ad Metrics & Tracking 101™',
@@ -154,6 +158,7 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/hhb-ufia-nzb',
     description:
       'The metrics we track in awareness & lead generation campaigns, and how to track them.',
+    thumbnail: adMetricsThumb,
   },
   {
     title: 'ProfitX Workshop - Christmas Comes Early™',
@@ -164,7 +169,9 @@ const CALLS: Call[] = [
     meetUrl: 'https://meet.google.com/kiq-exdz-onh',
     description:
       'How to keep your retainer clients over the Christmas period.',
+    thumbnail: christmasThumb,
   },
+
 ];
 
 
