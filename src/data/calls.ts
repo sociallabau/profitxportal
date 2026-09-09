@@ -6,6 +6,9 @@ import paidAdPowerupThumb from '@/assets/paid-ad-powerup-thumb.png';
 import organicContentSnowballThumb from '@/assets/organic-content-snowball-thumb.png';
 import next90Thumb from '@/assets/next-90-thumb.png';
 import deliveryMagicThumb from '@/assets/delivery-magic-thumb.png';
+import theSystemThumb from '@/assets/the-system-thumb.png';
+import adMetricsThumb from '@/assets/ad-metrics-thumb.png';
+import christmasThumb from '@/assets/christmas-comes-early-thumb.png';
 
 export type Call = {
   title: string;
