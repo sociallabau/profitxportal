@@ -135,7 +135,38 @@ const CALLS: Call[] = [
       'Planning & managing clients’ socials, with guest Chloe. Time zone: Australia/Brisbane.',
     thumbnail: deliveryMagicThumb,
   },
+  {
+    title: 'ProfitX Workshop - The System™',
+    category: 'Workshop',
+    workshopType: 'learn',
+    start: '2026-09-30T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/gxw-ttdk-ykq',
+    description:
+      'How to run a ProfitX video business — generating leads, sales and delivery systems.',
+  },
+  {
+    title: 'ProfitX Workshop - Ad Metrics & Tracking 101™',
+    category: 'Workshop',
+    workshopType: 'do',
+    start: '2026-10-14T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/hhb-ufia-nzb',
+    description:
+      'The metrics we track in awareness & lead generation campaigns, and how to track them.',
+  },
+  {
+    title: 'ProfitX Workshop - Christmas Comes Early™',
+    category: 'Workshop',
+    workshopType: 'learn',
+    start: '2026-10-28T07:00:00',
+    durationMins: 90,
+    meetUrl: 'https://meet.google.com/kiq-exdz-onh',
+    description:
+      'How to keep your retainer clients over the Christmas period.',
+  },
 ];
+
 
 const MOMENTUM_DATES = [
   '2026-06-16',
