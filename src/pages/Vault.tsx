@@ -41,7 +41,7 @@ type VaultItem = {
 
 const ITEMS: VaultItem[] = [
   {
-    title: 'Momentum Call',
+    title: 'Momentum Call - Setting Up Lead Generation Ads, Ad Creatives etc...',
     sortDate: '2026-09-15',
     category: 'Momentum Call',
     date: 'Sep 15',
