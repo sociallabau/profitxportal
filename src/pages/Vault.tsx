@@ -18,6 +18,7 @@ import vaultContentStrategy from '@/assets/vault-workshop-content-strategy.jpg';
 import vaultPaidAdPowerup from '@/assets/vault-paid-ad-powerup.jpg';
 import vaultOrganicContentSnowball from '@/assets/vault-organic-content-snowball.jpg';
 import vaultSpringPlanning from '@/assets/vault-spring-planning.jpg';
+import vaultDeliveryMagic from '@/assets/vault-delivery-magic.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 
@@ -167,6 +168,23 @@ const ITEMS: VaultItem[] = [
     workbookLabel: 'Workshop Workbook',
     templates: [
       { label: 'Social Lab Planner', url: 'https://ripe-age-78d.notion.site/Social-Lab-Content-Plan-3c0f13ad5f5d809ea9d9d29be7b58c7b' },
+    ],
+  },
+  {
+    title: 'Workshop — Delivery Magic™',
+    sortDate: '2026-09-16',
+    category: 'Workshop',
+    date: 'Sep 16',
+    url: 'https://drive.google.com/file/d/1nGibPK7u5Xs7lQ9sMupiToaniG3dPWYI/view?usp=sharing',
+    thumbnail: vaultDeliveryMagic,
+    transcriptUrl: 'https://docs.google.com/document/d/18Lmqd5MUIRaz42CHcd5YhhFCKNlOMzwye_fOxF81wq4/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Delivery-Magic-3dcbdcf32ce4803a9b62f55d304b5aa7?source=copy_link',
+    workbookLabel: 'Workshop Workbook',
+    templates: [
+      { label: 'Basic Template', url: 'https://ripe-age-78d.notion.site/NEW-TEMPLATE-Basic-2e1f13ad5f5d81a8b1dbde7eef2b93cc?source=copy_link' },
+      { label: 'Template Doc', url: 'https://drive.google.com/file/d/1OMa_0bn46bAHwN6iWhcQbOP20vP8BawR/view?usp=sharing' },
+      { label: 'Tracking Spreadsheet', url: 'https://docs.google.com/spreadsheets/d/1YUXXh8SEOAwVLwSArFuv9t9zkyRaOyvH66m7DO-1WWs/edit?usp=sharing' },
     ],
   },
   {
