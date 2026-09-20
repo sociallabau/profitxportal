@@ -3,6 +3,34 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Upload, Loader2, FileSpreadsheet, Trash2, ChevronDown } from 'lucide-react';
 
+/**
+ * Pulls the text out of a PDF in the browser. pdf.js is a heavy library and
+ * most uploads are CSVs, so it is only fetched when someone actually picks a
+ * PDF — the rest of the app never pays for it.
+ */
+async function extractPdfText(file: File): Promise<string> {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = (
+    await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
+  ).default;
+
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const pages: string[] = [];
+
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    const text = content.items
+      .map(item => ('str' in item ? item.str : ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (text) pages.push(text);
+  }
+
+  return pages.join('\n\n');
+}
+
 type Kind = 'pnl' | 'ads';
 
 interface Audit {
@@ -18,12 +46,12 @@ const KINDS: { id: Kind; label: string; hint: string }[] = [
   {
     id: 'pnl',
     label: 'P&L',
-    hint: 'Export it from Xero, MYOB or QuickBooks as CSV, or paste the numbers straight in.',
+    hint: 'Export it from Xero, MYOB or QuickBooks as PDF or CSV, or paste the numbers straight in.',
   },
   {
     id: 'ads',
     label: 'Ad tracking',
-    hint: 'Your ad tracking sheet as CSV — spend, leads, calls booked, calls showed, closes.',
+    hint: 'Your ad tracking sheet as CSV or PDF — spend, leads, calls booked, calls showed, closes.',
   },
 ];
 
@@ -33,6 +61,7 @@ export default function FinancialAudit() {
   const [filename, setFilename] = useState<string | null>(null);
   const [period, setPeriod] = useState('');
   const [running, setRunning] = useState(false);
+  const [reading, setReading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [history, setHistory] = useState<Audit[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -51,16 +80,38 @@ export default function FinancialAudit() {
   const handleFile = async (files: FileList | null) => {
     const file = files?.[0];
     if (!file) return;
-    if (file.size > 2_000_000) {
+
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (file.size > (isPdf ? 15_000_000 : 2_000_000)) {
       toast.error('That file is huge — export just the summary and try again');
       return;
     }
+
+    setReading(true);
     try {
-      setText(await file.text());
+      const contents = isPdf ? await extractPdfText(file) : await file.text();
+
+      if (contents.trim().length < 40) {
+        toast.error(
+          isPdf
+            ? "That PDF has no readable text — it's probably a scan. Export it as CSV, or paste the numbers in below."
+            : "That file looks empty — check the export and try again",
+        );
+        return;
+      }
+
+      setText(contents);
       setFilename(file.name);
       setResult(null);
-    } catch {
-      toast.error("Couldn't read that file — export it as CSV");
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        isPdf
+          ? "Couldn't read that PDF — try exporting as CSV instead"
+          : "Couldn't read that file — export it as CSV",
+      );
+    } finally {
+      setReading(false);
     }
   };
 
@@ -123,11 +174,12 @@ export default function FinancialAudit() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <label className="flex items-center justify-center gap-2 px-4 py-2.5 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer transition">
-          <Upload className="w-4 h-4" />
-          {filename ?? 'Choose a CSV file'}
+          {reading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          {reading ? 'Reading the file…' : (filename ?? 'Choose a PDF or CSV')}
           <input
             type="file"
-            accept=".csv,.tsv,.txt,text/csv,text/plain"
+            accept=".csv,.tsv,.txt,.pdf,text/csv,text/plain,application/pdf"
+            disabled={reading}
             className="hidden"
             onChange={e => { handleFile(e.target.files); e.target.value = ''; }}
           />
