@@ -127,10 +127,10 @@ export default function DanAI() {
       console.error(error ?? data?.error);
       return;
     }
-    const { ingested = 0, queued = 0 } = data ?? {};
+    const { ingested = 0, queued = 0, remaining = 0 } = data ?? {};
     toast.success(
       ingested || queued
-        ? `Added ${ingested} transcript${ingested === 1 ? '' : 's'}, queued ${queued} video${queued === 1 ? '' : 's'}`
+        ? `Added ${ingested} transcript${ingested === 1 ? '' : 's'}${queued ? `, queued ${queued} video${queued === 1 ? '' : 's'}` : ''}${remaining ? ` · ${remaining} still to go` : ''}`
         : 'Nothing new in Drive',
     );
     if (data?.errors?.length) console.warn('drive-sync issues', data.errors);
@@ -455,7 +455,7 @@ export default function DanAI() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">Google Drive</p>
               <p className="text-xs text-muted-foreground">
-                Pulls in Meet transcripts and Gemini notes, and queues videos for transcribing.
+                Pulls the transcript out of each Gemini notes doc. Runs in batches — click again if more are waiting.
               </p>
             </div>
             <button

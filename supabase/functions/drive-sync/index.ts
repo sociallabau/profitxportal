@@ -44,7 +44,7 @@ async function getDriveToken(sa: { client_email: string; private_key: string }):
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const claim = base64url(JSON.stringify({
     iss: sa.client_email,
-    scope: "https://www.googleapis.com/auth/drive.readonly",
+    scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents.readonly",
     aud: "https://oauth2.googleapis.com/token",
     exp: now + 3600,
     iat: now,
@@ -141,13 +141,82 @@ async function listFolderTree(
   return found;
 }
 
-async function exportDocText(token: string, fileId: string): Promise<string> {
+type DocTab = {
+  tabProperties?: { title?: string };
+  documentTab?: { body?: { content?: unknown[] } };
+  childTabs?: DocTab[];
+};
+
+/** Pulls the plain text out of a Docs API body. */
+function extractBodyText(content: unknown[] | undefined): string {
+  if (!content) return "";
+  let out = "";
+  for (const element of content as Record<string, any>[]) {
+    const paragraph = element.paragraph;
+    if (paragraph?.elements) {
+      for (const run of paragraph.elements) {
+        const text = run?.textRun?.content;
+        if (typeof text === "string") out += text;
+      }
+    }
+    if (element.table?.tableRows) {
+      for (const row of element.table.tableRows) {
+        for (const cell of row.tableCells ?? []) {
+          out += extractBodyText(cell.content);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function flattenTabs(tabs: DocTab[] | undefined, out: DocTab[] = []): DocTab[] {
+  for (const tab of tabs ?? []) {
+    out.push(tab);
+    if (tab.childTabs?.length) flattenTabs(tab.childTabs, out);
+  }
+  return out;
+}
+
+/**
+ * Meet files the verbatim transcript as a TAB inside the "Notes by Gemini"
+ * doc, not as its own file. A plain Drive export can miss it, so read the
+ * document through the Docs API with tab content included.
+ *
+ * Prefers the Transcript tab — Dan's actual words. Falls back to the notes
+ * tabs, which are written about him in third person and so are weaker for
+ * matching his voice.
+ */
+async function fetchDocText(
+  token: string,
+  fileId: string,
+): Promise<{ text: string; kind: "transcript" | "notes" }> {
   const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`,
+    `https://docs.googleapis.com/v1/documents/${fileId}?includeTabsContent=true`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
-  if (!res.ok) throw new Error(`Drive export ${res.status}: ${await res.text()}`);
-  return await res.text();
+  if (!res.ok) throw new Error(`Docs get ${res.status}: ${await res.text()}`);
+  const doc = await res.json();
+
+  const tabs = flattenTabs(doc.tabs);
+  if (tabs.length) {
+    const transcriptTab = tabs.find(t =>
+      /transcript/i.test(t.tabProperties?.title ?? "")
+    );
+    if (transcriptTab) {
+      const text = extractBodyText(transcriptTab.documentTab?.body?.content).trim();
+      if (text.length > 500) return { text, kind: "transcript" };
+    }
+    const notes = tabs
+      .map(t => extractBodyText(t.documentTab?.body?.content))
+      .join("\n\n")
+      .trim();
+    if (notes) return { text: notes, kind: "notes" };
+  }
+
+  // Docs without tabs still have a top-level body.
+  const body = extractBodyText(doc.body?.content).trim();
+  return { text: body, kind: "notes" };
 }
 
 function chunkText(text: string, size = 1400, overlap = 200): string[] {
@@ -220,7 +289,9 @@ Deno.serve(async (req) => {
 
     const token = await getDriveToken(sa);
 
+    const maxDocs = Number(Deno.env.get("DRIVE_SYNC_MAX_DOCS") ?? 5);
     let ingested = 0;
+    let remaining = 0;
     let queued = 0;
     let skipped = 0;
     const errors: string[] = [];
@@ -248,8 +319,11 @@ Deno.serve(async (req) => {
         if (existing) { skipped++; continue; }
 
         if (file.mimeType === GOOGLE_DOC && isTranscriptLike(file.name)) {
+          // Each transcript is large, so only take a few per run; the next
+          // run (or the next click) picks up where this one stopped.
+          if (ingested >= maxDocs) { remaining++; continue; }
           try {
-            const text = await exportDocText(token, file.id);
+            const { text, kind } = await fetchDocText(token, file.id);
             const chunks = chunkText(text);
             if (!chunks.length) { skipped++; continue; }
 
@@ -257,7 +331,7 @@ Deno.serve(async (req) => {
               .from("knowledge_docs")
               .insert({
                 title: file.name,
-                source_type: "call",
+                source_type: kind === "transcript" ? "call" : "note",
                 source_id: file.id,
                 source_url: `https://docs.google.com/document/d/${file.id}`,
                 word_count: text.split(/\s+/).length,
@@ -303,7 +377,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return json({ ingested, queued, skipped, errors });
+    return json({ ingested, queued, skipped, remaining, hasMore: remaining > 0, errors });
   } catch (err) {
     console.error("drive-sync error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);
