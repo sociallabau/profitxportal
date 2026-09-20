@@ -245,6 +245,24 @@ function isTranscriptLike(name: string): boolean {
   return /transcript|notes by gemini|notes/i.test(name);
 }
 
+/**
+ * Momentum calls, Q&As and workshops are where Dan does the talking — he
+ * teaches and answers questions, rather than listening to one client's
+ * situation. They are the best material for answering as him, so they get
+ * ingested first and are labelled separately.
+ */
+function isTeaching(name: string): boolean {
+  return /momentum|q\s*&\s*a|q and a|workshop|hot seat|lesson|masterclass/i.test(name);
+}
+
+/** Highest-value first, then most recent. */
+function byPriority(a: DriveFile, b: DriveFile): number {
+  const aTeaching = isTeaching(a.name) ? 0 : 1;
+  const bTeaching = isTeaching(b.name) ? 0 : 1;
+  if (aTeaching !== bTeaching) return aTeaching - bTeaching;
+  return (b.modifiedTime ?? "").localeCompare(a.modifiedTime ?? "");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -312,7 +330,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      for (const file of files) {
+      for (const file of files.sort(byPriority)) {
         // Already ingested?
         const { data: existing } = await admin
           .from("knowledge_docs").select("id").eq("source_id", file.id).maybeSingle();
@@ -331,7 +349,9 @@ Deno.serve(async (req) => {
               .from("knowledge_docs")
               .insert({
                 title: file.name,
-                source_type: kind === "transcript" ? "call" : "note",
+                source_type: kind !== "transcript"
+                  ? "note"
+                  : isTeaching(file.name) ? "teaching" : "call",
                 source_id: file.id,
                 source_url: `https://docs.google.com/document/d/${file.id}`,
                 word_count: text.split(/\s+/).length,

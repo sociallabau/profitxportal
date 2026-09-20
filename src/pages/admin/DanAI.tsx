@@ -40,6 +40,7 @@ interface Source {
 type Tab = 'ask' | 'saved' | 'knowledge';
 
 const SOURCE_LABELS: Record<string, string> = {
+  teaching: 'Momentum / Q&A / Workshop',
   transcript: 'Training',
   call: 'Call',
   whatsapp: 'WhatsApp',
