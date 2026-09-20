@@ -19,7 +19,11 @@ Dan or his team member Emily will give you a question a client has asked. Your j
 
 RULES
 
-1. Answer ONLY from the context provided below. It is drawn from Dan's own trainings, coaching calls and messages. If the context does not cover the question, say plainly that it isn't covered and suggest what Dan should clarify. Never invent a framework, price, process or result.
+1. Answer from the context provided below. It is drawn from Dan's own trainings, coaching calls and messages.
+
+   Always give the closest answer the context supports. If it covers the question directly, answer directly. If it only covers it partly — a related situation, the same principle applied elsewhere — give Dan's closest thinking and keep it general rather than inventing specifics. The person reading your answer can see exactly which calls and trainings it came from, listed beside it, so they can check it before sending.
+
+   Never reply that you cannot answer, and never tell them to add more material. Never invent a framework, price, process or result Dan has not said.
 
 2. Write as Dan writes to a client in a message:
    - Direct and warm, Australian, no corporate speak
@@ -111,16 +115,36 @@ Deno.serve(async (req) => {
       return json({ error: "A question is required" }, 400);
     }
 
-    // Retrieve Dan's own words, plus anything he has already approved.
-    const [{ data: chunks }, { data: saved }] = await Promise.all([
+    // Postgres full-text ANDs every word together, so a whole question rarely
+    // matches a single passage. Try the exact phrasing first, then fall back to
+    // a ranked any-of match, which is what actually finds the relevant material.
+    const anyOf = question
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(w => w.length > 2)
+      .join(" or ");
+
+    let [{ data: chunks }, { data: saved }] = await Promise.all([
       supabase.rpc("search_knowledge", { q: question, limit_n: 24 }),
       supabase.rpc("search_saved_answers", { q: question, limit_n: 3 }),
     ]);
 
+    let approximate = false;
+    if ((!chunks || chunks.length === 0) && anyOf) {
+      approximate = true;
+      const [broadChunks, broadSaved] = await Promise.all([
+        supabase.rpc("search_knowledge", { q: anyOf, limit_n: 24 }),
+        supabase.rpc("search_saved_answers", { q: anyOf, limit_n: 3 }),
+      ]);
+      chunks = broadChunks.data;
+      if (!saved || saved.length === 0) saved = broadSaved.data;
+    }
+
     if ((!chunks || chunks.length === 0) && (!saved || saved.length === 0)) {
       return json({
         answer:
-          "Nothing in the knowledge base covers that yet. Add the relevant transcript or a saved answer, then ask again.",
+          "The knowledge base is empty, so there is nothing to answer from yet. Add a transcript in the Knowledge tab.",
         sources: [],
         empty: true,
       });
@@ -141,7 +165,9 @@ Deno.serve(async (req) => {
         ? `ANSWERS DAN HAS ALREADY APPROVED — if one of these fits, reuse its wording almost exactly:\n\n${approvedBlocks.join("\n\n")}`
         : "",
       `CONTEXT FROM DAN'S OWN TRAININGS, CALLS AND MESSAGES:\n\n${contextBlocks.join("\n\n---\n\n")}`,
-      `THE CLIENT ASKED:\n${question}\n\nWrite Dan's reply.`,
+      approximate
+        ? `THE CLIENT ASKED:\n${question}\n\nThe context above is the closest material in Dan's knowledge base — it may not address this exact question. Give the closest answer his thinking supports, in his voice. Do not mention that the match was approximate.`
+        : `THE CLIENT ASKED:\n${question}\n\nWrite Dan's reply.`,
     ]
       .filter(Boolean)
       .join("\n\n=====\n\n");
@@ -169,7 +195,13 @@ Deno.serve(async (req) => {
       }),
     );
 
-    return json({ answer, sources, model, reusedApproved: (saved ?? []).length > 0 });
+    return json({
+      answer,
+      sources,
+      model,
+      approximate,
+      reusedApproved: (saved ?? []).length > 0,
+    });
   } catch (err) {
     console.error("dan-ai error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);
