@@ -18,7 +18,8 @@ interface PastQuestion {
   created_at: string;
 }
 
-const EXAMPLES = [
+/** Shown until Dan builds the real list from his own Q&As and momentum calls. */
+const FALLBACK_EXAMPLES = [
   'How much should I charge for a monthly retainer?',
   'A client wants to drop their price — do I hold or move?',
   "My ads are getting leads but nobody's booking calls",
@@ -31,10 +32,22 @@ export default function AskDan() {
   const [asking, setAsking] = useState(false);
   const [result, setResult] = useState<Answer | null>(null);
   const [recent, setRecent] = useState<PastQuestion[]>([]);
+  const [examples, setExamples] = useState<string[]>(FALLBACK_EXAMPLES);
 
   useEffect(() => {
-    if (user) loadRecent();
+    if (user) {
+      loadRecent();
+      loadExamples();
+    }
   }, [user]);
+
+  const loadExamples = async () => {
+    const { data } = await supabase
+      .from('suggested_questions')
+      .select('question')
+      .order('position', { ascending: true });
+    if (data?.length) setExamples(data.map(q => q.question));
+  };
 
   const loadRecent = async () => {
     const { data } = await supabase
@@ -115,10 +128,10 @@ export default function AskDan() {
       {!result && !asking && (
         <div className="mt-6">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            Try one of these
+            What people ask most
           </p>
           <div className="flex flex-wrap gap-2">
-            {EXAMPLES.map(ex => (
+            {examples.map(ex => (
               <button
                 key={ex}
                 onClick={() => handleAsk(ex)}

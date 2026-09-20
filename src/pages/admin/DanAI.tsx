@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
   Sparkles, Copy, Check, Trash2, Upload, BookmarkPlus, Loader2, FileText, MessageSquare,
-  RefreshCw, Clapperboard, Wand2, Mic,
+  RefreshCw, Clapperboard, Wand2, Mic, HelpCircle,
 } from 'lucide-react';
 
 interface KnowledgeDoc {
@@ -88,6 +88,8 @@ export default function DanAI() {
   const [transcribing, setTranscribing] = useState(false);
   const [voice, setVoice] = useState<{ content: string; built_from: number; updated_at: string } | null>(null);
   const [analysing, setAnalysing] = useState(false);
+  const [suggested, setSuggested] = useState<{ id: string; question: string; theme: string | null }[]>([]);
+  const [findingQuestions, setFindingQuestions] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -95,6 +97,7 @@ export default function DanAI() {
       loadSaved();
       loadJobs();
       loadVoice();
+      loadSuggested();
     }
   }, [user]);
 
@@ -151,6 +154,28 @@ export default function DanAI() {
       .eq('slug', 'default')
       .maybeSingle();
     setVoice(data ?? null);
+  };
+
+  const loadSuggested = async () => {
+    const { data } = await supabase
+      .from('suggested_questions')
+      .select('id, question, theme')
+      .order('position', { ascending: true });
+    setSuggested(data ?? []);
+  };
+
+  const handleFindQuestions = async () => {
+    setFindingQuestions(true);
+    const { data, error } = await supabase.functions.invoke('common-questions', { body: {} });
+    setFindingQuestions(false);
+
+    if (error || data?.error) {
+      toast.error(data?.error ?? "Couldn't work out the common questions");
+      console.error(error ?? data?.error);
+      return;
+    }
+    toast.success(`Read ${data.read_from} sessions${data.from_portal ? ` and ${data.from_portal} real questions` : ''}`);
+    loadSuggested();
   };
 
   const handleAnalyseVoice = async () => {
@@ -596,10 +621,11 @@ export default function DanAI() {
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-foreground mb-1">How Dan writes</h2>
                 <p className="text-xs text-muted-foreground max-w-lg">
-                  Claude reads your messages and teaching and writes down the patterns — sentence
-                  rhythm, the phrases you reach for, how you open and close. Every answer the
-                  clients get is written to this, which is how they get your voice without ever
-                  seeing a private message.
+                  Claude reads everything in the knowledge base that's actually you — your typed
+                  messages, your 1:1 calls, your workshops and your trainings — and writes down the
+                  patterns: sentence rhythm, the phrases you reach for, how you open and close.
+                  Every answer clients get is written to this, which is how they get your voice
+                  without ever seeing a private call or message.
                 </p>
               </div>
               <button
@@ -624,9 +650,50 @@ export default function DanAI() {
             </pre>
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              No voice profile yet. Load some of your WhatsApp exports and transcripts first, then build it.
+              No voice profile yet. Load your knowledge base first, then build it.
             </p>
           )}
+
+          <div className="border border-border rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-foreground mb-1">What clients ask most</h2>
+                <p className="text-xs text-muted-foreground max-w-lg">
+                  Pulled out of your Q&amp;As and momentum calls — the questions that keep coming up,
+                  phrased the way a client would type them. These become the prompts on the client
+                  Ask Dan page. Rebuild it occasionally and it learns from what they actually ask.
+                </p>
+              </div>
+              <button
+                onClick={handleFindQuestions}
+                disabled={findingQuestions}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all disabled:opacity-50 shrink-0"
+              >
+                {findingQuestions ? <Loader2 className="w-4 h-4 animate-spin" /> : <HelpCircle className="w-4 h-4" />}
+                {findingQuestions ? 'Reading…' : suggested.length ? 'Rebuild' : 'Work them out'}
+              </button>
+            </div>
+
+            {suggested.length > 0 ? (
+              <ol className="space-y-2">
+                {suggested.map((q, i) => (
+                  <li key={q.id} className="flex gap-2.5 text-sm text-foreground">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-[11px] font-bold flex items-center justify-center mt-0.5">
+                      {i + 1}
+                    </span>
+                    <span className="leading-relaxed">
+                      {q.question}
+                      {q.theme && <span className="text-muted-foreground"> · {q.theme}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Not built yet — clients see a default set until you do.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </PageLayout>

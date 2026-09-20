@@ -25,6 +25,8 @@ Write a style guide a writer could follow to be mistaken for him. Be specific an
 
 Be concrete. "Uses short sentences" is useless; "Breaks after one idea, often a three-to-six word line on its own" is useful. Quote him directly wherever you can.
 
+Quote Dan only. The samples include calls with individual clients, so never carry a client's name, business, revenue or personal situation into the guide — you are describing how he speaks, not what was discussed.
+
 Return the guide as plain text, no preamble, under 900 words.`;
 
 async function callModel(prompt: string): Promise<string> {
@@ -89,30 +91,33 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Typed messages show how he writes; teaching shows how he explains.
-    const { data: typedDocs } = await admin
-      .from("knowledge_docs").select("id").eq("source_type", "whatsapp").limit(40);
-    const { data: spokenDocs } = await admin
-      .from("knowledge_docs").select("id").in("source_type", ["teaching", "transcript"]).limit(40);
-
-    const typedIds = (typedDocs ?? []).map(d => d.id);
-    const spokenIds = (spokenDocs ?? []).map(d => d.id);
-
-    if (!typedIds.length && !spokenIds.length) {
-      return json({ error: "Nothing in the knowledge base to analyse yet" }, 400);
-    }
+    // Everything in the knowledge base that is actually Dan speaking or
+    // writing. Each register is sampled separately so one big source cannot
+    // drown the others:
+    //   whatsapp   - how he types, the closest match to a written answer
+    //   call       - 1:1s, him talking to one person rather than a room
+    //   teaching   - workshops, Q&As, momentum calls
+    //   transcript - his own trainings and uploads
+    // Gemini notes are excluded on purpose: they are written *about* him in
+    // third person ("Dan advised..."), so they would teach the wrong voice.
+    const REGISTERS: { type: string; label: string; docs: number; chunks: number }[] = [
+      { type: "whatsapp", label: "Dan, typed to a client", docs: 60, chunks: 70 },
+      { type: "call", label: "Dan, on a 1:1 call", docs: 60, chunks: 60 },
+      { type: "teaching", label: "Dan, teaching a group", docs: 60, chunks: 60 },
+      { type: "transcript", label: "Dan, in his own training", docs: 40, chunks: 40 },
+    ];
 
     const samples: string[] = [];
 
-    if (typedIds.length) {
+    for (const register of REGISTERS) {
+      const { data: docs } = await admin
+        .from("knowledge_docs").select("id").eq("source_type", register.type).limit(register.docs);
+      const ids = (docs ?? []).map(d => d.id);
+      if (!ids.length) continue;
+
       const { data } = await admin
-        .from("knowledge_chunks").select("content").in("doc_id", typedIds).limit(50);
-      for (const c of data ?? []) samples.push(`[Dan, typed to a client]\n${c.content}`);
-    }
-    if (spokenIds.length) {
-      const { data } = await admin
-        .from("knowledge_chunks").select("content").in("doc_id", spokenIds).limit(50);
-      for (const c of data ?? []) samples.push(`[Dan, teaching]\n${c.content}`);
+        .from("knowledge_chunks").select("content").in("doc_id", ids).limit(register.chunks);
+      for (const c of data ?? []) samples.push(`[${register.label}]\n${c.content}`);
     }
 
     if (!samples.length) {
@@ -120,7 +125,7 @@ Deno.serve(async (req) => {
     }
 
     // Keep the prompt inside a sensible size.
-    const corpus = samples.join("\n\n---\n\n").slice(0, 180_000);
+    const corpus = samples.join("\n\n---\n\n").slice(0, 320_000);
     const content = (await callModel(`${INSTRUCTION}\n\n=====\n\n${corpus}`)).trim();
 
     if (!content) return json({ error: "The model returned nothing — try again" }, 502);
