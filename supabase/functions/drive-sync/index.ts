@@ -85,28 +85,60 @@ type DriveFile = {
   size?: string;
 };
 
-async function listFolder(token: string, folderId: string): Promise<DriveFile[]> {
-  const files: DriveFile[] = [];
-  let pageToken: string | undefined;
-  do {
-    const params = new URLSearchParams({
-      q: `'${folderId}' in parents and trashed = false`,
-      fields: "nextPageToken, files(id, name, mimeType, modifiedTime, size)",
-      pageSize: "200",
-      supportsAllDrives: "true",
-      includeItemsFromAllDrives: "true",
-    });
-    if (pageToken) params.set("pageToken", pageToken);
+const FOLDER_MIME = "application/vnd.google-apps.folder";
 
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error(`Drive list ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    files.push(...(data.files ?? []));
-    pageToken = data.nextPageToken;
-  } while (pageToken);
-  return files;
+/**
+ * Walks a folder and everything beneath it. Google Meet files one subfolder
+ * per call, so a flat listing finds nothing.
+ */
+async function listFolderTree(
+  token: string,
+  rootId: string,
+  maxDepth = 4,
+): Promise<DriveFile[]> {
+  const found: DriveFile[] = [];
+  const seenFolders = new Set<string>();
+  let frontier: { id: string; depth: number }[] = [{ id: rootId, depth: 0 }];
+
+  while (frontier.length) {
+    const next: { id: string; depth: number }[] = [];
+
+    for (const { id, depth } of frontier) {
+      if (seenFolders.has(id)) continue;
+      seenFolders.add(id);
+
+      let pageToken: string | undefined;
+      do {
+        const params = new URLSearchParams({
+          q: `'${id}' in parents and trashed = false`,
+          fields: "nextPageToken, files(id, name, mimeType, modifiedTime, size)",
+          pageSize: "200",
+          supportsAllDrives: "true",
+          includeItemsFromAllDrives: "true",
+        });
+        if (pageToken) params.set("pageToken", pageToken);
+
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`Drive list ${res.status}: ${await res.text()}`);
+        const data = await res.json();
+
+        for (const file of (data.files ?? []) as DriveFile[]) {
+          if (file.mimeType === FOLDER_MIME) {
+            if (depth < maxDepth) next.push({ id: file.id, depth: depth + 1 });
+          } else {
+            found.push(file);
+          }
+        }
+        pageToken = data.nextPageToken;
+      } while (pageToken);
+    }
+
+    frontier = next;
+  }
+
+  return found;
 }
 
 async function exportDocText(token: string, fileId: string): Promise<string> {
@@ -196,7 +228,7 @@ Deno.serve(async (req) => {
     for (const folderId of folderIds) {
       let files: DriveFile[];
       try {
-        files = await listFolder(token, folderId);
+        files = await listFolderTree(token, folderId);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         errors.push(`${folderId}: ${message}`);
