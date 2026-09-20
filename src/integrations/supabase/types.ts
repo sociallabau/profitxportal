@@ -561,24 +561,6 @@ export type Database = {
         }
         Relationships: []
       }
-      voice_profile: {
-        Row: { built_from: number; content: string; id: string; slug: string; updated_at: string; updated_by: string | null }
-        Insert: { built_from?: number; content: string; id?: string; slug?: string; updated_at?: string; updated_by?: string | null }
-        Update: { built_from?: number; content?: string; id?: string; slug?: string; updated_at?: string; updated_by?: string | null }
-        Relationships: []
-      }
-      client_questions: {
-        Row: { answer: string | null; created_at: string; id: string; next_steps: Json | null; question: string; resource: string | null; user_id: string }
-        Insert: { answer?: string | null; created_at?: string; id?: string; next_steps?: Json | null; question: string; resource?: string | null; user_id?: string }
-        Update: { answer?: string | null; created_at?: string; id?: string; next_steps?: Json | null; question?: string; resource?: string | null; user_id?: string }
-        Relationships: []
-      }
-      financial_audits: {
-        Row: { audit: string | null; created_at: string; filename: string | null; id: string; kind: string; period: string | null; source_text: string | null; user_id: string }
-        Insert: { audit?: string | null; created_at?: string; filename?: string | null; id?: string; kind?: string; period?: string | null; source_text?: string | null; user_id?: string }
-        Update: { audit?: string | null; created_at?: string; filename?: string | null; id?: string; kind?: string; period?: string | null; source_text?: string | null; user_id?: string }
-        Relationships: []
-      }
       module_pages: {
         Row: {
           created_at: string | null
@@ -647,10 +629,6 @@ export type Database = {
       }
       monthly_totals: {
         Row: {
-          expense_contractors: number | null
-          expense_software: number | null
-          expense_owner_pay: number | null
-          expense_other: number | null
           ad_spend: number | null
           biggest_win: string | null
           booked_calls: number | null
@@ -676,10 +654,6 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          expense_contractors?: number | null
-          expense_software?: number | null
-          expense_owner_pay?: number | null
-          expense_other?: number | null
           ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null
@@ -705,10 +679,6 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          expense_contractors?: number | null
-          expense_software?: number | null
-          expense_owner_pay?: number | null
-          expense_other?: number | null
           ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null
