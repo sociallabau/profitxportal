@@ -17,6 +17,7 @@ import MonthlyTotals from "./pages/submissions/MonthlyTotals";
 import Financials from "./pages/Financials";
 import SettingsPage from "./pages/SettingsPage";
 import ClientHealth from "./pages/ClientHealth";
+import ClientJourney from "./pages/ClientJourney";
 import CashMenu from "./pages/CashMenu";
 import WinsWall from "./pages/WinsWall";
 import ModulePage from "./pages/ModulePage";
@@ -80,6 +81,8 @@ const App = () => (
           <Route path="/client-health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
+          <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
+          <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>

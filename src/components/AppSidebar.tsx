@@ -3,7 +3,7 @@ import {
   Gauge, Route, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X,
   Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, DollarSign,
-  Wrench, ChevronDown,
+  Wrench, ChevronDown, Compass,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ const toolItems = [
 
 const adminItems = [
   { label: 'Client Health', path: '/client-health', icon: HeartPulse },
+  { label: 'Client Journey', path: '/client-journey', icon: Compass },
 ];
 
 const ownerItems = [

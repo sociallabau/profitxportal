@@ -217,6 +217,45 @@ export type Database = {
         }
         Relationships: []
       }
+      client_journey: {
+        Row: {
+          added_date: string
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          stage: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          added_date?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone: string
+          stage?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Update: {
+          added_date?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          stage?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       content_posts: {
         Row: {
           category: string | null
