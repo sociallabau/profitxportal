@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
   Sparkles, Copy, Check, Trash2, Upload, BookmarkPlus, Loader2, FileText, MessageSquare,
+  RefreshCw, Clapperboard,
 } from 'lucide-react';
 
 interface KnowledgeDoc {
@@ -20,6 +21,14 @@ interface SavedAnswer {
   question: string;
   answer: string;
   created_at: string;
+}
+
+interface TranscriptionJob {
+  id: string;
+  title: string;
+  status: string;
+  size_bytes: number | null;
+  error: string | null;
 }
 
 interface Source {
@@ -72,11 +81,14 @@ export default function DanAI() {
   const [savedAnswers, setSavedAnswers] = useState<SavedAnswer[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [jobs, setJobs] = useState<TranscriptionJob[]>([]);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (user) {
       loadDocs();
       loadSaved();
+      loadJobs();
     }
   }, [user]);
 
@@ -94,6 +106,36 @@ export default function DanAI() {
       .select('id, question, answer, created_at')
       .order('created_at', { ascending: false });
     setSavedAnswers(data ?? []);
+  };
+
+  const loadJobs = async () => {
+    const { data } = await supabase
+      .from('transcription_jobs')
+      .select('id, title, status, size_bytes, error')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    setJobs(data ?? []);
+  };
+
+  const handleSyncDrive = async () => {
+    setSyncing(true);
+    const { data, error } = await supabase.functions.invoke('drive-sync', { body: {} });
+    setSyncing(false);
+
+    if (error || data?.error) {
+      toast.error(data?.error ?? 'Drive sync failed');
+      console.error(error ?? data?.error);
+      return;
+    }
+    const { ingested = 0, queued = 0 } = data ?? {};
+    toast.success(
+      ingested || queued
+        ? `Added ${ingested} transcript${ingested === 1 ? '' : 's'}, queued ${queued} video${queued === 1 ? '' : 's'}`
+        : 'Nothing new in Drive',
+    );
+    if (data?.errors?.length) console.warn('drive-sync issues', data.errors);
+    loadDocs();
+    loadJobs();
   };
 
   const copyText = async (text: string, key: string) => {
@@ -408,6 +450,46 @@ export default function DanAI() {
               <p className="text-[11px] text-muted-foreground mt-2">{uploadProgress}</p>
             )}
           </div>
+
+          <div className="flex items-center justify-between gap-3 border border-border rounded-2xl px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">Google Drive</p>
+              <p className="text-xs text-muted-foreground">
+                Pulls in Meet transcripts and Gemini notes, and queues videos for transcribing.
+              </p>
+            </div>
+            <button
+              onClick={handleSyncDrive}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all disabled:opacity-50 shrink-0"
+            >
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+          </div>
+
+          {jobs.length > 0 && (
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Videos waiting to be transcribed ({jobs.filter(j => j.status === 'pending').length})
+              </h3>
+              <div className="space-y-2">
+                {jobs.slice(0, 10).map(job => (
+                  <div key={job.id} className="flex items-center gap-3 border border-border rounded-xl px-3 py-2.5">
+                    <Clapperboard className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {job.status}
+                        {job.size_bytes ? ` · ${(job.size_bytes / 1_000_000_000).toFixed(2)} GB` : ''}
+                        {job.error ? ` · ${job.error}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             {docs.map(doc => (

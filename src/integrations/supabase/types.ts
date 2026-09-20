@@ -470,9 +470,21 @@ export type Database = {
         Relationships: []
       }
       knowledge_docs: {
-        Row: { created_at: string; created_by: string; id: string; source_type: string; source_url: string | null; title: string; word_count: number }
-        Insert: { created_at?: string; created_by?: string; id?: string; source_type?: string; source_url?: string | null; title: string; word_count?: number }
-        Update: { created_at?: string; created_by?: string; id?: string; source_type?: string; source_url?: string | null; title?: string; word_count?: number }
+        Row: { created_at: string; created_by: string | null; id: string; source_id: string | null; source_type: string; source_url: string | null; title: string; word_count: number }
+        Insert: { created_at?: string; created_by?: string | null; id?: string; source_id?: string | null; source_type?: string; source_url?: string | null; title: string; word_count?: number }
+        Update: { created_at?: string; created_by?: string | null; id?: string; source_id?: string | null; source_type?: string; source_url?: string | null; title?: string; word_count?: number }
+        Relationships: []
+      }
+      transcription_jobs: {
+        Row: { created_at: string; doc_id: string | null; drive_file_id: string; error: string | null; id: string; mime_type: string | null; provider: string | null; provider_job_id: string | null; size_bytes: number | null; status: string; title: string; updated_at: string }
+        Insert: { created_at?: string; doc_id?: string | null; drive_file_id: string; error?: string | null; id?: string; mime_type?: string | null; provider?: string | null; provider_job_id?: string | null; size_bytes?: number | null; status?: string; title: string; updated_at?: string }
+        Update: { created_at?: string; doc_id?: string | null; drive_file_id?: string; error?: string | null; id?: string; mime_type?: string | null; provider?: string | null; provider_job_id?: string | null; size_bytes?: number | null; status?: string; title?: string; updated_at?: string }
+        Relationships: []
+      }
+      drive_sync_state: {
+        Row: { folder_id: string; folder_name: string | null; last_result: string | null; last_synced_at: string | null; updated_at: string }
+        Insert: { folder_id: string; folder_name?: string | null; last_result?: string | null; last_synced_at?: string | null; updated_at?: string }
+        Update: { folder_id?: string; folder_name?: string | null; last_result?: string | null; last_synced_at?: string | null; updated_at?: string }
         Relationships: []
       }
       knowledge_chunks: {
