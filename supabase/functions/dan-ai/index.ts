@@ -141,10 +141,31 @@ Deno.serve(async (req) => {
       if (!saved || saved.length === 0) saved = broadSaved.data;
     }
 
+    // Last resort: the single most distinctive word. Across a knowledge base
+    // this size that almost always returns something, which is the point —
+    // an approximate answer with its sources beats refusing to answer.
+    if (!chunks || chunks.length === 0) {
+      const longest = question
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+        .sort((a, b) => b.length - a.length)[0];
+
+      if (longest) {
+        approximate = true;
+        const { data: lastResort } = await supabase.rpc("search_knowledge", {
+          q: longest,
+          limit_n: 16,
+        });
+        chunks = lastResort;
+      }
+    }
+
     if ((!chunks || chunks.length === 0) && (!saved || saved.length === 0)) {
       return json({
         answer:
-          "The knowledge base is empty, so there is nothing to answer from yet. Add a transcript in the Knowledge tab.",
+          "No material in the knowledge base matches that at all. Either the knowledge base is still empty, or the question uses wording that appears nowhere in Dan's calls and trainings — try rephrasing it the way a client would actually ask.",
         sources: [],
         empty: true,
       });
