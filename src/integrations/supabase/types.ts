@@ -469,6 +469,24 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_docs: {
+        Row: { created_at: string; created_by: string; id: string; source_type: string; source_url: string | null; title: string; word_count: number }
+        Insert: { created_at?: string; created_by?: string; id?: string; source_type?: string; source_url?: string | null; title: string; word_count?: number }
+        Update: { created_at?: string; created_by?: string; id?: string; source_type?: string; source_url?: string | null; title?: string; word_count?: number }
+        Relationships: []
+      }
+      knowledge_chunks: {
+        Row: { chunk_index: number; content: string; created_at: string; doc_id: string; id: string }
+        Insert: { chunk_index: number; content: string; created_at?: string; doc_id: string; id?: string }
+        Update: { chunk_index?: number; content?: string; created_at?: string; doc_id?: string; id?: string }
+        Relationships: []
+      }
+      saved_answers: {
+        Row: { answer: string; created_at: string; created_by: string; id: string; question: string; times_used: number; updated_at: string }
+        Insert: { answer: string; created_at?: string; created_by?: string; id?: string; question: string; times_used?: number; updated_at?: string }
+        Update: { answer?: string; created_at?: string; created_by?: string; id?: string; question?: string; times_used?: number; updated_at?: string }
+        Relationships: []
+      }
       module_pages: {
         Row: {
           created_at: string | null

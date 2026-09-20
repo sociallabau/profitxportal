@@ -28,6 +28,7 @@ import LaunchHQ from "./pages/LaunchHQ";
 import Vault from "./pages/Vault";
 import Calls from "./pages/Calls";
 import MyFinances from "./pages/admin/MyFinances";
+import DanAI from "./pages/admin/DanAI";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -83,6 +84,7 @@ const App = () => (
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
+          <Route path="/dan-ai" element={<AdminRoute><DanAI /></AdminRoute>} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>
