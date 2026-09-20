@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, CheckCircle2, AlertTriangle, ArrowRight, Eye } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
+import FinancialAudit from '@/components/FinancialAudit';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
@@ -149,6 +150,7 @@ export default function Financials() {
           <p className="text-base font-semibold text-foreground mb-2">No financial data yet</p>
           <p className="text-sm text-muted-foreground">Submit your monthly check-in to see your real numbers, margins, and growth funnel here.</p>
         </div>
+        <FinancialAudit />
       </PageLayout>
     );
   }
@@ -301,6 +303,7 @@ export default function Financials() {
           </div>
         </div>
       )}
+      <FinancialAudit />
     </PageLayout>
   );
 }

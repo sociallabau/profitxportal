@@ -3,7 +3,7 @@ import {
   Gauge, Route, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X,
   Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, DollarSign,
-  Wrench, ChevronDown, Compass, Sparkle,
+  Wrench, ChevronDown, Compass, Sparkle, MessagesSquare,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ export const CIRCLE_URLS = {
 
 const mainNavItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
+  { label: 'Ask Dan', path: '/ask-dan', icon: MessagesSquare },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Financials', path: '/financials', icon: Wallet },

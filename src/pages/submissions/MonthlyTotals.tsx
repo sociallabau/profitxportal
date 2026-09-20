@@ -40,7 +40,7 @@ export default function MonthlyTotals() {
   });
 
   const [form, setForm] = useState({
-    oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '',
+    oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '', expense_contractors: '', expense_software: '', expense_owner_pay: '', expense_other: '',
     ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
     new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
     business_confidence: '5', nps: '5',
@@ -72,6 +72,10 @@ export default function MonthlyTotals() {
         oneoff_revenue: oneoffs,
         total_revenue: total,
         expenses: parseFloat(form.expenses) || 0,
+        expense_contractors: form.expense_contractors ? parseFloat(form.expense_contractors) : null,
+        expense_software: form.expense_software ? parseFloat(form.expense_software) : null,
+        expense_owner_pay: form.expense_owner_pay ? parseFloat(form.expense_owner_pay) : null,
+        expense_other: form.expense_other ? parseFloat(form.expense_other) : null,
         ad_spend: parseFloat(form.ad_spend) || 0,
         content_posts: parseInt(form.content_posts) || 0,
         leads_generated: parseInt(form.leads_generated) || 0,
@@ -100,7 +104,7 @@ export default function MonthlyTotals() {
       qc.invalidateQueries({ queryKey: ['monthly-history'] });
       qc.invalidateQueries({ queryKey: ['wins-wall'] });
       setForm({
-        oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '',
+        oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '', expense_contractors: '', expense_software: '', expense_owner_pay: '', expense_other: '',
         ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
         new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
         business_confidence: '5', nps: '5',
@@ -171,6 +175,39 @@ export default function MonthlyTotals() {
               <input type="number" value={form.ad_spend} onChange={e => set('ad_spend', e.target.value)}
                 placeholder="500"
                 className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+            </div>
+          </div>
+
+          <div className="mt-5 pt-5 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-3">
+              Optional, but this is how Dan spots what's actually eating your margin. A 10% margin caused
+              by editor costs needs a completely different fix to one caused by what you pay yourself.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Editors &amp; contractors ($)</label>
+                <input type="number" value={form.expense_contractors} onChange={e => set('expense_contractors', e.target.value)}
+                  placeholder="1200"
+                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Software &amp; subscriptions ($)</label>
+                <input type="number" value={form.expense_software} onChange={e => set('expense_software', e.target.value)}
+                  placeholder="300"
+                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">What you paid yourself ($)</label>
+                <input type="number" value={form.expense_owner_pay} onChange={e => set('expense_owner_pay', e.target.value)}
+                  placeholder="4000"
+                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Everything else ($)</label>
+                <input type="number" value={form.expense_other} onChange={e => set('expense_other', e.target.value)}
+                  placeholder="400"
+                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+              </div>
             </div>
           </div>
         </div>

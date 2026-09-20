@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
   Sparkles, Copy, Check, Trash2, Upload, BookmarkPlus, Loader2, FileText, MessageSquare,
-  RefreshCw, Clapperboard, Wand2,
+  RefreshCw, Clapperboard, Wand2, Mic,
 } from 'lucide-react';
 
 interface KnowledgeDoc {
@@ -37,7 +37,7 @@ interface Source {
   snippet: string;
 }
 
-type Tab = 'ask' | 'saved' | 'knowledge';
+type Tab = 'ask' | 'saved' | 'knowledge' | 'voice';
 
 const SOURCE_LABELS: Record<string, string> = {
   teaching: 'Momentum / Q&A / Workshop',
@@ -86,12 +86,15 @@ export default function DanAI() {
   const [jobs, setJobs] = useState<TranscriptionJob[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [voice, setVoice] = useState<{ content: string; built_from: number; updated_at: string } | null>(null);
+  const [analysing, setAnalysing] = useState(false);
 
   useEffect(() => {
     if (user) {
       loadDocs();
       loadSaved();
       loadJobs();
+      loadVoice();
     }
   }, [user]);
 
@@ -139,6 +142,29 @@ export default function DanAI() {
     if (data?.errors?.length) console.warn('drive-sync issues', data.errors);
     loadDocs();
     loadJobs();
+  };
+
+  const loadVoice = async () => {
+    const { data } = await supabase
+      .from('voice_profile')
+      .select('content, built_from, updated_at')
+      .eq('slug', 'default')
+      .maybeSingle();
+    setVoice(data ?? null);
+  };
+
+  const handleAnalyseVoice = async () => {
+    setAnalysing(true);
+    const { data, error } = await supabase.functions.invoke('analyse-voice', { body: {} });
+    setAnalysing(false);
+
+    if (error || data?.error) {
+      toast.error(data?.error ?? "Couldn't analyse your voice");
+      console.error(error ?? data?.error);
+      return;
+    }
+    toast.success(`Voice profile built from ${data.built_from} samples`);
+    loadVoice();
   };
 
   const handleTranscribe = async () => {
@@ -287,6 +313,7 @@ export default function DanAI() {
     { id: 'ask', label: 'Ask' },
     { id: 'saved', label: `Saved answers (${savedAnswers.length})` },
     { id: 'knowledge', label: `Knowledge (${docs.length})` },
+    { id: 'voice', label: 'Voice' },
   ];
 
   return (
@@ -560,6 +587,46 @@ export default function DanAI() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {tab === 'voice' && (
+        <div className="space-y-5">
+          <div className="border border-border rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-foreground mb-1">How Dan writes</h2>
+                <p className="text-xs text-muted-foreground max-w-lg">
+                  Claude reads your messages and teaching and writes down the patterns — sentence
+                  rhythm, the phrases you reach for, how you open and close. Every answer the
+                  clients get is written to this, which is how they get your voice without ever
+                  seeing a private message.
+                </p>
+              </div>
+              <button
+                onClick={handleAnalyseVoice}
+                disabled={analysing}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all disabled:opacity-50 shrink-0"
+              >
+                {analysing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                {analysing ? 'Reading…' : voice ? 'Rebuild' : 'Build it'}
+              </button>
+            </div>
+            {voice && (
+              <p className="text-[11px] text-muted-foreground mt-3">
+                Built from {voice.built_from} samples · {new Date(voice.updated_at).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+
+          {voice ? (
+            <pre className="border border-border rounded-2xl px-4 py-4 text-sm text-foreground whitespace-pre-wrap break-words font-sans leading-relaxed">
+              {voice.content}
+            </pre>
+          ) : (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No voice profile yet. Load some of your WhatsApp exports and transcripts first, then build it.
+            </p>
+          )}
         </div>
       )}
     </PageLayout>

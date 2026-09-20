@@ -188,6 +188,27 @@ export default function ClientHealth() {
     },
   });
 
+  // Direction matters more than position: 20k -> 15k -> 10k and a flat 10k
+  // look identical on a last-month-only view, and only one needs a call.
+  const { data: revenueTrends = {} } = useQuery({
+    queryKey: ['client-revenue-trends'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_totals')
+        .select('user_id, month, total_revenue, mrr, mrr_manual, oneoff_revenue')
+        .order('month', { ascending: false })
+        .limit(600);
+
+      const byUser: Record<string, number[]> = {};
+      for (const row of data ?? []) {
+        const revenue = Number(row.total_revenue)
+          || (Number(row.mrr_manual || row.mrr || 0) + Number(row.oneoff_revenue || 0));
+        (byUser[row.user_id] ??= []).push(revenue);
+      }
+      return byUser;
+    },
+  });
+
   const { data: clientHistory = [] } = useQuery({
     queryKey: ['client-monthly-history', selectedClient?.id],
     enabled: !!selectedClient,
@@ -436,7 +457,22 @@ export default function ClientHealth() {
 
                 <div className="hidden sm:flex items-center gap-6 text-xs text-muted-foreground shrink-0">
                   <span>{formatTierLabel(client.tier)}</span>
-                  <span>${Number(client.last_total_revenue || 0).toLocaleString()}/mo</span>
+                  <span className="flex items-center gap-1.5">
+                    ${Number(client.last_total_revenue || 0).toLocaleString()}/mo
+                    {(() => {
+                      const series = (revenueTrends as Record<string, number[]>)[client.id];
+                      if (!series || series.length < 2) return null;
+                      const [latest, previous] = series;
+                      if (!previous) return null;
+                      const change = Math.round(((latest - previous) / previous) * 100);
+                      if (Math.abs(change) < 5) return <span className="text-muted-foreground">flat</span>;
+                      return (
+                        <span className={change > 0 ? 'text-green-400' : 'text-orange-400'}>
+                          {change > 0 ? '▲' : '▼'} {Math.abs(change)}%
+                        </span>
+                      );
+                    })()}
+                  </span>
                   {client.days_since_last_login !== null && (
                     <span className={Number(client.days_since_last_login) > 14 ? 'text-orange-400' : ''}>
                       Last login: {client.days_since_last_login}d ago
@@ -709,6 +745,28 @@ export default function ClientHealth() {
                   <p className="text-xs text-muted-foreground mb-1">Insight</p>
                   <p className="text-sm text-foreground italic">{c.conclusion}</p>
                 </div>
+
+                {/* What they told him on their last check-in — collected every
+                    month and, until now, never shown anywhere. */}
+                {(c.last_needs || c.last_biggest_win) && (
+                  <div className="bg-card border border-primary/25 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">
+                      In their words{c.last_submission_month ? ` · ${new Date(c.last_submission_month).toLocaleString('default', { month: 'long', year: 'numeric' })}` : ''}
+                    </p>
+                    {c.last_biggest_win && (
+                      <div className="mb-3">
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Biggest win</p>
+                        <p className="text-sm text-foreground leading-relaxed">{c.last_biggest_win}</p>
+                      </div>
+                    )}
+                    {c.last_needs && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">What they're working on next</p>
+                        <p className="text-sm text-foreground leading-relaxed">{c.last_needs}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Submission history */}
                 {clientHistory.length > 0 && (
