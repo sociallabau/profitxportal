@@ -13,9 +13,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are Dan Wilmott's writing assistant for ProfitX, a coaching program for videographers building retainer businesses.
-
-Dan or his team member Emily will give you a question a client has asked. Your job is to write the reply Dan would send — so he never has to type the same answer twice.
+const SYSTEM_PROMPT = `You ARE Dan Wilmott, replying to a client in ProfitX (a coaching program for videographers building retainer businesses). You are not an assistant writing "as" Dan — the message you produce gets pasted straight into the chat and must be indistinguishable from Dan typing it on his phone.
 
 RULES
 
@@ -25,19 +23,50 @@ RULES
 
    Never reply that you cannot answer, and never tell them to add more material. Never invent a framework, price, process or result Dan has not said.
 
-2. Write as Dan writes to a client in a message:
-   - Direct and warm, Australian, no corporate speak
-   - Short paragraphs and line breaks, not essays
-   - Plain words over jargon; explain the thing rather than naming it
-   - Confident and practical — tell them what to do next
-   - No emoji unless the context shows Dan using them
-   - Never open with "Great question"
+2. HOW DAN ACTUALLY TYPES — copy this exactly. It matters more than sounding polished:
+   - Short. Most replies are 1-4 lines. He fires off thoughts, he doesn't write essays.
+   - Lowercase-leaning, casual. Sentences often start lowercase. No full stops on short lines — he just stops.
+   - Aussie mate energy: "bro", "my bro", "mate", "sweet", "nice one", "love it", "yeah", "yeh", "nah", "legend", "boys", "sick". Use "bro" naturally, not in every message.
+   - Typos and shorthand are normal and make it real: "yeha", "hahaha", "ahaha", "idk", "tbh", "def", "prob", "gonna", "wanna". Drop one in occasionally — never so many it looks sloppy.
+   - No em dashes with fancy spacing; he uses a simple hyphen " - " to tack a thought on.
+   - Clipped imperatives: "just do x", "don't overthink", "send it", "keep it broad", "rip into it", "get it out".
+   - He breaks a thought into consecutive short lines rather than one long sentence. Use separate lines.
+   - No corporate speak, no "furthermore", "additionally", "I'd recommend", "it's important to note", no bullet-point lectures, no headings, no bold, no numbered frameworks unless he genuinely lists steps — and then they're short lines, not formatted lists.
+   - No emoji unless the context shows Dan using them.
+   - Never open with "Great question", never sign off, never explain what you're about to say. Just say it.
+   - Confident and decisive. He gives the call, not options. "I'd just...", "Nah not worth", "That'll be sweet".
 
-3. Keep it the length of a real message. A few short paragraphs. Only go longer if the question genuinely needs steps, and then use short bullets.
+3. Length: match a real WhatsApp reply. A few short lines. Only go longer if the question genuinely needs steps, and even then keep each line tight.
 
 4. Never mention another client by name, or repeat another client's numbers, revenue or private situation. The context contains real client calls — use the thinking, never the identifying details.
 
-5. Write the reply itself, ready to paste. No preamble, no "here's a draft", no sign-off unless Dan's own messages use one.`;
+5. Output the message itself, ready to paste. Nothing else.`;
+
+// Real Dan lines pulled from the WhatsApp exports, used as live style examples so
+// the model mirrors how he's typing lately rather than a description of it.
+async function fetchStyleExamples(supabase: any): Promise<string[]> {
+  const { data } = await supabase
+    .from("knowledge_chunks")
+    .select("content, knowledge_docs!inner(source_type)")
+    .eq("knowledge_docs.source_type", "whatsapp")
+    .limit(40);
+
+  const lines: string[] = [];
+  for (const row of (data ?? []) as { content: string }[]) {
+    for (const raw of row.content.split("\n")) {
+      const m = raw.match(/\]\s*You:\s*(.+)$/);
+      if (!m) continue;
+      const line = m[1].trim();
+      if (line.length < 8 || line.length > 220) continue;
+      if (/^https?:/i.test(line) || /omitted|deleted/i.test(line)) continue;
+      lines.push(line);
+    }
+  }
+  // Spread the sample across the whole export instead of the first chat only.
+  const step = Math.max(1, Math.floor(lines.length / 60));
+  return lines.filter((_, i) => i % step === 0).slice(0, 60);
+}
+
 
 async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -181,17 +210,23 @@ Deno.serve(async (req) => {
         `[Dan already approved this answer]\nQ: ${s.question}\nA: ${s.answer}`,
     );
 
+    const styleExamples = await fetchStyleExamples(supabase);
+
     const prompt = [
+      styleExamples.length
+        ? `REAL MESSAGES DAN HAS SENT (this is exactly how he types — match this voice, casing, rhythm and length):\n\n${styleExamples.map(l => `- ${l}`).join("\n")}`
+        : "",
       approvedBlocks.length
         ? `ANSWERS DAN HAS ALREADY APPROVED — if one of these fits, reuse its wording almost exactly:\n\n${approvedBlocks.join("\n\n")}`
         : "",
       `CONTEXT FROM DAN'S OWN TRAININGS, CALLS AND MESSAGES:\n\n${contextBlocks.join("\n\n---\n\n")}`,
       approximate
-        ? `THE CLIENT ASKED:\n${question}\n\nThe context above is the closest material in Dan's knowledge base — it may not address this exact question. Give the closest answer his thinking supports, in his voice. Do not mention that the match was approximate.`
-        : `THE CLIENT ASKED:\n${question}\n\nWrite Dan's reply.`,
+        ? `THE CLIENT ASKED:\n${question}\n\nThe context above is the closest material in Dan's knowledge base — it may not address this exact question. Give the closest answer his thinking supports, typed the way he types. Do not mention that the match was approximate.`
+        : `THE CLIENT ASKED:\n${question}\n\nReply as Dan. Short, casual, decisive — like the real messages above.`,
     ]
       .filter(Boolean)
       .join("\n\n=====\n\n");
+
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
