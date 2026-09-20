@@ -190,7 +190,7 @@ function flattenTabs(tabs: DocTab[] | undefined, out: DocTab[] = []): DocTab[] {
 async function fetchDocText(
   token: string,
   fileId: string,
-): Promise<{ text: string; kind: "transcript" | "notes" }> {
+): Promise<{ text: string; kind: "transcript" | "notes" | "plain" }> {
   const res = await fetch(
     `https://docs.googleapis.com/v1/documents/${fileId}?includeTabsContent=true`,
     { headers: { Authorization: `Bearer ${token}` } },
@@ -214,9 +214,20 @@ async function fetchDocText(
     if (notes) return { text: notes, kind: "notes" };
   }
 
-  // Docs without tabs still have a top-level body.
+  // A doc with no tabs is not a Gemini notes doc — it is a plain document
+  // (a training transcript, a pasted chat export), so take it at face value.
   const body = extractBodyText(doc.body?.content).trim();
-  return { text: body, kind: "notes" };
+  return { text: body, kind: "plain" };
+}
+
+/** Plain text and markdown files uploaded to Drive, fetched as-is. */
+async function fetchPlainFile(token: string, fileId: string): Promise<string> {
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Drive media ${res.status}: ${await res.text()}`);
+  return await res.text();
 }
 
 function chunkText(text: string, size = 1400, overlap = 200): string[] {
@@ -336,12 +347,18 @@ Deno.serve(async (req) => {
           .from("knowledge_docs").select("id").eq("source_id", file.id).maybeSingle();
         if (existing) { skipped++; continue; }
 
-        if (file.mimeType === GOOGLE_DOC && isTranscriptLike(file.name)) {
+        const isTextFile = file.mimeType === "text/plain" ||
+          file.mimeType === "text/markdown" ||
+          /\.(txt|md)$/i.test(file.name);
+
+        if ((file.mimeType === GOOGLE_DOC && isTranscriptLike(file.name)) || isTextFile) {
           // Each transcript is large, so only take a few per run; the next
           // run (or the next click) picks up where this one stopped.
           if (ingested >= maxDocs) { remaining++; continue; }
           try {
-            const { text, kind } = await fetchDocText(token, file.id);
+            const { text, kind } = isTextFile
+              ? { text: await fetchPlainFile(token, file.id), kind: "plain" as const }
+              : await fetchDocText(token, file.id);
             const chunks = chunkText(text);
             if (!chunks.length) { skipped++; continue; }
 
@@ -349,9 +366,11 @@ Deno.serve(async (req) => {
               .from("knowledge_docs")
               .insert({
                 title: file.name,
-                source_type: kind !== "transcript"
-                  ? "note"
-                  : isTeaching(file.name) ? "teaching" : "call",
+                source_type: isTeaching(file.name)
+                  ? "teaching"
+                  : kind === "notes"
+                    ? "note"
+                    : kind === "plain" ? "transcript" : "call",
                 source_id: file.id,
                 source_url: `https://docs.google.com/document/d/${file.id}`,
                 word_count: text.split(/\s+/).length,

@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 Deno.serve(async (req) => {
@@ -19,19 +19,26 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+    // An admin clicking the button, or the scheduled job.
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const providedSecret = req.headers.get("x-cron-secret");
+    const isCron = Boolean(cronSecret && providedSecret === cronSecret);
 
-    const scoped = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: userData } = await scoped.auth.getUser();
-    if (!userData?.user) return json({ error: "Unauthorized" }, 401);
-    const { data: profile } = await scoped
-      .from("profiles").select("is_admin").eq("id", userData.user.id).single();
-    if (!profile?.is_admin) return json({ error: "Admins only" }, 403);
+    if (!isCron) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+
+      const scoped = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: userData } = await scoped.auth.getUser();
+      if (!userData?.user) return json({ error: "Unauthorized" }, 401);
+      const { data: profile } = await scoped
+        .from("profiles").select("is_admin").eq("id", userData.user.id).single();
+      if (!profile?.is_admin) return json({ error: "Admins only" }, 403);
+    }
 
     const deepgramKey = Deno.env.get("DEEPGRAM_API_KEY");
     if (!deepgramKey) return json({ error: "DEEPGRAM_API_KEY is not set" }, 500);
