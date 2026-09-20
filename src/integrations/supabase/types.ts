@@ -364,6 +364,30 @@ export type Database = {
         }
         Relationships: []
       }
+      drive_sync_state: {
+        Row: {
+          folder_id: string
+          folder_name: string | null
+          last_result: string | null
+          last_synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          folder_id: string
+          folder_name?: string | null
+          last_result?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          folder_id?: string
+          folder_name?: string | null
+          last_result?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string | null
@@ -466,6 +490,74 @@ export type Database = {
           source?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      knowledge_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          doc_id: string
+          id: string
+          tsv: unknown
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          doc_id: string
+          id?: string
+          tsv?: unknown
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          doc_id?: string
+          id?: string
+          tsv?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_chunks_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_docs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_docs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          source_id: string | null
+          source_type: string
+          source_url: string | null
+          title: string
+          word_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          source_id?: string | null
+          source_type?: string
+          source_url?: string | null
+          title: string
+          word_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          source_id?: string | null
+          source_type?: string
+          source_url?: string | null
+          title?: string
+          word_count?: number
         }
         Relationships: []
       }
@@ -838,6 +930,39 @@ export type Database = {
           },
         ]
       }
+      saved_answers: {
+        Row: {
+          answer: string
+          created_at: string
+          created_by: string
+          id: string
+          question: string
+          times_used: number
+          tsv: unknown
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          question: string
+          times_used?: number
+          tsv?: unknown
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          question?: string
+          times_used?: number
+          tsv?: unknown
+          updated_at?: string
+        }
+        Relationships: []
+      }
       saved_ideas: {
         Row: {
           ai_script: string | null
@@ -891,6 +1016,71 @@ export type Database = {
           views?: number | null
         }
         Relationships: []
+      }
+      transcription_jobs: {
+        Row: {
+          access_token: string | null
+          completed_at: string | null
+          created_at: string
+          doc_id: string | null
+          drive_file_id: string
+          error: string | null
+          id: string
+          mime_type: string | null
+          provider: string | null
+          provider_job_id: string | null
+          size_bytes: number | null
+          status: string
+          submitted_at: string | null
+          title: string
+          transcript_chars: number | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          completed_at?: string | null
+          created_at?: string
+          doc_id?: string | null
+          drive_file_id: string
+          error?: string | null
+          id?: string
+          mime_type?: string | null
+          provider?: string | null
+          provider_job_id?: string | null
+          size_bytes?: number | null
+          status?: string
+          submitted_at?: string | null
+          title: string
+          transcript_chars?: number | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          completed_at?: string | null
+          created_at?: string
+          doc_id?: string | null
+          drive_file_id?: string
+          error?: string | null
+          id?: string
+          mime_type?: string | null
+          provider?: string | null
+          provider_job_id?: string | null
+          size_bytes?: number | null
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          transcript_chars?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcription_jobs_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_docs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_wins: {
         Row: {
@@ -978,6 +1168,26 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      search_knowledge: {
+        Args: { limit_n?: number; q: string }
+        Returns: {
+          chunk_id: string
+          content: string
+          doc_id: string
+          rank: number
+          source_type: string
+          title: string
+        }[]
+      }
+      search_saved_answers: {
+        Args: { limit_n?: number; q: string }
+        Returns: {
+          answer: string
+          id: string
+          question: string
+          rank: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
