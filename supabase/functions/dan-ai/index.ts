@@ -94,6 +94,9 @@ async function callLovable(apiKey: string, prompt: string): Promise<string> {
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-pro",
+      // Without a budget this reasoning model can spend it all on thinking and
+      // return empty content.
+      max_tokens: 1500,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt },
@@ -101,8 +104,15 @@ async function callLovable(apiKey: string, prompt: string): Promise<string> {
     }),
   });
   if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
+
   const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text) {
+    throw new Error(
+      `Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`,
+    );
+  }
+  return text;
 }
 
 Deno.serve(async (req) => {

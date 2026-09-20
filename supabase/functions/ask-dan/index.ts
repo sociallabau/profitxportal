@@ -77,7 +77,8 @@ async function callModel(prompt: string, system: string): Promise<string> {
     method: "POST",
     headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-2.5-flash",
+      max_tokens: 2000,
       messages: [
         { role: "system", content: system },
         { role: "user", content: prompt },
@@ -85,7 +86,17 @@ async function callModel(prompt: string, system: string): Promise<string> {
     }),
   });
   if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
-  return (await res.json()).choices?.[0]?.message?.content ?? "";
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text) {
+    // A reasoning model with no token budget burns it all on thinking and
+    // returns empty content, so surface the reason rather than "".
+    throw new Error(
+      `Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`,
+    );
+  }
+  return text;
 }
 
 /** Models sometimes wrap JSON in a fence or add a sentence around it. */
