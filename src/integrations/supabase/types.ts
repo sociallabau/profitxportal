@@ -1092,6 +1092,30 @@ export type Database = {
         }
         Relationships: []
       }
+      suggested_questions: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          question: string
+          theme: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          question: string
+          theme?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          question?: string
+          theme?: string | null
+        }
+        Relationships: []
+      }
       transcription_jobs: {
         Row: {
           access_token: string | null
