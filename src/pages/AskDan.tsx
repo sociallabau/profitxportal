@@ -3,6 +3,7 @@ import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { functionErrorMessage } from '@/lib/functionError';
 import { Sparkles, Loader2, ListChecks, PlayCircle, Clock } from 'lucide-react';
 import { resourceCatalogue } from '@/data/resourceCatalogue';
 
@@ -72,8 +73,9 @@ export default function AskDan() {
 
     setAsking(false);
     if (error || data?.error) {
-      toast.error(data?.error ?? "Couldn't get an answer — try again");
-      console.error(error ?? data?.error);
+      const message = await functionErrorMessage(error, data);
+      toast.error(message ?? "Couldn't get an answer — try again");
+      console.error('ask-dan', error ?? data?.error);
       return;
     }
     setResult({

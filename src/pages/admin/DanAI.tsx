@@ -3,6 +3,7 @@ import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { functionErrorMessage } from '@/lib/functionError';
 import {
   Sparkles, Copy, Check, Trash2, Upload, BookmarkPlus, Loader2, FileText, MessageSquare,
   RefreshCw, Clapperboard, Wand2, Mic, HelpCircle,
@@ -170,8 +171,9 @@ export default function DanAI() {
     setFindingQuestions(false);
 
     if (error || data?.error) {
-      toast.error(data?.error ?? "Couldn't work out the common questions");
-      console.error(error ?? data?.error);
+      const message = await functionErrorMessage(error, data);
+      toast.error(message ?? "Couldn't work out the common questions");
+      console.error('common-questions', error ?? data?.error);
       return;
     }
     toast.success(`Read ${data.read_from} sessions${data.from_portal ? ` and ${data.from_portal} real questions` : ''}`);
@@ -184,8 +186,9 @@ export default function DanAI() {
     setAnalysing(false);
 
     if (error || data?.error) {
-      toast.error(data?.error ?? "Couldn't analyse your voice");
-      console.error(error ?? data?.error);
+      const message = await functionErrorMessage(error, data);
+      toast.error(message ?? "Couldn't analyse your voice");
+      console.error('analyse-voice', error ?? data?.error);
       return;
     }
     toast.success(`Voice profile built from ${data.built_from} samples`);

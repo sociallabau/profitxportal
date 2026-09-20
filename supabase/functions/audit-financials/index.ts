@@ -9,21 +9,25 @@ const corsHeaders = {
 
 const BASE_VOICE = `Dan Wilmott runs ProfitX, coaching videographers to build retainer businesses. Write as Dan speaks to a client: direct and warm, Australian, no corporate speak, short paragraphs, plain words over jargon, confident and practical. No emoji. Never open with "Great question".`;
 
-const PNL_BRIEF = `You are looking at a client's profit and loss.
+const PNL_BRIEF = `You are looking at a client's profit and loss, exactly as they sent it.
 
-Work out and state plainly: revenue, total costs, gross and net margin. Then find the actual problem. For a videographer it is nearly always one of four things — what they pay editors and contractors, ad spend, software creep, or what they take out themselves — so say which, with the number.
+Read the document first and work out how it is laid out — the line items, the periods, and any totals or percentages it already calculates. Use its own labels and figures. Do not restructure it into a format you prefer.
+
+Then: state revenue, total costs, and gross and net margin. Find the actual problem. For a videographer it is nearly always one of four things — what they pay editors and contractors, ad spend, software creep, or what they take out themselves — so say which, with the number.
 
 Compare against what Dan teaches about margins for their stage. Be straight about it: if they are keeping 8% of what they bill, say so and say what it should be.
 
 Finish with the two or three things that would move the number most, in order of impact.`;
 
-const ADS_BRIEF = `You are looking at a client's paid ad tracking.
+const ADS_BRIEF = `You are looking at a client's paid ad tracking sheet.
 
-Work through the funnel in order: spend, impressions or reach, clicks, leads, calls booked, calls showed, closes. Find where it actually breaks — a cheap lead that never books is a different problem from an expensive lead that closes.
+This is Dan's own tracking sheet, and it defines the metrics that matter. Read the column headers first and work out exactly what it tracks — it will carry things like spend, impressions, reach, CPM, clicks, CTR, CPC, leads, follow through %, CPL, call bookings, leads to call %, calls taken, show rate, cost per show, signed up, conversion rate, leads to close %, revenue, CPA and ROI.
 
-Give the numbers that matter: cost per lead, cost per booked call, cost per client, and return on spend if the data supports it. Say which are healthy and which are not, against what Dan teaches.
+Use the sheet's own metric names and its own definitions. Work with the numbers it already calculates rather than inventing your own, and only calculate something yourself where the sheet leaves it blank or the figure is clearly wrong. If the sheet contains target or benchmark rows, judge performance against those targets specifically.
 
-Finish with the two or three changes worth making next, in order of impact. Be specific — which campaign, which creative, which step.`;
+Then find where the funnel actually breaks. Follow it in the order the sheet lays out, and be precise about the step: a cheap lead that never books is a completely different problem from an expensive lead that closes well. Quote the dates or rows where it turns.
+
+Finish with the two or three changes worth making next, in order of impact. Be specific — which day, which campaign, which step of the funnel.`;
 
 async function callModel(prompt: string, system: string): Promise<string> {
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
@@ -116,7 +120,8 @@ Deno.serve(async (req) => {
 ${auditKind === "ads" ? ADS_BRIEF : PNL_BRIEF}
 
 Rules:
-- Use only the numbers in the data. If something needed is missing, say what to send next time rather than guessing.
+- Use only the numbers in the data, and prefer the sheet's own calculated figures over your own arithmetic. If a column is empty or obviously broken, say so rather than filling the gap with an assumption.
+- If something needed is missing entirely, say what to send next time rather than guessing.
 - Never invent a benchmark. If Dan's teaching below gives one, use it; otherwise reason from their own numbers.
 - Write it as a message to them. Plain text, no markdown headings, no tables.`;
 

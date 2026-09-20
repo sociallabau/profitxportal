@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { functionErrorMessage } from '@/lib/functionError';
 import { Upload, Loader2, FileSpreadsheet, Trash2, ChevronDown } from 'lucide-react';
 
 /**
@@ -117,7 +118,7 @@ export default function FinancialAudit() {
 
   const handleRun = async () => {
     if (text.trim().length < 40) {
-      toast.error('Upload a file or paste your numbers first');
+      toast.error('Upload your sheet first');
       return;
     }
     setRunning(true);
@@ -129,8 +130,9 @@ export default function FinancialAudit() {
 
     setRunning(false);
     if (error || data?.error) {
-      toast.error(data?.error ?? "Couldn't run the audit — try again");
-      console.error(error ?? data?.error);
+      const message = await functionErrorMessage(error, data);
+      toast.error(message ?? "Couldn't run the audit — try again");
+      console.error('audit-financials', error ?? data?.error);
       return;
     }
     setResult(data.audit ?? '');
@@ -192,12 +194,11 @@ export default function FinancialAudit() {
         />
       </div>
 
-      <textarea
-        className={`${inputCls} min-h-28 resize-y font-mono text-xs`}
-        placeholder="…or paste the numbers here"
-        value={text}
-        onChange={e => { setText(e.target.value); setFilename(null); }}
-      />
+      {filename && (
+        <p className="text-xs text-muted-foreground mb-3">
+          Read {text.length.toLocaleString()} characters from {filename}.
+        </p>
+      )}
 
       <button
         onClick={handleRun}
