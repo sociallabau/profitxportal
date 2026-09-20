@@ -76,7 +76,7 @@ const App = () => (
           <Route path="/cash-menu" element={<ProtectedRoute><CashMenu /></ProtectedRoute>} />
           <Route path="/wins" element={<ProtectedRoute><WinsWall /></ProtectedRoute>} />
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
-          <Route path="/ask-dan" element={<ProtectedRoute><AskDan /></ProtectedRoute>} />
+          <Route path="/ask-dan" element={<AdminRoute><AskDan /></AdminRoute>} />
           <Route path="/calls" element={<ProtectedRoute><Calls /></ProtectedRoute>} />
           <Route path="/module/:moduleId" element={<ProtectedRoute><ModulePage /></ProtectedRoute>} />
           <Route path="/submissions/clients" element={<ProtectedRoute><NewClients /></ProtectedRoute>} />
