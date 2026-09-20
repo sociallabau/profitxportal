@@ -3,7 +3,9 @@ import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Plus, Trash2, ChevronRight, Mail, Phone, Compass, X } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Mail, Phone, Compass, X, BookOpen } from 'lucide-react';
+import { PLAYBOOK } from '@/data/clientJourneyPlaybook';
+import ClientJourneyPlaybook from '@/components/ClientJourneyPlaybook';
 
 interface ClientJourneyCard {
   id: string;
@@ -36,6 +38,10 @@ export default function ClientJourney() {
   const [saving, setSaving] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [playbookStage, setPlaybookStage] = useState<string | null>(null);
+  const [playbookClient, setPlaybookClient] = useState<ClientJourneyCard | null>(null);
+  const [kickoffTime, setKickoffTime] = useState('');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) fetchClients();
@@ -120,6 +126,26 @@ export default function ClientJourney() {
     setDraggedId(null);
     if (!card || card.stage === stageId) return;
     handleMoveStage(card.id, stageId);
+  };
+
+  const copyText = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(current => (current === key ? null : current)), 1500);
+    } catch {
+      toast.error('Could not copy — select the text and copy it manually');
+    }
+  };
+
+  const openPlaybook = (stageId: string, client: ClientJourneyCard | null) => {
+    setPlaybookStage(stageId);
+    setPlaybookClient(client);
+  };
+
+  const closePlaybook = () => {
+    setPlaybookStage(null);
+    setPlaybookClient(null);
   };
 
   if (authLoading || loading) return null;
@@ -253,9 +279,19 @@ export default function ClientJourney() {
                       {stage.emoji} {stage.label}
                     </span>
                   </div>
-                  <span className="text-[11px] font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full min-w-[22px] text-center">
-                    {stageClients.length}
-                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => openPlaybook(stage.id, null)}
+                      className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/60 transition-colors"
+                      title="Messages & links for this stage"
+                      aria-label={`Messages and links for ${stage.label}`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[11px] font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full min-w-[22px] text-center">
+                      {stageClients.length}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground pl-4">{stage.description}</p>
               </div>
@@ -299,6 +335,16 @@ export default function ClientJourney() {
                       )}
                     </div>
 
+                    {(PLAYBOOK[stage.id]?.messages || PLAYBOOK[stage.id]?.links || PLAYBOOK[stage.id]?.checklist) && (
+                      <button
+                        onClick={() => openPlaybook(stage.id, client)}
+                        className="flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold px-2 py-1.5 mb-1 rounded-lg text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all"
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        Messages & links
+                      </button>
+                    )}
+
                     {stageIndex < STAGES.length - 1 && (
                       <button
                         onClick={() => handleMoveStage(client.id, STAGES[stageIndex + 1].id)}
@@ -319,6 +365,25 @@ export default function ClientJourney() {
           );
         })}
       </div>
+
+      {playbookStage && (() => {
+        const stage = STAGES.find(st => st.id === playbookStage);
+        if (!stage) return null;
+        return (
+          <ClientJourneyPlaybook
+            stage={stage}
+            playbook={PLAYBOOK[playbookStage] || {}}
+            clientName={playbookClient?.name}
+            clientPhone={playbookClient?.phone}
+            kickoffTime={kickoffTime}
+            onKickoffTimeChange={setKickoffTime}
+            onClose={closePlaybook}
+            copiedKey={copiedKey}
+            onCopy={copyText}
+            inputCls={inputCls}
+          />
+        );
+      })()}
 
       {clients.length === 0 && (
         <div className="text-center py-12">
