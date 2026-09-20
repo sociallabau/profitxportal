@@ -52,22 +52,31 @@ The answer field is what the client reads, so it must stand alone and sound like
 async function callModel(prompt: string, system: string): Promise<string> {
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (anthropicKey) {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 2000,
-        system,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
-    return (await res.json()).content?.[0]?.text ?? "";
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-5",
+          max_tokens: 2000,
+          system,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+      const text = (await res.json()).content?.[0]?.text ?? "";
+      if (!text) throw new Error("Claude returned no content");
+      return text;
+    } catch (err) {
+      // Keep working if Claude is unreachable or out of credit, rather
+      // than taking the whole feature down with it.
+      if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
+      console.error("Claude call failed, falling back to the gateway:", err);
+    }
   }
 
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");

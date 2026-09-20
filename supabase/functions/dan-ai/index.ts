@@ -241,15 +241,26 @@ Deno.serve(async (req) => {
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
 
-    let answer: string;
-    let model: string;
+    let answer = "";
+    let model = "";
+
     if (anthropicKey) {
-      answer = await callAnthropic(anthropicKey, prompt);
-      model = "claude-sonnet-5";
-    } else if (lovableKey) {
+      try {
+        answer = await callAnthropic(anthropicKey, prompt);
+        model = "claude-sonnet-5";
+      } catch (err) {
+        // Fall back rather than taking the tool down with Claude.
+        if (!lovableKey) throw err;
+        console.error("Claude call failed, falling back to the gateway:", err);
+      }
+    }
+
+    if (!answer && lovableKey) {
       answer = await callLovable(lovableKey, prompt);
       model = "gemini-2.5-pro";
-    } else {
+    }
+
+    if (!answer) {
       return json({ error: "No AI key configured" }, 500);
     }
 
