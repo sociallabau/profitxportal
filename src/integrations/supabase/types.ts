@@ -476,7 +476,7 @@ export type Database = {
         Relationships: []
       }
       transcription_jobs: {
-        Row: { created_at: string; doc_id: string | null; drive_file_id: string; error: string | null; id: string; mime_type: string | null; provider: string | null; provider_job_id: string | null; size_bytes: number | null; status: string; title: string; updated_at: string }
+        Row: { access_token: string | null; completed_at: string | null; created_at: string; doc_id: string | null; drive_file_id: string; error: string | null; id: string; mime_type: string | null; provider: string | null; provider_job_id: string | null; size_bytes: number | null; status: string; submitted_at: string | null; title: string; transcript_chars: number | null; updated_at: string }
         Insert: { created_at?: string; doc_id?: string | null; drive_file_id: string; error?: string | null; id?: string; mime_type?: string | null; provider?: string | null; provider_job_id?: string | null; size_bytes?: number | null; status?: string; title: string; updated_at?: string }
         Update: { created_at?: string; doc_id?: string | null; drive_file_id?: string; error?: string | null; id?: string; mime_type?: string | null; provider?: string | null; provider_job_id?: string | null; size_bytes?: number | null; status?: string; title?: string; updated_at?: string }
         Relationships: []

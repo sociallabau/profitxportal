@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
   Sparkles, Copy, Check, Trash2, Upload, BookmarkPlus, Loader2, FileText, MessageSquare,
-  RefreshCw, Clapperboard,
+  RefreshCw, Clapperboard, Wand2,
 } from 'lucide-react';
 
 interface KnowledgeDoc {
@@ -84,6 +84,7 @@ export default function DanAI() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [jobs, setJobs] = useState<TranscriptionJob[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -136,6 +137,28 @@ export default function DanAI() {
     );
     if (data?.errors?.length) console.warn('drive-sync issues', data.errors);
     loadDocs();
+    loadJobs();
+  };
+
+  const handleTranscribe = async () => {
+    setTranscribing(true);
+    const { data, error } = await supabase.functions.invoke('transcribe', {
+      body: { limit: 5 },
+    });
+    setTranscribing(false);
+
+    if (error || data?.error) {
+      toast.error(data?.error ?? 'Could not start transcribing');
+      console.error(error ?? data?.error);
+      return;
+    }
+    const { submitted = 0 } = data ?? {};
+    toast.success(
+      submitted
+        ? `Transcribing ${submitted} recording${submitted === 1 ? '' : 's'} — they'll appear as they finish`
+        : 'Nothing waiting to transcribe',
+    );
+    if (data?.errors?.length) console.warn('transcribe issues', data.errors);
     loadJobs();
   };
 
@@ -471,9 +494,21 @@ export default function DanAI() {
 
           {jobs.length > 0 && (
             <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Videos waiting to be transcribed ({jobs.filter(j => j.status === 'pending').length})
-              </h3>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Recordings ({jobs.filter(j => j.status === 'pending').length} waiting)
+                </h3>
+                {jobs.some(j => j.status === 'pending' || j.status === 'failed') && (
+                  <button
+                    onClick={handleTranscribe}
+                    disabled={transcribing}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all disabled:opacity-50"
+                  >
+                    {transcribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                    {transcribing ? 'Starting…' : 'Transcribe next 5'}
+                  </button>
+                )}
+              </div>
               <div className="space-y-2">
                 {jobs.slice(0, 10).map(job => (
                   <div key={job.id} className="flex items-center gap-3 border border-border rounded-xl px-3 py-2.5">

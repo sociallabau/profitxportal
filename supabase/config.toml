@@ -1,1 +1,8 @@
 project_id = "yzpjoxtqpqyzgsptplzr"
+# Called by Deepgram, which cannot present a Supabase JWT. Both verify their
+# own one-time token instead.
+[functions.transcript-media]
+verify_jwt = false
+
+[functions.transcribe-callback]
+verify_jwt = false
