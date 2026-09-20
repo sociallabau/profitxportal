@@ -256,6 +256,36 @@ export type Database = {
         }
         Relationships: []
       }
+      client_questions: {
+        Row: {
+          answer: string | null
+          created_at: string
+          id: string
+          next_steps: Json | null
+          question: string
+          resource: string | null
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          next_steps?: Json | null
+          question: string
+          resource?: string | null
+          user_id?: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          next_steps?: Json | null
+          question?: string
+          resource?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       content_posts: {
         Row: {
           category: string | null
@@ -385,6 +415,39 @@ export type Database = {
           last_result?: string | null
           last_synced_at?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      financial_audits: {
+        Row: {
+          audit: string | null
+          created_at: string
+          filename: string | null
+          id: string
+          kind: string
+          period: string | null
+          source_text: string | null
+          user_id: string
+        }
+        Insert: {
+          audit?: string | null
+          created_at?: string
+          filename?: string | null
+          id?: string
+          kind?: string
+          period?: string | null
+          source_text?: string | null
+          user_id?: string
+        }
+        Update: {
+          audit?: string | null
+          created_at?: string
+          filename?: string | null
+          id?: string
+          kind?: string
+          period?: string | null
+          source_text?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -636,6 +699,10 @@ export type Database = {
           calls_showed: number | null
           content_posts: number | null
           created_at: string | null
+          expense_contractors: number | null
+          expense_other: number | null
+          expense_owner_pay: number | null
+          expense_software: number | null
           expenses: number | null
           id: string
           leads_generated: number | null
@@ -661,6 +728,10 @@ export type Database = {
           calls_showed?: number | null
           content_posts?: number | null
           created_at?: string | null
+          expense_contractors?: number | null
+          expense_other?: number | null
+          expense_owner_pay?: number | null
+          expense_software?: number | null
           expenses?: number | null
           id?: string
           leads_generated?: number | null
@@ -686,6 +757,10 @@ export type Database = {
           calls_showed?: number | null
           content_posts?: number | null
           created_at?: string | null
+          expense_contractors?: number | null
+          expense_other?: number | null
+          expense_owner_pay?: number | null
+          expense_software?: number | null
           expenses?: number | null
           id?: string
           leads_generated?: number | null
@@ -1082,6 +1157,33 @@ export type Database = {
           },
         ]
       }
+      voice_profile: {
+        Row: {
+          built_from: number
+          content: string
+          id: string
+          slug: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          built_from?: number
+          content: string
+          id?: string
+          slug?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          built_from?: number
+          content?: string
+          id?: string
+          slug?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       weekly_wins: {
         Row: {
           cash_amount: number | null
@@ -1169,6 +1271,17 @@ export type Database = {
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       search_knowledge: {
+        Args: { limit_n?: number; q: string }
+        Returns: {
+          chunk_id: string
+          content: string
+          doc_id: string
+          rank: number
+          source_type: string
+          title: string
+        }[]
+      }
+      search_knowledge_public: {
         Args: { limit_n?: number; q: string }
         Returns: {
           chunk_id: string
