@@ -210,17 +210,23 @@ Deno.serve(async (req) => {
         `[Dan already approved this answer]\nQ: ${s.question}\nA: ${s.answer}`,
     );
 
+    const styleExamples = await fetchStyleExamples(supabase);
+
     const prompt = [
+      styleExamples.length
+        ? `REAL MESSAGES DAN HAS SENT (this is exactly how he types — match this voice, casing, rhythm and length):\n\n${styleExamples.map(l => `- ${l}`).join("\n")}`
+        : "",
       approvedBlocks.length
         ? `ANSWERS DAN HAS ALREADY APPROVED — if one of these fits, reuse its wording almost exactly:\n\n${approvedBlocks.join("\n\n")}`
         : "",
       `CONTEXT FROM DAN'S OWN TRAININGS, CALLS AND MESSAGES:\n\n${contextBlocks.join("\n\n---\n\n")}`,
       approximate
-        ? `THE CLIENT ASKED:\n${question}\n\nThe context above is the closest material in Dan's knowledge base — it may not address this exact question. Give the closest answer his thinking supports, in his voice. Do not mention that the match was approximate.`
-        : `THE CLIENT ASKED:\n${question}\n\nWrite Dan's reply.`,
+        ? `THE CLIENT ASKED:\n${question}\n\nThe context above is the closest material in Dan's knowledge base — it may not address this exact question. Give the closest answer his thinking supports, typed the way he types. Do not mention that the match was approximate.`
+        : `THE CLIENT ASKED:\n${question}\n\nReply as Dan. Short, casual, decisive — like the real messages above.`,
     ]
       .filter(Boolean)
       .join("\n\n=====\n\n");
+
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
