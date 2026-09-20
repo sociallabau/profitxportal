@@ -17,7 +17,6 @@ export const CIRCLE_URLS = {
 
 const mainNavItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
-  { label: 'Ask Dan', path: '/ask-dan', icon: MessagesSquare },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Financials', path: '/financials', icon: Wallet },
@@ -34,6 +33,7 @@ const toolItems = [
 ];
 
 const adminItems = [
+  { label: 'Ask Dan', path: '/ask-dan', icon: MessagesSquare },
   { label: 'Client Health', path: '/client-health', icon: HeartPulse },
   { label: 'Client Journey', path: '/client-journey', icon: Compass },
   { label: 'Dan AI', path: '/dan-ai', icon: Sparkle },
