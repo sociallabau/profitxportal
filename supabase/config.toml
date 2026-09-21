@@ -11,3 +11,7 @@ verify_jwt = false
 # public Instagram CDN hosts in code instead.
 [functions.proxy-image]
 verify_jwt = false
+
+# Public calendar feed, read by the portal on load. No user data involved.
+[functions.calendar-feed]
+verify_jwt = false

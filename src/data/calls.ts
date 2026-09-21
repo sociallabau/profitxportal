@@ -234,3 +234,26 @@ export function getUpcomingCalls(limit?: number): Call[] {
   );
   return limit ? upcoming.slice(0, limit) : upcoming;
 }
+
+
+/**
+ * Matches a calendar event title to the artwork we already have.
+ *
+ * The live feed only knows titles, so this is what keeps a synced call looking
+ * the same as a hand-listed one. Anything unrecognised falls back to the
+ * momentum call artwork rather than showing nothing.
+ */
+export function thumbnailFor(title: string): string {
+  const t = title.toLowerCase();
+  if (t.includes('smooth operator')) return smoothOperatorThumb;
+  if (t.includes('hot seat')) return hotSeatElijahThumb;
+  if (t.includes('pay to play')) return payToPlayThumb;
+  if (t.includes('paid ad powerup')) return paidAdPowerupThumb;
+  if (t.includes('organic content') || t.includes('snowball')) return organicContentSnowballThumb;
+  if (t.includes('next 90') || t.includes('edit flow')) return next90Thumb;
+  if (t.includes('delivery magic')) return deliveryMagicThumb;
+  if (t.includes('the system')) return theSystemThumb;
+  if (t.includes('ad metrics') || t.includes('tracking 101')) return adMetricsThumb;
+  if (t.includes('christmas')) return christmasThumb;
+  return momentumCallThumb;
+}

@@ -10,6 +10,7 @@ import { usePageTracking } from '@/hooks/usePageTracking';
 import { supabase } from '@/lib/supabase';
 import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
+import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
@@ -224,8 +225,9 @@ export default function Dashboard() {
 
   const cycle = currentCycle();
   const PhaseIcon = PHASE_META[cycle.phase].icon;
-  const upcomingCalls = getUpcomingCalls(2);
-  const threeWeekCalls = getUpcomingCalls();
+  const { calls: allUpcoming } = useUpcomingCalls();
+  const upcomingCalls = allUpcoming.slice(0, 2);
+  const threeWeekCalls = allUpcoming;
 
   const { data: wins = [] } = useQuery({
     queryKey: ['dashboard-wins', user?.id],

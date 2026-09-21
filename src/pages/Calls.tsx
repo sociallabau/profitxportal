@@ -1,7 +1,8 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
-import { ALL_CALLS, brisbaneDateKey, type Call } from '@/data/calls';
+import { brisbaneDateKey, type Call } from '@/data/calls';
+import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 
 const categoryStyles: Record<Call['category'], string> = {
   Workshop: 'bg-warning/15 text-warning border-warning/30',
@@ -52,9 +53,7 @@ function googleCalendarUrl(call: Call) {
 
 export default function Calls() {
   const todayBrisbane = brisbaneDateKey();
-  const upcoming = [...ALL_CALLS]
-    .filter((c) => c.start.slice(0, 10) >= todayBrisbane)
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  const { calls: upcoming } = useUpcomingCalls();
 
   return (
     <PageLayout>
