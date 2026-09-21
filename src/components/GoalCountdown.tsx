@@ -9,7 +9,7 @@ interface Props {
 export default function GoalCountdown({ currentMrr }: Props) {
   const { goal } = useGoal();
   const navigate = useNavigate();
-  const goalData = goal.data as any;
+  const goalData = goal.data;
 
   const retainerTiers = [
     goalData?.retainer_tier_1,

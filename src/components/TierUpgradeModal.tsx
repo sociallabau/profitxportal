@@ -58,7 +58,7 @@ export default function TierUpgradeModal({ userId, newTier, onClose }: Props) {
 
   const handleClose = async () => {
     setSaving(true);
-    await supabase.from('profiles').update({ tier_seen: newTier } as any).eq('id', userId);
+    await supabase.from('profiles').update({ tier_seen: newTier }).eq('id', userId);
     qc.invalidateQueries({ queryKey: ['profile', userId] });
     setSaving(false);
     onClose();

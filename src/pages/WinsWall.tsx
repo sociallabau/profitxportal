@@ -124,7 +124,7 @@ export default function WinsWall() {
           </div>
         ) : (
           <div className="space-y-3">
-            {submissions.map((sub: any) => {
+            {submissions.map(sub => {
               const name = sub.profiles?.full_name ?? 'Anonymous';
               const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 

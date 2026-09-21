@@ -47,7 +47,7 @@ export function useGoal() {
         throw new Error('Could not verify your session. Please refresh the page and try again.');
       }
       const { error } = await supabase.from('goals').upsert(
-        { user_id: uid, ...values } as any,
+        { user_id: uid, ...values },
         { onConflict: 'user_id' }
       );
       if (error) {

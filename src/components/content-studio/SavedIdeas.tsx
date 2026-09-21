@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { Bookmark, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Row } from '@/lib/db';
 
 export default function SavedIdeas() {
   const { user } = useRequireAuth();
@@ -48,7 +49,7 @@ export default function SavedIdeas() {
     <div>
       <p className="text-sm text-muted-foreground mb-4">Your personal swipe file of content inspiration.</p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {ideas.map((idea: any) => (
+        {ideas.map((idea: Row<'saved_ideas'>) => (
           <div key={idea.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-foreground">@{idea.source_handle || 'unknown'}</span>

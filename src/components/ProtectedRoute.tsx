@@ -23,7 +23,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       if (cancelled) return;
       // Admins skip onboarding gate
       if (profile?.is_admin) { setStatus('ready'); return; }
-      if ((profile as any)?.access_revoked) { setStatus('revoked'); return; }
+      if (profile?.access_revoked) { setStatus('revoked'); return; }
       setStatus(profile?.onboarded ? 'ready' : 'needs-onboarding');
     })();
     return () => { cancelled = true; };

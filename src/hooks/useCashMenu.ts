@@ -10,7 +10,7 @@ export function useCashMenu() {
       const { data } = await supabase
         .from('cash_menu_actions')
         .select('action_key');
-      return (data ?? []).map((r: any) => r.action_key as string);
+      return (data ?? []).map(row => row.action_key);
     },
   });
 
