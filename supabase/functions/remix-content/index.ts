@@ -54,7 +54,10 @@ async function transcribeVideo(videoUrl: string): Promise<string | null> {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
+        // Stays on Gemini deliberately — this call sends video, which Claude
+        // cannot read. Every text call in this file goes through callAI.
         model: "google/gemini-2.5-pro",
+        max_tokens: 1500,
         messages: [
           {
             role: "system",
@@ -89,6 +92,69 @@ async function transcribeVideo(videoUrl: string): Promise<string | null> {
     console.log("Transcription exception:", e?.message)
     return null
   }
+}
+
+/**
+ * Claude first, gateway as the safety net.
+ *
+ * Every AI call in the portal routes to Claude when ANTHROPIC_API_KEY is set,
+ * and drops to the Lovable gateway if Claude is unreachable or out of credit,
+ * so a billing problem degrades quality rather than taking the feature down.
+ */
+async function callAI(system: string, user: string, maxTokens = 1500): Promise<string> {
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+
+  if (anthropicKey) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-5",
+          max_tokens: maxTokens,
+          system,
+          messages: [{ role: "user", content: user }],
+        }),
+      });
+      if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+      const text = (await res.json()).content?.[0]?.text ?? "";
+      if (!text) throw new Error("Claude returned no content");
+      return text;
+    } catch (err) {
+      if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
+      console.error("Claude call failed, falling back to the gateway:", err);
+    }
+  }
+
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      max_tokens: maxTokens,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text) {
+    throw new Error(
+      `Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`,
+    );
+  }
+  return text;
 }
 
 Deno.serve(async (req) => {
@@ -200,50 +266,22 @@ Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write
 
     const userMessage = `${sourceBlock}\n\nPost URL: ${postUrl}\n\nRemix this into a ${chosenFormat === "carousel" ? "carousel" : "reel"} for my business following the framework exactly.`
 
-    const aiResponse = await fetch(`https://ai.gateway.lovable.dev/v1/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 1200,
-      }),
-    })
-
-    if (!aiResponse.ok) {
-      const err = await aiResponse.text()
-      console.error("AI error:", aiResponse.status, err)
+    let remix = ""
+    try {
+      remix = await callAI(systemPrompt, userMessage, 1200)
+    } catch (err) {
+      console.error("AI error:", err)
       return new Response(
         JSON.stringify({ error: "AI request failed. Try again later." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
 
-    const aiData = await aiResponse.json()
-    const remix = aiData.choices?.[0]?.message?.content || ""
-
     // Generate a short summary of what the source video was actually about
     let transcriptSummary: string | null = null
     if (transcript) {
       try {
-        const sumRes = await fetch(`https://ai.gateway.lovable.dev/v1/chat/completions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash-lite",
-            messages: [
-              {
-                role: "system",
-                content: `You summarise short-form videos for a business owner who wants to remix them. Output STRICT markdown with these sections and nothing else:
+        transcriptSummary = await callAI(`You summarise short-form videos for a business owner who wants to remix them. Output STRICT markdown with these sections and nothing else:
 
 **What the video is about:** 1 sentence.
 
@@ -256,20 +294,7 @@ Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write
 
 **How it maps to your business:** 1 sentence connecting the idea to: ${businessOverview}.
 
-Keep it tight. No fluff, no preamble.`,
-              },
-              {
-                role: "user",
-                content: `Transcript:\n"""\n${transcript}\n"""\n\nOriginal caption: "${postCaption || "(none)"}"`,
-              },
-            ],
-            max_tokens: 400,
-          }),
-        })
-        if (sumRes.ok) {
-          const sumData = await sumRes.json()
-          transcriptSummary = sumData.choices?.[0]?.message?.content || null
-        }
+Keep it tight. No fluff, no preamble.`, `Transcript:\n"""\n${transcript}\n"""\n\nOriginal caption: "${postCaption || "(none)"}"`, 400)
       } catch (e: any) {
         console.log("Summary generation failed:", e?.message)
       }

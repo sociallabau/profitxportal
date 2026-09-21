@@ -60,6 +60,67 @@ Prospect just replied:
 
 Generate 3 distinct next-message options I could send. Vary the angle (e.g. one curious, one value-led, one direct). Each should sound like a real human typing on their phone.`;
 
+    // Claude first. It uses a tool call for the same structured output the
+    // gateway path produces, so the response shape is identical either way.
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (anthropicKey) {
+      try {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": anthropicKey,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-5",
+            max_tokens: 1200,
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+            tools: [{
+              name: "suggest_replies",
+              description: "Return 3 candidate DM replies",
+              input_schema: {
+                type: "object",
+                properties: {
+                  suggestions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        angle: { type: "string", description: "1-3 word label e.g. 'Curious'" },
+                        message: { type: "string" },
+                      },
+                      required: ["angle", "message"],
+                    },
+                  },
+                },
+                required: ["suggestions"],
+              },
+            }],
+            tool_choice: { type: "tool", name: "suggest_replies" },
+          }),
+        });
+
+        if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+
+        const data = await res.json();
+        const toolUse = data.content?.find((block: { type: string }) => block.type === "tool_use");
+        const suggestions = toolUse?.input?.suggestions;
+        if (!Array.isArray(suggestions) || suggestions.length === 0) {
+          throw new Error("Claude returned no suggestions");
+        }
+
+        return new Response(JSON.stringify({ suggestions }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        // Fall through to the gateway rather than failing the request.
+        if (!LOVABLE_API_KEY) throw err;
+        console.error("Claude call failed, falling back to the gateway:", err);
+      }
+    }
+
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {

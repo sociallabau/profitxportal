@@ -61,6 +61,70 @@ function buildPartPrompt(part: "all" | "reel" | "carousel" | "email") {
   );
 }
 
+
+/**
+ * Claude first, gateway as the safety net.
+ *
+ * Every AI call in the portal routes to Claude when ANTHROPIC_API_KEY is set,
+ * and drops to the Lovable gateway if Claude is unreachable or out of credit,
+ * so a billing problem degrades quality rather than taking the feature down.
+ */
+async function callAI(system: string, user: string, maxTokens = 1500): Promise<string> {
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+
+  if (anthropicKey) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-5",
+          max_tokens: maxTokens,
+          system,
+          messages: [{ role: "user", content: user }],
+        }),
+      });
+      if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+      const text = (await res.json()).content?.[0]?.text ?? "";
+      if (!text) throw new Error("Claude returned no content");
+      return text;
+    } catch (err) {
+      if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
+      console.error("Claude call failed, falling back to the gateway:", err);
+    }
+  }
+
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      max_tokens: maxTokens,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text) {
+    throw new Error(
+      `Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`,
+    );
+  }
+  return text;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -107,32 +171,16 @@ ${answer}
 
 Generate ${which === "all" ? "the reel framework, carousel, and email" : `only the ${which}`} now.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: buildPartPrompt(which) },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 1500,
-      }),
-    });
-
-    if (!aiRes.ok) {
-      const err = await aiRes.text();
-      return new Response(JSON.stringify({ error: `AI error: ${err}` }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let text: string;
+    try {
+      text = await callAI(buildPartPrompt(which), userMessage, 1500);
+    } catch (err) {
+      console.error("generate-content AI error", err);
+      return new Response(
+        JSON.stringify({ error: err instanceof Error ? err.message : "AI error" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
-
-    const aiData = await aiRes.json();
-    const text = aiData.choices?.[0]?.message?.content || "";
 
     // Parse sections
     const parsed: { reel?: string; carousel?: string; emailSubject?: string; emailBody?: string } = {};
