@@ -54,9 +54,14 @@ function getMarginBand(netMargin: number): 'green' | 'amber' | 'red' {
 }
 
 /**
- * Scoring built around the four numbers Dan actually judges a business on:
- * revenue, leads, cost to acquire a client, and conversion. Margin and content
- * still count, but as supporting detail rather than the headline.
+ * Scoring built around the numbers Dan judges a business on: revenue, net
+ * margin, leads, cost to acquire a client, and conversion. Margin carries the
+ * most weight of any single component — a business that turns over plenty and
+ * keeps none of it is not a healthy business.
+ *
+ * Lead scoring is deliberately not tied to a fixed weekly target. What matters
+ * is that leads arrive consistently; the right number depends entirely on
+ * their stage and price point.
  *
  * The old scoring banded purely on margin, so the score itself never moved a
  * client between red, amber and green. Here the band comes from the score.
@@ -71,18 +76,18 @@ function calcHealthScoreV2(client: any) {
   const clientValue = Number(client.last_new_clients_value || 0);
   const content    = Number(client.last_content_posts || 0);
 
-  // Revenue (max 25)
+  // Revenue (max 20)
   let revenueScore = 0;
-  if (revenue >= 30000) revenueScore = 25;
-  else if (revenue >= 15000) revenueScore = 18;
-  else if (revenue >= 5000) revenueScore = 12;
-  else if (revenue > 0) revenueScore = 6;
+  if (revenue >= 30000) revenueScore = 20;
+  else if (revenue >= 15000) revenueScore = 15;
+  else if (revenue >= 5000) revenueScore = 10;
+  else if (revenue > 0) revenueScore = 5;
 
-  // Leads (max 20) — 10 a week is the target, so 40 a month is full marks
+  // Leads (max 15) — is anything coming in the top, at any scale
   let leadsScore = 0;
-  if (leads >= 40) leadsScore = 20;
-  else if (leads >= 20) leadsScore = 14;
-  else if (leads >= 10) leadsScore = 9;
+  if (leads >= 20) leadsScore = 15;
+  else if (leads >= 10) leadsScore = 12;
+  else if (leads >= 5) leadsScore = 8;
   else if (leads >= 1) leadsScore = 4;
 
   // Conversion, leads to signed clients (max 15)
@@ -106,12 +111,12 @@ function calcHealthScoreV2(client: any) {
   } else if (adSpend > 0 && newClients === 0) cacScore = 0;    // spending, winning nobody
   else if (newClients > 0) cacScore = 8;                       // won clients, value unknown
 
-  // Margin (max 15)
+  // Margin (max 25) — the heaviest single component. Profit is the point.
   let marginScore = 0;
-  if (netMargin >= TARGET_MARGIN) marginScore = 15;
-  else if (netMargin >= MIN_MARGIN) marginScore = 10;
-  else if (netMargin >= 10) marginScore = 5;
-  else if (netMargin >= 0) marginScore = 2;
+  if (netMargin >= TARGET_MARGIN) marginScore = 25;
+  else if (netMargin >= MIN_MARGIN) marginScore = 18;
+  else if (netMargin >= 10) marginScore = 9;
+  else if (netMargin >= 0) marginScore = 3;
 
   // Content, the leading indicator for leads (max 10)
   let contentScore = 0;
@@ -428,7 +433,7 @@ export default function ClientHealth() {
             <p className="text-xs text-muted-foreground max-w-xl">
               {scoringMode === 'current'
                 ? 'Current: bands come from net margin alone — the score underneath never moves anyone between colours.'
-                : 'New: revenue, leads, cost to acquire and conversion decide the score, and the score sets the band. Margin and content still count, as supporting detail.'}
+                : 'New: net margin carries the most weight, with revenue, leads, cost to acquire and conversion alongside it — and the score sets the band rather than margin alone.'}
             </p>
           </div>
           <div className="flex gap-1 shrink-0">

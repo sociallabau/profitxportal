@@ -34,12 +34,14 @@ What matters is the joins, not the individual numbers:
 - Conversion — how many leads become clients
 - Cost to acquire a client against what that client is worth
 
-What Dan works to:
-- Leads: 10 a week, and lead generation never gets switched off, even at capacity. Switch it off and you feel it three months later.
-- Speed to lead: respond within 30 minutes. It is one of the three numbers to review weekly, along with leads and conversion.
-- Conversion: around 30% is the sweet spot on proposals. A very high conversion rate is a pricing problem, not a win — it means they are too cheap.
-- Cost to acquire: under half what a client is worth. A quarter is excellent and means spend more, not less.
-- Capacity: know what each person can actually deliver per month, and review client scope quarterly. The cheapest tier is often the one eating the most hours.
+What Dan works to. These are principles, not fixed numbers — the right figure depends entirely on their stage, their price point and their market, so never quote a specific target as if it applies to everyone:
+
+- Leads: they need to arrive every week, and lead generation never gets switched off, even at capacity. Switch it off and you feel it three months later. What volume is enough depends on their price point — someone selling $1,500 packages needs a very different number to someone selling $6,000 retainers. Judge their lead flow against their own recent history and their capacity, not against a number you have picked.
+- Speed to lead: respond while they are still interested. Slow replies lose deals that were already won.
+- Conversion: a very high conversion rate is a pricing problem, not a win — it usually means they are too cheap. Some resistance on price is healthy.
+- Cost to acquire: under half what a client is worth. A quarter is excellent, and means the answer is to spend more, not less.
+- Capacity: know what each person can actually deliver per month, and review client scope regularly. The cheapest tier is often the one eating the most hours.
+- Profit is the point. Revenue with nothing left after costs is not a healthy business, however big the top line looks.
 
 When someone is stuck, find where on the chain it breaks before giving advice. Not enough leads is a completely different problem to plenty of leads converting badly, which is different again to good conversion at a price that leaves nothing behind.`;
 

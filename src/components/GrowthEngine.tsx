@@ -36,8 +36,18 @@ function revenueOf(row: MonthRow) {
     || (Number(row.mrr_manual || row.mrr || 0) + Number(row.oneoff_revenue || 0));
 }
 
-/** Benchmarks Dan works to. 10 leads a week is the target, so 40 a month. */
-const LEAD_TARGET_MONTHLY = 40;
+/**
+ * Leads are judged against the business's own recent history rather than a
+ * fixed target. What the right number is depends entirely on stage and price
+ * point — someone starting out and someone at $30k a month need completely
+ * different volumes. What matters is that leads keep arriving, and that the
+ * trend is not falling.
+ */
+function leadBaseline(rows: MonthRow[]): number | null {
+  const history = rows.slice(1).map(r => Number(r.leads_generated || 0)).filter(n => n > 0);
+  if (history.length === 0) return null;
+  return history.reduce((sum, n) => sum + n, 0) / history.length;
+}
 
 type Verdict = 'good' | 'watch' | 'bad' | 'none';
 
@@ -115,8 +125,13 @@ export default function GrowthEngine() {
 
   const cacRatio = cac !== null && valuePerClient ? cac / valuePerClient : null;
 
+  const baseline = leadBaseline(rows);
   const leadVerdict: Verdict =
-    leads === 0 ? 'bad' : leads >= LEAD_TARGET_MONTHLY ? 'good' : leads >= LEAD_TARGET_MONTHLY / 2 ? 'watch' : 'bad';
+    leads === 0 ? 'bad'
+    : baseline === null ? 'none'
+    : leads >= baseline * 1.1 ? 'good'
+    : leads >= baseline * 0.8 ? 'watch'
+    : 'bad';
   const conversionVerdict: Verdict =
     conversion === null ? 'none' : conversion >= 20 ? 'good' : conversion >= 10 ? 'watch' : 'bad';
   const cacVerdict: Verdict =
@@ -130,8 +145,10 @@ export default function GrowthEngine() {
     headline = `Each client costs ${money(cac!)} to win and is worth ${money(valuePerClient!)}. That's under half, which means the honest answer is to spend more on ads, not less.`;
   } else if (cacRatio !== null && cacRatio > 1) {
     headline = `Each client costs ${money(cac!)} to win but is only worth ${money(valuePerClient!)}. You're paying more than they bring in — fix that before spending another dollar.`;
-  } else if (leads < LEAD_TARGET_MONTHLY) {
-    headline = `${leads} leads this month against a target of ${LEAD_TARGET_MONTHLY}. Everything downstream is capped by what comes in the top.`;
+  } else if (leads === 0) {
+    headline = "No leads logged this month. Everything downstream is capped by what comes in the top, so that's the only thing worth working on.";
+  } else if (baseline !== null && leads < baseline * 0.8) {
+    headline = `${leads} leads this month against your usual ${Math.round(baseline)}. Leads are falling, and everything downstream follows it three months later.`;
   } else {
     headline = `${leads} leads, ${clients} closed, ${money(revenue)} in. Conversion is the lever worth pulling next.`;
   }
@@ -162,7 +179,9 @@ export default function GrowthEngine() {
           label="Leads"
           value={String(leads)}
           verdict={leadVerdict}
-          sub={`Target ${LEAD_TARGET_MONTHLY} a month — 10 a week`}
+          sub={baseline !== null
+            ? `Your recent average is ${Math.round(baseline)} a month`
+            : 'Keep them coming in every week'}
         />
         <Stat
           label="Cost per lead"
