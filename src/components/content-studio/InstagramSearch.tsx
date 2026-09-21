@@ -37,7 +37,7 @@ const getOutlierBadge = (score: number) => {
 };
 
 const proxyImage = (url: string): string => {
-  if (!url) return '/placeholder.svg';
+  if (!url) return '';
   const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-image`;
   return `${base}?url=${encodeURIComponent(url)}`;
 };
@@ -48,6 +48,9 @@ export default function InstagramSearch() {
   const mode = 'handle' as const;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<InstagramPost[]>([]);
+  // Thumbnails that failed to load, so the card shows an honest empty state
+  // rather than swapping in a placeholder image that looks like a broken app.
+  const [failedThumbs, setFailedThumbs] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +109,7 @@ export default function InstagramSearch() {
       let serverError: string | null = null;
       if (fnError) {
         try {
-          const ctx = (fnError as any).context;
+          const ctx = (fnError as { context?: Response }).context;
           if (ctx && typeof ctx.json === 'function') {
             const body = await ctx.json();
             serverError = body?.error || null;
@@ -142,7 +145,7 @@ export default function InstagramSearch() {
       if (posts.length === 0) {
         setError(`No public posts found for @${handle}. Try a different handle.`);
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(`We couldn't find @${handle} on Instagram. Double-check the handle and try again.`);
     } finally {
       if (searchTimer.current) {
@@ -200,7 +203,7 @@ export default function InstagramSearch() {
       setRemixProgress(100);
       setRemixStage('Done');
       toast.success(data?.transcribed ? 'Remix ready — transcribed from video' : 'Remix ready');
-    } catch (err: any) {
+    } catch (err) {
       setRemixErrors(prev => ({ ...prev, [post.id]: err.message || 'Something went wrong.' }));
       toast.error('Remix failed');
     } finally {
@@ -298,15 +301,18 @@ export default function InstagramSearch() {
             <div key={post.id} className="bg-card border border-border rounded-xl overflow-hidden flex flex-col">
               {/* Thumbnail */}
               <a href={post.postUrl} target="_blank" rel="noopener noreferrer" className="relative block aspect-video bg-muted group">
-                {post.thumbnail ? (
+                {post.thumbnail && !failedThumbs.has(post.id) ? (
                   <img
                     src={proxyImage(post.thumbnail)}
                     alt={post.caption?.substring(0, 50)}
+                    loading="lazy"
                     className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
+                    onError={() => setFailedThumbs(prev => new Set(prev).add(post.id))}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">No thumbnail</div>
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                    No thumbnail
+                  </div>
                 )}
                 <div className="absolute inset-0 bg-background/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <ExternalLink className="w-6 h-6 text-foreground" />

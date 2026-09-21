@@ -6,3 +6,8 @@ verify_jwt = false
 
 [functions.transcribe-callback]
 verify_jwt = false
+
+# Called as the src of an <img>, which cannot present a JWT. Restricted to
+# public Instagram CDN hosts in code instead.
+[functions.proxy-image]
+verify_jwt = false

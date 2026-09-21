@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -16,25 +14,14 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Require authenticated caller
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-  }
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    const token = authHeader.replace('Bearer ', '');
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) {
-      return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-    }
-  } catch {
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-  }
+  // Deliberately unauthenticated. This is only ever called as the src of an
+  // <img>, and a browser cannot attach an Authorization header to an image
+  // request — requiring one meant every thumbnail was rejected before it
+  // reached this code.
+  //
+  // What keeps it safe is the host allowlist below: it will only ever fetch
+  // public Instagram CDN images over https, so there is nothing private to
+  // reach through it.
 
   const url = new URL(req.url);
   const imageUrl = url.searchParams.get('url');

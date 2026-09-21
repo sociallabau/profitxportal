@@ -624,6 +624,12 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_reviews: {
+        Row: { admin_breakdown: string; client_summary: string; created_at: string; focus: string | null; id: string; month: string; user_id: string }
+        Insert: { admin_breakdown: string; client_summary: string; created_at?: string; focus?: string | null; id?: string; month: string; user_id: string }
+        Update: { admin_breakdown?: string; client_summary?: string; created_at?: string; focus?: string | null; id?: string; month?: string; user_id?: string }
+        Relationships: []
+      }
       module_pages: {
         Row: {
           created_at: string | null
