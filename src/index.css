@@ -156,3 +156,115 @@
   50% { opacity: 0.6; }
 }
 .traffic-dot:hover { animation: pulse-dot 1s ease-in-out infinite; }
+
+/* ---------------------------------------------------------------------------
+   Surface texture and motion.
+
+   Nothing here changes a colour, a font or a layout — it adds grain to the
+   canvas and makes things respond when you touch them. All of it sits behind
+   prefers-reduced-motion.
+--------------------------------------------------------------------------- */
+
+/* Fine grain over the canvas, so the flat tan reads as paper rather than fill. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.dark body::before {
+  opacity: 0.055;
+  mix-blend-mode: overlay;
+}
+
+/* A barely-there warm bloom so large empty areas are not perfectly flat. */
+body {
+  background-image:
+    radial-gradient(ellipse 90% 60% at 12% 0%, hsl(var(--card) / 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, hsl(var(--primary) / 0.05) 0%, transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Buttons: press response and a soft lift on hover. */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']) {
+  transition:
+    transform 140ms cubic-bezier(0.2, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.2, 0, 0.2, 1),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+button:not(:disabled):active,
+[role='button']:not([aria-disabled='true']):active {
+  transform: translateY(1px) scale(0.985);
+}
+
+/* Cards that are clickable get an actual lift, so they read as interactive. */
+a.bg-card,
+button.bg-card,
+a[class*='bg-card'],
+button[class*='bg-card'] {
+  transition:
+    transform 180ms cubic-bezier(0.2, 0, 0.2, 1),
+    box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1),
+    border-color 180ms ease;
+}
+
+a.bg-card:hover,
+button.bg-card:hover,
+a[class*='bg-card']:hover,
+button[class*='bg-card']:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -12px hsl(var(--foreground) / 0.18);
+}
+
+/* Inputs settle into focus rather than snapping. */
+input,
+textarea,
+select {
+  transition:
+    border-color 160ms ease,
+    box-shadow 200ms ease,
+    background-color 160ms ease;
+}
+
+/* Pages arrive rather than appear. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.page-enter {
+  animation: page-enter 320ms cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+/* Sidebar links shift slightly toward you on hover. */
+aside a {
+  transition: transform 160ms cubic-bezier(0.2, 0, 0.2, 1), background-color 160ms ease, color 160ms ease;
+}
+
+aside a:hover {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active,
+  [role='button']:not([aria-disabled='true']):active,
+  a.bg-card:hover,
+  button.bg-card:hover,
+  a[class*='bg-card']:hover,
+  button[class*='bg-card']:hover,
+  aside a:hover {
+    transform: none;
+  }
+
+  .page-enter { animation: none; }
+}
