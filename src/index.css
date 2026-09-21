@@ -158,44 +158,126 @@
 .traffic-dot:hover { animation: pulse-dot 1s ease-in-out infinite; }
 
 /* ---------------------------------------------------------------------------
-   Surface texture and motion.
+   Surface, depth and motion.
 
-   Nothing here changes a colour, a font or a layout — it adds grain to the
-   canvas and makes things respond when you touch them. All of it sits behind
-   prefers-reduced-motion.
+   Same palette, same Inter, same layout. What changes is how the surfaces sit:
+   cards lift off the canvas instead of being drawn on it, edges are softer,
+   and things respond when you touch them.
 --------------------------------------------------------------------------- */
 
-/* Fine grain over the canvas, so the flat tan reads as paper rather than fill. */
+:root {
+  --radius: 0.875rem;                                   /* softer corners throughout */
+  --elevation-1: 0 1px 2px hsl(var(--foreground) / 0.04), 0 1px 3px hsl(var(--foreground) / 0.03);
+  --elevation-2: 0 2px 4px hsl(var(--foreground) / 0.04), 0 12px 28px -18px hsl(var(--foreground) / 0.22);
+  --elevation-3: 0 4px 8px hsl(var(--foreground) / 0.05), 0 24px 48px -24px hsl(var(--foreground) / 0.28);
+}
+
+.dark {
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
+  --elevation-2: 0 2px 4px rgb(0 0 0 / 0.4), 0 12px 28px -18px rgb(0 0 0 / 0.7);
+  --elevation-3: 0 4px 8px rgb(0 0 0 / 0.45), 0 24px 48px -24px rgb(0 0 0 / 0.8);
+}
+
+/* Canvas: a light source top-left, warmth bottom-right, grain over the lot. */
+body {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 8% -10%, hsl(var(--card) / 0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 105% 105%, hsl(var(--primary) / 0.07) 0%, transparent 65%);
+  background-attachment: fixed;
+}
+
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.035;
+  opacity: 0.06;
   mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-.dark body::before {
-  opacity: 0.055;
-  mix-blend-mode: overlay;
+.dark body::before { opacity: 0.09; mix-blend-mode: overlay; }
+
+/* Panels lift off the canvas rather than being outlined on it. */
+[class*='bg-card'][class*='rounded-xl'],
+[class*='bg-card'][class*='rounded-2xl'],
+[class*='bg-card'][class*='rounded-lg'] {
+  box-shadow: var(--elevation-2);
+  border-color: hsl(var(--border) / 0.55);
+  backdrop-filter: saturate(1.05);
 }
 
-/* A barely-there warm bloom so large empty areas are not perfectly flat. */
-body {
-  background-image:
-    radial-gradient(ellipse 90% 60% at 12% 0%, hsl(var(--card) / 0.55) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 100%, hsl(var(--primary) / 0.05) 0%, transparent 60%);
-  background-attachment: fixed;
+/* A hairline of light along the top edge, which is what sells the depth. */
+[class*='bg-card'][class*='rounded-xl']::before,
+[class*='bg-card'][class*='rounded-2xl']::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.7), transparent);
+  pointer-events: none;
 }
 
-/* Buttons: press response and a soft lift on hover. */
+[class*='bg-card'][class*='rounded-xl'],
+[class*='bg-card'][class*='rounded-2xl'] { position: relative; }
+
+.dark [class*='bg-card'][class*='rounded-xl']::before,
+.dark [class*='bg-card'][class*='rounded-2xl']::before {
+  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.12), transparent);
+}
+
+/* Clickable panels rise further. */
+a[class*='bg-card']:hover,
+button[class*='bg-card']:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--elevation-3);
+  border-color: hsl(var(--primary) / 0.35);
+}
+
+a[class*='bg-card'],
+button[class*='bg-card'] {
+  transition:
+    transform 200ms cubic-bezier(0.2, 0, 0.2, 1),
+    box-shadow 240ms cubic-bezier(0.2, 0, 0.2, 1),
+    border-color 200ms ease;
+}
+
+/* The sidebar reads as a separate plane. */
+aside {
+  background-image: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.92) 100%);
+  box-shadow: 1px 0 0 hsl(var(--border) / 0.6), 8px 0 32px -24px hsl(var(--foreground) / 0.25);
+}
+
+aside a {
+  transition: transform 160ms cubic-bezier(0.2, 0, 0.2, 1), background-color 160ms ease, color 160ms ease, box-shadow 200ms ease;
+}
+
+aside a:hover { transform: translateX(3px); }
+
+/* The active nav item glows rather than just filling. */
+aside a[class*='bg-primary'] {
+  box-shadow: 0 4px 14px -4px hsl(var(--primary) / 0.5);
+}
+
+/* Primary buttons get a little dimension and a glow on hover. */
+button[class*='bg-primary'],
+button[class*='from-primary'] {
+  box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.45);
+}
+
+button[class*='bg-primary']:hover:not(:disabled),
+button[class*='from-primary']:hover:not(:disabled) {
+  box-shadow: 0 8px 22px -6px hsl(var(--primary) / 0.6);
+  transform: translateY(-1px);
+}
+
 button:not(:disabled),
 [role='button']:not([aria-disabled='true']) {
   transition:
     transform 140ms cubic-bezier(0.2, 0, 0.2, 1),
-    box-shadow 200ms cubic-bezier(0.2, 0, 0.2, 1),
+    box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1),
     background-color 160ms ease,
     border-color 160ms ease,
     color 160ms ease,
@@ -207,64 +289,39 @@ button:not(:disabled):active,
   transform: translateY(1px) scale(0.985);
 }
 
-/* Cards that are clickable get an actual lift, so they read as interactive. */
-a.bg-card,
-button.bg-card,
-a[class*='bg-card'],
-button[class*='bg-card'] {
-  transition:
-    transform 180ms cubic-bezier(0.2, 0, 0.2, 1),
-    box-shadow 220ms cubic-bezier(0.2, 0, 0.2, 1),
-    border-color 180ms ease;
-}
-
-a.bg-card:hover,
-button.bg-card:hover,
-a[class*='bg-card']:hover,
-button[class*='bg-card']:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px -12px hsl(var(--foreground) / 0.18);
-}
-
-/* Inputs settle into focus rather than snapping. */
+/* Inputs sit in the surface rather than on it. */
 input,
 textarea,
 select {
-  transition:
-    border-color 160ms ease,
-    box-shadow 200ms ease,
-    background-color 160ms ease;
+  box-shadow: inset 0 1px 2px hsl(var(--foreground) / 0.05);
+  transition: border-color 160ms ease, box-shadow 200ms ease, background-color 160ms ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow:
+    inset 0 1px 2px hsl(var(--foreground) / 0.04),
+    0 0 0 3px hsl(var(--primary) / 0.14);
 }
 
 /* Pages arrive rather than appear. */
 @keyframes page-enter {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
 
-.page-enter {
-  animation: page-enter 320ms cubic-bezier(0.2, 0, 0.2, 1) both;
-}
-
-/* Sidebar links shift slightly toward you on hover. */
-aside a {
-  transition: transform 160ms cubic-bezier(0.2, 0, 0.2, 1), background-color 160ms ease, color 160ms ease;
-}
-
-aside a:hover {
-  transform: translateX(2px);
-}
+.page-enter { animation: page-enter 340ms cubic-bezier(0.2, 0, 0.2, 1) both; }
 
 @media (prefers-reduced-motion: reduce) {
   button:not(:disabled):active,
   [role='button']:not([aria-disabled='true']):active,
-  a.bg-card:hover,
-  button.bg-card:hover,
   a[class*='bg-card']:hover,
   button[class*='bg-card']:hover,
+  button[class*='bg-primary']:hover:not(:disabled),
+  button[class*='from-primary']:hover:not(:disabled),
   aside a:hover {
     transform: none;
   }
-
   .page-enter { animation: none; }
 }
