@@ -624,12 +624,6 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_log: {
-        Row: { channel: string; clients_won: number; content_posts: number; created_at: string; id: string; leads: number; log_date: string; meetings: number; notes: string | null; response_minutes: number | null; spend: number; updated_at: string; user_id: string; value_won: number }
-        Insert: { channel: string; clients_won?: number; content_posts?: number; created_at?: string; id?: string; leads?: number; log_date?: string; meetings?: number; notes?: string | null; response_minutes?: number | null; spend?: number; updated_at?: string; user_id?: string; value_won?: number }
-        Update: { channel?: string; clients_won?: number; content_posts?: number; created_at?: string; id?: string; leads?: number; log_date?: string; meetings?: number; notes?: string | null; response_minutes?: number | null; spend?: number; updated_at?: string; user_id?: string; value_won?: number }
-        Relationships: []
-      }
       module_pages: {
         Row: {
           created_at: string | null

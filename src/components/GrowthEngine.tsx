@@ -28,18 +28,6 @@ interface MonthRow {
   oneoff_revenue: number | null;
 }
 
-type DailyRow = {
-  log_date: string;
-  channel: string;
-  leads: number;
-  spend: number;
-  meetings: number;
-  clients_won: number;
-  value_won: number;
-  content_posts: number;
-  response_minutes: number | null;
-};
-
 const money = (n: number) =>
   n >= 1000 ? `$${Math.round(n).toLocaleString()}` : `$${n.toFixed(n < 100 ? 2 : 0)}`;
 
@@ -100,7 +88,6 @@ function Trend({ current, previous }: { current: number; previous: number | null
 export default function GrowthEngine() {
   const { user } = useRequireAuth();
   const [rows, setRows] = useState<MonthRow[]>([]);
-  const [daily, setDaily] = useState<DailyRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -113,16 +100,6 @@ export default function GrowthEngine() {
         .order('month', { ascending: false })
         .limit(6);
       setRows((data ?? []) as MonthRow[]);
-
-      const since = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
-      const { data: logs } = await supabase
-        .from('daily_log')
-        .select('log_date, channel, leads, spend, meetings, clients_won, value_won, content_posts, response_minutes')
-        .eq('user_id', user.id)
-        .gte('log_date', since)
-        .order('log_date', { ascending: false });
-      setDaily((logs ?? []) as DailyRow[]);
-
       setLoading(false);
     })();
   }, [user]);
@@ -177,35 +154,6 @@ export default function GrowthEngine() {
   }
 
   const monthLabel = new Date(latest.month).toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  // Which channel is actually working — only answerable from the daily log.
-  const byChannel = daily.reduce<Record<string, { leads: number; spend: number; won: number; value: number }>>(
-    (acc, row) => {
-      const bucket = acc[row.channel] ??= { leads: 0, spend: 0, won: 0, value: 0 };
-      bucket.leads += Number(row.leads || 0);
-      bucket.spend += Number(row.spend || 0);
-      bucket.won += Number(row.clients_won || 0);
-      bucket.value += Number(row.value_won || 0);
-      return acc;
-    },
-    {},
-  );
-
-  const channelRows = Object.entries(byChannel)
-    .filter(([, v]) => v.leads > 0 || v.spend > 0)
-    .sort((a, b) => b[1].value - a[1].value);
-
-  const responses = daily.map(r => r.response_minutes).filter((n): n is number => n != null);
-  const avgResponse = responses.length
-    ? Math.round(responses.reduce((sum, n) => sum + n, 0) / responses.length)
-    : null;
-
-  const CHANNEL_LABELS: Record<string, string> = {
-    paid_ads: 'Paid ads',
-    organic: 'Organic content',
-    outbound: 'Outbound / DMs',
-    referral: 'Referral',
-  };
 
   return (
     <div className="mt-8">
@@ -265,47 +213,6 @@ export default function GrowthEngine() {
           sub="What one piece of content is worth to you"
         />
       </div>
-
-      {channelRows.length > 0 && (
-        <div className="mt-4 bg-card border border-border rounded-xl p-4 overflow-x-auto">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              By channel · last 30 days
-            </p>
-            {avgResponse !== null && (
-              <p className="text-[11px] text-muted-foreground">
-                Average speed to lead: <span className="text-foreground font-semibold">{avgResponse} mins</span>
-              </p>
-            )}
-          </div>
-          <table className="w-full text-xs min-w-[460px]">
-            <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                {['Channel', 'Leads', 'Spend', 'Won', 'Cost per client', 'Value'].map(h => (
-                  <th key={h} className="pb-2 pr-4 font-semibold whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {channelRows.map(([channel, v]) => {
-                const channelCac = v.won > 0 && v.spend > 0 ? v.spend / v.won : null;
-                return (
-                  <tr key={channel} className="border-b border-border/50 last:border-0">
-                    <td className="py-2 pr-4 text-foreground whitespace-nowrap font-medium">
-                      {CHANNEL_LABELS[channel] ?? channel}
-                    </td>
-                    <td className="py-2 pr-4 text-foreground">{v.leads}</td>
-                    <td className="py-2 pr-4 text-foreground">{money(v.spend)}</td>
-                    <td className="py-2 pr-4 text-foreground">{v.won}</td>
-                    <td className="py-2 pr-4 text-foreground">{channelCac !== null ? money(channelCac) : '—'}</td>
-                    <td className="py-2 pr-4 text-primary font-semibold">{money(v.value)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {rows.length > 1 && (
         <div className="mt-4 bg-card border border-border rounded-xl p-4 overflow-x-auto">
