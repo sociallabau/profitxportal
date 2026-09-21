@@ -19,15 +19,41 @@ Compare against what Dan teaches about margins for their stage. Be straight abou
 
 Finish with the two or three things that would move the number most, in order of impact.`;
 
-const ADS_BRIEF = `You are looking at a client's paid ad tracking sheet.
+const ADS_BRIEF = `You are reading Dan's paid ad tracking sheet. He has a specific way of reading it. Follow it exactly.
 
-This is Dan's own tracking sheet, and it defines the metrics that matter. Read the column headers first and work out exactly what it tracks — it will carry things like spend, impressions, reach, CPM, clicks, CTR, CPC, leads, follow through %, CPL, call bookings, leads to call %, calls taken, show rate, cost per show, signed up, conversion rate, leads to close %, revenue, CPA and ROI.
+READ IT IN THIS ORDER
 
-Use the sheet's own metric names and its own definitions. Work with the numbers it already calculates rather than inventing your own, and only calculate something yourself where the sheet leaves it blank or the figure is clearly wrong. If the sheet contains target or benchmark rows, judge performance against those targets specifically.
+1. Go straight to the far right — revenue and return. That is the only question that matters first: is this making money? Say the spend, the revenue and the return, and give the verdict in a sentence.
 
-Then find where the funnel actually breaks. Follow it in the order the sheet lays out, and be precise about the step: a cheap lead that never books is a completely different problem from an expensive lead that closes well. Quote the dates or rows where it turns.
+2. If it IS making money, go to cost per acquisition and compare it to the offer price. Under half the offer price is good. Around a quarter is excellent, and means the answer is to turn the budget up.
 
-Finish with the two or three changes worth making next, in order of impact. Be specific — which day, which campaign, which step of the funnel.`;
+3. Only then work backwards through the funnel — to confirm why it is working, not to hunt for faults.
+
+4. If it is NOT making money, that is when you work forwards from the start: click-through rate, then form fill, then call bookings, then show rate, then close rate. Find the step where it actually breaks and name it.
+
+WHAT DAN TREATS AS NORMAL
+- CPM: under $30 is fine
+- Click-through rate: 1% or higher is good. 2% means the creatives are working.
+- Clicks to leads (form fill): often only 3-5%, and a low number here is NOT a problem by itself
+- Leads to call bookings: around 50% is good
+- Call bookings to calls taken (show rate): 90%+ is the number that actually matters
+- Close rate: 20% is bang on
+- Cost per acquisition: under half the offer price is the line; a quarter is excellent
+
+THE JUDGEMENT THAT MATTERS MOST
+
+A low form fill rate with a strong show rate and close rate is a healthy funnel, not a broken one. The form is doing the qualifying — it weeds out people who do not really want it. If only 3% of clicks fill in the form but 90% of the people who book actually show up and a fifth of them buy, that proves the ones filling it in genuinely want the thing.
+
+So never flag a low form fill as a problem when the downstream numbers are strong. Say plainly why it is fine. The same goes for any single percentage that looks off while the money at the end is good.
+
+PENDING CLOSES
+If the sheet separates closed from pending, say so. Most people only count the definite ones, so work on the basis that roughly half the pending will come through, and say what that does to the return.
+
+SCALING
+When cost per acquisition is under half the offer price, the advice is: turn the budget up, push more creatives in, and leave it a week or two so cost per client can stabilise before judging it. As volume goes up the percentages shrink and cost per client usually climbs — that is expected. Cost per client and the return are what to watch, not the percentages in the middle.
+
+LENGTH
+Keep it tight. Do not walk every column or flag every number slightly out of range. Lead with the money, give the verdict, explain the one or two things that actually decide it, then finish with what to do next.`;
 
 async function callModel(prompt: string, system: string): Promise<string> {
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
@@ -142,8 +168,9 @@ ${auditKind === "ads" ? ADS_BRIEF : PNL_BRIEF}
 Rules:
 - Use only the numbers in the data, and prefer the sheet's own calculated figures over your own arithmetic. If a column is empty or obviously broken, say so rather than filling the gap with an assumption.
 - If something needed is missing entirely, say what to send next time rather than guessing.
-- Never invent a benchmark. If Dan's teaching below gives one, use it; otherwise reason from their own numbers.
-- Write it as a message to them. Plain text, no markdown headings, no tables.`;
+- Use the benchmarks above. Do not invent others.
+- Write it as a message to them. Plain text, no markdown headings, no tables, no column-by-column walkthrough.
+- Talk about the money before anything else, every time.`;
 
     const audit = (await callModel(
       `${teaching}THEIR ${auditKind === "ads" ? "AD TRACKING" : "P&L"}${period ? ` (${period})` : ""}:\n\n${text.slice(0, 60_000)}\n\nGive them your read on it.`,
