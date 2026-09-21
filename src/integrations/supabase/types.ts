@@ -657,39 +657,6 @@ export type Database = {
         }
         Relationships: []
       }
-      monday_wins: {
-        Row: {
-          cash_collected: number | null
-          created_at: string | null
-          deal_value: number | null
-          id: string
-          new_client: boolean | null
-          occurred_on: string | null
-          user_id: string
-          win_text: string
-        }
-        Insert: {
-          cash_collected?: number | null
-          created_at?: string | null
-          deal_value?: number | null
-          id?: string
-          new_client?: boolean | null
-          occurred_on?: string | null
-          user_id: string
-          win_text: string
-        }
-        Update: {
-          cash_collected?: number | null
-          created_at?: string | null
-          deal_value?: number | null
-          id?: string
-          new_client?: boolean | null
-          occurred_on?: string | null
-          user_id?: string
-          win_text?: string
-        }
-        Relationships: []
-      }
       monthly_totals: {
         Row: {
           ad_spend: number | null
@@ -924,39 +891,6 @@ export type Database = {
           onboarding_notice_seen?: boolean | null
           tier?: string | null
           tier_seen?: string | null
-        }
-        Relationships: []
-      }
-      resources: {
-        Row: {
-          category: string
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          sort_order: number | null
-          title: string
-          url: string
-        }
-        Insert: {
-          category: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          sort_order?: number | null
-          title: string
-          url: string
-        }
-        Update: {
-          category?: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          sort_order?: number | null
-          title?: string
-          url?: string
         }
         Relationships: []
       }
