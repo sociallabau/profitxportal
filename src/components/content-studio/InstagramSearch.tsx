@@ -58,6 +58,10 @@ export default function InstagramSearch() {
   const [remixingId, setRemixingId] = useState<string | null>(null);
   const [remixResults, setRemixResults] = useState<Record<string, string>>({});
   const [remixSummaries, setRemixSummaries] = useState<Record<string, string>>({});
+  // Whether the remix was written from the actual video or only its caption.
+  // Worth showing permanently: a caption-only remix reads generic, and without
+  // this there is no way to tell that is why.
+  const [remixFromVideo, setRemixFromVideo] = useState<Record<string, boolean>>({});
   const [remixErrors, setRemixErrors] = useState<Record<string, string>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showSummaryId, setShowSummaryId] = useState<string | null>(null);
@@ -197,6 +201,7 @@ export default function InstagramSearch() {
         throw new Error(data.error);
       }
       setRemixResults(prev => ({ ...prev, [post.id]: data?.remix || '' }));
+      setRemixFromVideo(prev => ({ ...prev, [post.id]: Boolean(data?.transcribed) }));
       if (data?.transcriptSummary) {
         setRemixSummaries(prev => ({ ...prev, [post.id]: data.transcriptSummary }));
       }
@@ -410,6 +415,17 @@ export default function InstagramSearch() {
                     >
                       {expandedId === post.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                       Remix Ideas
+                      {post.id in remixFromVideo && (
+                        <span
+                          className={`ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                            remixFromVideo[post.id]
+                              ? 'bg-primary/10 text-primary border-primary/25'
+                              : 'bg-muted text-muted-foreground border-border'
+                          }`}
+                        >
+                          {remixFromVideo[post.id] ? 'From the video' : 'Caption only'}
+                        </span>
+                      )}
                     </button>
                     {expandedId === post.id && (
                       <>

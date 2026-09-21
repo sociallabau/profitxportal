@@ -26,7 +26,64 @@ function bytesToBase64(bytes: Uint8Array): string {
  * Use Lovable AI (Gemini 2.5 Pro multimodal) to transcribe the video.
  * Returns transcript text or null on any failure.
  */
+/**
+ * Deepgram transcribes from a URL, so the video is never downloaded here.
+ *
+ * The previous approach pulled the file into the function, base64-encoded it
+ * and sent it to a model — which fell over on anything past 18MB, and most
+ * reels are bigger than that. Failure was silent, so the remix quietly fell
+ * back to the caption and produced something generic.
+ */
+async function transcribeWithDeepgram(videoUrl: string): Promise<string | null> {
+  const key = Deno.env.get("DEEPGRAM_API_KEY")
+  if (!key) {
+    console.log("No DEEPGRAM_API_KEY — falling back to model transcription")
+    return null
+  }
+
+  try {
+    const params = new URLSearchParams({
+      model: "nova-3",
+      smart_format: "true",
+      punctuate: "true",
+      paragraphs: "true",
+    })
+
+    const res = await fetch(`https://api.deepgram.com/v1/listen?${params}`, {
+      method: "POST",
+      headers: { Authorization: `Token ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: videoUrl }),
+    })
+
+    if (!res.ok) {
+      console.log("Deepgram error:", res.status, (await res.text()).substring(0, 300))
+      return null
+    }
+
+    const data = await res.json()
+    const alt = data.results?.channels?.[0]?.alternatives?.[0]
+    const text: string = alt?.paragraphs?.transcript || alt?.transcript || ""
+    if (text.trim().length < 20) {
+      console.log("Deepgram returned nothing usable")
+      return null
+    }
+    console.log(`Deepgram transcribed ${text.length} characters`)
+    return text.trim()
+  } catch (e) {
+    console.log("Deepgram call failed:", e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
 async function transcribeVideo(videoUrl: string): Promise<string | null> {
+  // Deepgram first — it fetches the video itself, so there is no size limit.
+  const viaDeepgram = await transcribeWithDeepgram(videoUrl)
+  if (viaDeepgram) return viaDeepgram
+
+  return await transcribeViaModel(videoUrl)
+}
+
+async function transcribeViaModel(videoUrl: string): Promise<string | null> {
   if (!LOVABLE_API_KEY) {
     console.log("No LOVABLE_API_KEY — skipping transcription")
     return null
