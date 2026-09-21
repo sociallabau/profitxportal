@@ -3,6 +3,7 @@ import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, CheckCircle2, AlertTriangle, ArrowRight, Eye } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import FinancialAudit from '@/components/FinancialAudit';
+import GrowthEngine from '@/components/GrowthEngine';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
@@ -303,6 +304,7 @@ export default function Financials() {
           </div>
         </div>
       )}
+      <GrowthEngine />
       <FinancialAudit />
     </PageLayout>
   );
