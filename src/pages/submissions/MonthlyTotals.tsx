@@ -100,6 +100,10 @@ export default function MonthlyTotals() {
       }
     },
     onSuccess: () => {
+      // Fire and forget: the client gets their confirmation straight away,
+      // and the round-up appears on Financials once the model responds.
+      supabase.functions.invoke('monthly-review', { body: {} }).catch(() => {});
+
       qc.invalidateQueries({ queryKey: ['monthly-totals-history'] });
       qc.invalidateQueries({ queryKey: ['monthly-history'] });
       qc.invalidateQueries({ queryKey: ['wins-wall'] });

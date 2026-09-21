@@ -1,6 +1,7 @@
-import { useQuery, type UseMutationResult } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 import {
   type ClientWithHealth,
   TIER_OPTIONS,
@@ -67,6 +68,36 @@ export default function ClientDetailPanel({
       .eq('user_id', client.id);
     return data ?? [];
   },
+  });
+
+  const queryClient = useQueryClient();
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['client-monthly-reviews', client.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('monthly_reviews')
+        .select('month, admin_breakdown, focus, created_at')
+        .eq('user_id', client.id)
+        .order('month', { ascending: false })
+        .limit(3);
+      return data ?? [];
+    },
+  });
+
+  const regenerate = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('monthly-review', {
+        body: { userId: client.id },
+      });
+      if (error || data?.error) throw new Error(data?.error ?? 'Could not build the review');
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Review rebuilt');
+      queryClient.invalidateQueries({ queryKey: ['client-monthly-reviews', client.id] });
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const c = client;
@@ -344,6 +375,46 @@ export default function ClientDetailPanel({
                     )}
                   </div>
                 )}
+
+                {/* Dan's breakdown — this client never sees it */}
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Monthly review
+                    </p>
+                    <button
+                      onClick={() => regenerate.mutate()}
+                      disabled={regenerate.isPending}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition disabled:opacity-50"
+                    >
+                      {regenerate.isPending ? 'Building…' : reviews.length ? 'Rebuild' : 'Build it'}
+                    </button>
+                  </div>
+
+                  {reviews.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No review yet. One is written automatically when they submit their month.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map(r => (
+                        <div key={r.month}>
+                          <div className="flex items-baseline justify-between gap-2 mb-1">
+                            <p className="text-xs font-semibold text-foreground">
+                              {new Date(r.month).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                            </p>
+                            {r.focus && (
+                              <span className="text-[11px] text-primary font-semibold truncate">{r.focus}</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                            {r.admin_breakdown}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Submission history */}
                 {clientHistory.length > 0 && (

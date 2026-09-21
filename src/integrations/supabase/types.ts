@@ -1234,6 +1234,15 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      my_monthly_reviews: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          client_summary: string
+          created_at: string
+          focus: string
+          month: string
+        }[]
+      }
       search_knowledge: {
         Args: { limit_n?: number; q: string }
         Returns: {
