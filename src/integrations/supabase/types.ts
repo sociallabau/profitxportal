@@ -690,6 +690,36 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_reviews: {
+        Row: {
+          admin_breakdown: string
+          client_summary: string
+          created_at: string
+          focus: string | null
+          id: string
+          month: string
+          user_id: string
+        }
+        Insert: {
+          admin_breakdown: string
+          client_summary: string
+          created_at?: string
+          focus?: string | null
+          id?: string
+          month: string
+          user_id: string
+        }
+        Update: {
+          admin_breakdown?: string
+          client_summary?: string
+          created_at?: string
+          focus?: string | null
+          id?: string
+          month?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       monthly_totals: {
         Row: {
           ad_spend: number | null
@@ -1294,6 +1324,15 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      my_monthly_reviews: {
+        Args: never
+        Returns: {
+          client_summary: string
+          created_at: string
+          focus: string
+          month: string
+        }[]
+      }
       search_knowledge: {
         Args: { limit_n?: number; q: string }
         Returns: {
