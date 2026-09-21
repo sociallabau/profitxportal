@@ -7,7 +7,27 @@ import PageLayout from '@/components/PageLayout';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import { ModuleContentDialog } from '@/components/ModuleContentView';
 
-const ACTIONS = [
+/**
+ * The actions are heterogeneous — most carry scripts, a couple open a module
+ * instead, some add tips or a warning. Declaring the optional fields here is
+ * what lets the JSX read them without casting, and means a misspelled field
+ * is a compile error rather than a silently missing section.
+ */
+type CashAction = {
+  key: string;
+  emoji: string;
+  label: string;
+  subtitle: string;
+  effort: string;
+  expectedResult: string;
+  scripts?: { channel: string; body: string }[];
+  opensModule?: string;
+  tips?: string[];
+  warning?: string;
+  followUp?: { title: string; steps: string[] };
+};
+
+const ACTIONS: CashAction[] = [
   {
     key: 'past_clients',
     emoji: '📬',
@@ -251,8 +271,8 @@ export default function CashMenu() {
               >
                 <button
                   onClick={() => {
-                    if ((action as any).opensModule) {
-                      setModuleModal((action as any).opensModule);
+                    if (action.opensModule) {
+                      setModuleModal(action.opensModule);
                     } else {
                       toggle(action.key);
                     }
@@ -277,7 +297,7 @@ export default function CashMenu() {
                       </div>
                     </div>
                   </div>
-                  {(action as any).opensModule ? (
+                  {action.opensModule ? (
                     <div className="flex items-center gap-3 flex-shrink-0 mt-1">
                       <button
                         onClick={(e) => {
@@ -303,7 +323,7 @@ export default function CashMenu() {
                   )}
                 </button>
 
-                {isOpen && !(action as any).opensModule && (
+                {isOpen && !action.opensModule && (
                   <div className="border-t border-border p-5 space-y-6">
                     {action.warning && (
                       <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm text-warning">
@@ -349,14 +369,6 @@ export default function CashMenu() {
                       </a>
                     )}
 
-                    {(action as any).roadmapLink && (
-                      <a
-                        href={`/module/${(action as any).roadmapLink.pillar}/${(action as any).roadmapLink.moduleId}`}
-                        className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        🗺️ Open {(action as any).roadmapLink.label} Module
-                      </a>
-                    )}
 
                     <div className="space-y-2">
                       <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tips</h4>
@@ -370,11 +382,11 @@ export default function CashMenu() {
                       </ul>
                     </div>
 
-                    {(action as any).followUp && (
+                    {action.followUp && (
                       <div className="space-y-2 bg-background/50 border border-border rounded-lg p-4">
-                        <h4 className="text-xs font-medium text-primary uppercase tracking-wider">📞 {(action as any).followUp.title}</h4>
+                        <h4 className="text-xs font-medium text-primary uppercase tracking-wider">📞 {action.followUp.title}</h4>
                         <ul className="space-y-1.5">
-                          {(action as any).followUp.steps.map((step: string, i: number) => (
+                          {action.followUp.steps.map((step: string, i: number) => (
                             <li key={i} className="flex gap-2 text-sm text-muted-foreground">
                               <span className="text-primary flex-shrink-0">{i + 1}.</span>
                               <span>{step}</span>

@@ -13,6 +13,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useRequireAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
+import type { LucideIcon } from 'lucide-react';
+
+type LaunchValues = {
+  daily_budget: number;
+  starting_followers: number;
+  ad_hook: string;
+  offer_summary: string;
+};
+
+type DmSuggestion = { angle: string; message: string };
 
 type Campaign = {
   id: string; user_id: string; status: string; daily_budget: number; duration_days: number;
@@ -97,7 +107,7 @@ export default function LaunchHQ() {
       setShowLaunch(false);
       toast({ title: '🚀 Campaign launched!', description: '5-day countdown started. Go all in.' });
     },
-    onError: (e: any) => toast({ title: 'Launch failed', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Launch failed', description: e.message, variant: 'destructive' }),
   });
 
   const addFollowers = useMutation({
@@ -303,7 +313,11 @@ function CampaignTracker({ campaign, followers }: { campaign: Campaign; follower
   );
 }
 
-function Stat({ icon: Icon, label, value }: any) {
+function Stat({ icon: Icon, label, value }: {
+  icon: LucideIcon;
+  label: string;
+  value: number | string;
+}) {
   return (
     <div className="bg-card/50 border border-border rounded-lg p-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider">
@@ -339,7 +353,12 @@ function AddFollowersCard({ value, onChange, onSubmit }: { value: string; onChan
   );
 }
 
-function FollowerKanban({ followers, onStageChange, onOpen, onDelete }: any) {
+function FollowerKanban({ followers, onStageChange, onOpen, onDelete }: {
+  followers: Follower[];
+  onStageChange: (follower: Follower, stage: string) => void;
+  onOpen: (follower: Follower) => void;
+  onDelete: (id: string) => void;
+}) {
   const grouped = useMemo(() => {
     const g: Record<string, Follower[]> = {};
     STAGES.forEach(s => g[s.key] = []);
@@ -389,7 +408,7 @@ function FollowerKanban({ followers, onStageChange, onOpen, onDelete }: any) {
   );
 }
 
-function LaunchDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (v: any) => void }) {
+function LaunchDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (v: LaunchValues) => void }) {
   const [budget, setBudget] = useState<string>('');
   const [industry, setIndustry] = useState('');
   return (
@@ -416,7 +435,14 @@ function LaunchDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () 
   );
 }
 
-function FollowerDialog({ follower, templates, campaign, onClose, onUpdate, onStageChange }: any) {
+function FollowerDialog({ follower, templates, campaign, onClose, onUpdate, onStageChange }: {
+  follower: Follower;
+  templates: DmTemplate[];
+  campaign: Campaign | null;
+  onClose: () => void;
+  onUpdate: (patch: Partial<Follower>) => void;
+  onStageChange: (stage: string) => void;
+}) {
   const [reply, setReply] = useState('');
   const [draft, setDraft] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -453,9 +479,10 @@ function FollowerDialog({ follower, templates, campaign, onClose, onUpdate, onSt
         },
       });
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      setAiSuggestions((data as any)?.suggestions ?? []);
-    } catch (e: any) {
+      const result = data as { error?: string; suggestions?: DmSuggestion[] } | null;
+      if (result?.error) throw new Error(result.error);
+      setAiSuggestions(result?.suggestions ?? []);
+    } catch (e) {
       toast({ title: 'AI failed', description: e.message, variant: 'destructive' });
     } finally { setAiLoading(false); }
   };
@@ -503,7 +530,7 @@ function FollowerDialog({ follower, templates, campaign, onClose, onUpdate, onSt
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">DM history ({follower.dm_history.length})</Label>
             <div className="mt-2 space-y-1.5 max-h-60 overflow-y-auto">
               {follower.dm_history.length === 0 && <p className="text-xs text-muted-foreground italic">No messages logged yet.</p>}
-              {follower.dm_history.map((m: any, i: number) => (
+              {follower.dm_history.map((m, i) => (
                 <div key={i} className={`text-sm p-2 rounded ${m.role === 'me' ? 'bg-primary/15 ml-6' : 'bg-muted mr-6'}`}>
                   <div className="text-[10px] uppercase tracking-wider opacity-60 mb-0.5">{m.role === 'me' ? 'You' : 'Them'}</div>
                   {m.text}
