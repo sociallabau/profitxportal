@@ -9,11 +9,12 @@ import { useProfile } from '@/hooks/useProfile';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import { supabase } from '@/lib/supabase';
 import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
+import type { LucideIcon } from 'lucide-react';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
 const PHASES: Phase[] = ['Build', 'Implement', 'Reflect'];
-const PHASE_META: Record<Phase, { icon: any; blurb: string; color: string; bg: string }> = {
+const PHASE_META: Record<Phase, { icon: LucideIcon; blurb: string; color: string; bg: string }> = {
   Build:     { icon: Hammer,  blurb: 'Learn or improve the core components of a ProfitX Business.', color: 'text-orange-400', bg: 'from-orange-500/25 to-orange-500/5' },
   Implement: { icon: Rocket,  blurb: 'Implement the components into your business. Take massive action.', color: 'text-blue-400', bg: 'from-blue-500/25 to-blue-500/5' },
   Reflect:   { icon: Compass, blurb: 'Reflect on how the implementation went. Set direction for the next quarter.', color: 'text-green-400', bg: 'from-green-500/25 to-green-500/5' },
@@ -250,7 +251,7 @@ export default function Dashboard() {
         .select('month, mrr, total_revenue')
         .eq('user_id', user!.id)
         .order('month', { ascending: true });
-      return (data ?? []).map((r: any) => ({
+      return (data ?? []).map(r => ({
         month: new Date(r.month).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
         revenue: Number(r.total_revenue) || Number(r.mrr) || 0,
       }));
@@ -364,7 +365,7 @@ export default function Dashboard() {
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
                 <Tooltip
                   contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: any) => [`$${Number(v).toLocaleString()}`, 'Revenue']}
+                  formatter={(v: number | string) => [`$${Number(v).toLocaleString()}`, 'Revenue']}
                 />
                 <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} />
               </LineChart>
@@ -388,7 +389,7 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground text-center py-4">No wins logged yet. Add your first one on the Wins Wall!</p>
         ) : (
           <div className="space-y-3">
-            {wins.map((w: any) => (
+            {wins.map(w => (
               <div key={w.id} className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0">
                 <span className="text-base mt-0.5">🏆</span>
                 <div className="flex-1 min-w-0">

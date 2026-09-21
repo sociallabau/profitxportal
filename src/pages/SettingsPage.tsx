@@ -25,12 +25,12 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (profile?.full_name) setFullName(profile.full_name);
-    if ((profile as any)?.business_overview) setBusinessOverview((profile as any).business_overview);
-  }, [profile?.full_name, (profile as any)?.business_overview]);
+    if (profile?.business_overview) setBusinessOverview(profile.business_overview);
+  }, [profile?.full_name, profile?.business_overview]);
 
   useEffect(() => {
     if (goalData) {
-      const g = goalData as any;
+      const g = goalData;
       setTargetMrr(String(g.target_mrr ?? ''));
       setStartingMrr(String(g.starting_mrr ?? ''));
       setTargetDate(g.target_date ?? '');
@@ -97,7 +97,7 @@ export default function SettingsPage() {
                 setSavingBiz(true);
                 const { error } = await supabase
                   .from('profiles')
-                  .update({ business_overview: businessOverview } as any)
+                  .update({ business_overview: businessOverview })
                   .eq('id', user.id);
                 setSavingBiz(false);
                 if (error) toast.error('Failed to save');

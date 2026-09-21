@@ -9,6 +9,7 @@ import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 const PILLARS = [
   {
@@ -118,7 +119,7 @@ export default function Roadmap() {
   });
 
   const safeCompletions = Array.isArray(completions) ? completions : [];
-  const completionMap: Record<string, boolean> = Object.fromEntries(safeCompletions.map((c: any) => [c.task_key, c.completed]));
+  const completionMap: Record<string, boolean> = Object.fromEntries(safeCompletions.map(c => [c.task_key, c.completed]));
 
   const toggleModule = useMutation({
     mutationFn: async ({ moduleId, current }: { moduleId: string; current: boolean }) => {
@@ -135,7 +136,7 @@ export default function Roadmap() {
     queryKey: ['module-pages-list'],
     queryFn: async () => {
       const { data } = await supabase.from('module_pages').select('module_id');
-      return data?.map((d: any) => d.module_id) ?? [];
+      return data?.map(d => d.module_id) ?? [];
     },
   });
   const hasPage = (id: string) => modulePages.includes(id);
@@ -392,7 +393,7 @@ function PillarRoadmap({
 }: {
   completionMap: Record<string, boolean>;
   unlockedTiers: string[];
-  toggleModule: any;
+  toggleModule: UseMutationResult<void, Error, { moduleId: string; current: boolean }>;
   navigate: (path: string) => void;
   hasPage: (id: string) => boolean;
 }) {

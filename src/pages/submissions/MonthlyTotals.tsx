@@ -54,7 +54,7 @@ export default function MonthlyTotals() {
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase.from('monthly_totals').select('*').eq('user_id', user!.id).order('month', { ascending: false });
-      return (data ?? []) as any[];
+      return data ?? [];
     },
   });
 
@@ -293,7 +293,7 @@ export default function MonthlyTotals() {
                 </tr>
               </thead>
               <tbody>
-                {history.map((row: any) => {
+                {history.map(row => {
                   const mrr = Number(row.mrr_manual || row.mrr) || 0;
                   const oneoffs = Number(row.oneoff_revenue) || 0;
                   const revenue = Number(row.total_revenue) || (mrr + oneoffs);

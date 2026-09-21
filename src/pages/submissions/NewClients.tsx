@@ -51,7 +51,7 @@ export default function NewClients() {
     },
   });
 
-  const totalMRR = clients?.reduce((sum: number, c: any) => sum + Number(c.monthly_value), 0) ?? 0;
+  const totalMRR = clients?.reduce((sum, c) => sum + Number(c.monthly_value), 0) ?? 0;
 
   return (
     <PageLayout>
@@ -120,7 +120,7 @@ export default function NewClients() {
 
       {clients && clients.length > 0 && (
         <div className="space-y-2">
-          {clients.map((c: any) => (
+          {clients.map(c => (
             <div key={c.id} className="flex items-center justify-between bg-card border border-border rounded-lg px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-foreground">{c.client_name}</p>

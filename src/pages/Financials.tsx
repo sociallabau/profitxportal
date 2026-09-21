@@ -8,6 +8,17 @@ import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
 
+/** A point on the revenue charts, real or the example series. */
+type ChartPoint = {
+  month: string;
+  revenue: number;
+  mrr: number;
+  grossProfit: number;
+  netProfit: number;
+  expenses: number;
+  adSpend: number;
+};
+
 const MARGIN_TARGETS: Record<string, { grossMin: number; grossMax: number; netMin: number; netMax: number; label: string }> = {
   'on-ramp': { grossMin: 65, grossMax: 80, netMin: 35, netMax: 50, label: 'On-Ramp' },
   'onramp':  { grossMin: 65, grossMax: 80, netMin: 35, netMax: 50, label: 'On-Ramp' },
@@ -38,13 +49,13 @@ function ExampleBadge() {
   );
 }
 
-function Sparkline({ data, dataKey, color }: { data: any[]; dataKey: string; color: string }) {
+function Sparkline({ data, dataKey, color }: { data: ChartPoint[]; dataKey: string; color: string }) {
   if (data.length < 2) return <div className="h-[40px]" />;
   return (
     <ResponsiveContainer width="100%" height={40}>
       <LineChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
         <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={1.5} dot={false} />
-        <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '6px', fontSize: '11px' }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, '']} labelFormatter={() => ''} />
+        <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '6px', fontSize: '11px' }} formatter={(v: number | string) => [`$${Number(v).toLocaleString()}`, '']} labelFormatter={() => ''} />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -98,7 +109,7 @@ export default function Financials() {
   const targets = MARGIN_TARGETS[tier] || MARGIN_TARGETS['on-ramp'];
 
   // Build real data
-  const realHistory = history.map((m: any) => {
+  const realHistory = history.map(m => {
     const mrrVal = Number(m.mrr_manual || m.mrr || 0);
     const oneoffs = Number(m.oneoff_revenue || 0);
     const rev = Number(m.total_revenue || 0) || (mrrVal + oneoffs);
@@ -110,7 +121,7 @@ export default function Financials() {
       grossProfit: rev - ads, netProfit: rev - exp,
     };
   });
-  const realLatest = history[history.length - 1] as any;
+  const realLatest = history[history.length - 1];
 
   const historyData = isExample ? EXAMPLE_HISTORY : realHistory;
 
@@ -160,7 +171,7 @@ export default function Financials() {
   const accentBorder = isExample ? 'border-blue-500/30' : 'border-border';
   const sparkColor = isExample ? '#60a5fa' : 'hsl(var(--primary))';
 
-  const StatBox = ({ label, value, sparkKey }: any) => (
+  const StatBox = ({ label, value, sparkKey }: { label: string; value: string; sparkKey: string }) => (
     <div className={`bg-card border ${accentBorder} rounded-xl p-4`}>
       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{label}{isExample ? ' *example*' : ''}</p>
       <p className={`text-xl font-bold ${accent}`}>{value}</p>
@@ -290,7 +301,7 @@ export default function Financials() {
                 </tr>
               </thead>
               <tbody>
-                {[...historyData].reverse().map((row: any, idx: number) => (
+                {[...historyData].reverse().map((row: ChartPoint, idx: number) => (
                   <tr key={`${row.month}-${idx}`} className="border-b border-border/50">
                     <td className="py-2 pr-4 whitespace-nowrap">{row.month}</td>
                     <td className={`py-2 pr-4 ${accent}`}>${Number(row.revenue || 0).toLocaleString()}</td>

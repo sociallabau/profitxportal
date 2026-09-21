@@ -65,8 +65,8 @@ export default function MyFinances() {
 
   const tier = profile?.tier || 'on-ramp';
   const targets = MARGIN_TARGETS[tier] || MARGIN_TARGETS['on-ramp'];
-  const latest = history[history.length - 1] as any;
-  const prev = history[history.length - 2] as any;
+  const latest = history[history.length - 1];
+  const prev = history[history.length - 2];
 
   const latestRevenue = latest ? (Number(latest.total_revenue || 0) || (Number(latest.mrr_manual || latest.mrr || 0) + Number(latest.oneoff_revenue || 0))) : 0;
   const latestExpenses = Number(latest?.expenses || 0);
@@ -74,7 +74,7 @@ export default function MyFinances() {
   const prevRevenue = prev ? (Number(prev.total_revenue || 0) || (Number(prev.mrr_manual || prev.mrr || 0) + Number(prev.oneoff_revenue || 0))) : 0;
   const revenueGrowth = prevRevenue > 0 ? Math.round(((latestRevenue - prevRevenue) / prevRevenue) * 100) : null;
 
-  const graphData = history.slice(-6).map((m: any) => {
+  const graphData = history.slice(-6).map(m => {
     const rev = Number(m.total_revenue || 0) || (Number(m.mrr_manual || m.mrr || 0) + Number(m.oneoff_revenue || 0));
     return { month: new Date(m.month).toLocaleString('default', { month: 'short' }), revenue: rev, expenses: Number(m.expenses || 0) };
   });
@@ -156,7 +156,7 @@ export default function MyFinances() {
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={graphData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(v: any, name: string) => [`$${Number(v).toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Expenses']} />
+                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(v: number | string, name: string) => [`$${Number(v).toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Expenses']} />
                   <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 3, fill: 'hsl(var(--primary))' }} />
                   <Line type="monotone" dataKey="expenses" stroke="#f97316" strokeWidth={1.5} dot={{ r: 2, fill: '#f97316' }} strokeDasharray="4 3" />
                 </LineChart>
