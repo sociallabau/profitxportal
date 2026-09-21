@@ -53,6 +53,89 @@ function getMarginBand(netMargin: number): 'green' | 'amber' | 'red' {
   return 'red';
 }
 
+/**
+ * Scoring built around the four numbers Dan actually judges a business on:
+ * revenue, leads, cost to acquire a client, and conversion. Margin and content
+ * still count, but as supporting detail rather than the headline.
+ *
+ * The old scoring banded purely on margin, so the score itself never moved a
+ * client between red, amber and green. Here the band comes from the score.
+ */
+function calcHealthScoreV2(client: any) {
+  const revenue    = Number(client.last_total_revenue || 0);
+  const expenses   = Number(client.last_expenses || 0);
+  const netMargin  = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : -1;
+  const leads      = Number(client.last_leads || 0);
+  const newClients = Number(client.last_new_clients || 0);
+  const adSpend    = Number(client.last_ad_spend || 0);
+  const clientValue = Number(client.last_new_clients_value || 0);
+  const content    = Number(client.last_content_posts || 0);
+
+  // Revenue (max 25)
+  let revenueScore = 0;
+  if (revenue >= 30000) revenueScore = 25;
+  else if (revenue >= 15000) revenueScore = 18;
+  else if (revenue >= 5000) revenueScore = 12;
+  else if (revenue > 0) revenueScore = 6;
+
+  // Leads (max 20) — 10 a week is the target, so 40 a month is full marks
+  let leadsScore = 0;
+  if (leads >= 40) leadsScore = 20;
+  else if (leads >= 20) leadsScore = 14;
+  else if (leads >= 10) leadsScore = 9;
+  else if (leads >= 1) leadsScore = 4;
+
+  // Conversion, leads to signed clients (max 15)
+  const conversion = leads > 0 ? (newClients / leads) * 100 : -1;
+  let conversionScore = 0;
+  if (conversion >= 20) conversionScore = 15;
+  else if (conversion >= 10) conversionScore = 11;
+  else if (conversion >= 5) conversionScore = 7;
+  else if (conversion > 0) conversionScore = 3;
+
+  // Cost to acquire against what a client is worth (max 15)
+  const cac = newClients > 0 ? adSpend / newClients : -1;
+  const valuePerClient = newClients > 0 ? clientValue / newClients : 0;
+  let cacScore = 0;
+  if (newClients > 0 && adSpend === 0) cacScore = 15;          // won without paying for it
+  else if (cac >= 0 && valuePerClient > 0) {
+    const ratio = cac / valuePerClient;
+    if (ratio <= 0.25) cacScore = 15;
+    else if (ratio <= 0.5) cacScore = 11;
+    else if (ratio <= 1) cacScore = 5;
+  } else if (adSpend > 0 && newClients === 0) cacScore = 0;    // spending, winning nobody
+  else if (newClients > 0) cacScore = 8;                       // won clients, value unknown
+
+  // Margin (max 15)
+  let marginScore = 0;
+  if (netMargin >= TARGET_MARGIN) marginScore = 15;
+  else if (netMargin >= MIN_MARGIN) marginScore = 10;
+  else if (netMargin >= 10) marginScore = 5;
+  else if (netMargin >= 0) marginScore = 2;
+
+  // Content, the leading indicator for leads (max 10)
+  let contentScore = 0;
+  if (content >= 12) contentScore = 10;
+  else if (content >= 8) contentScore = 7;
+  else if (content >= 4) contentScore = 4;
+  else if (content >= 1) contentScore = 2;
+
+  const score = revenueScore + leadsScore + conversionScore + cacScore + marginScore + contentScore;
+
+  let band: 'green' | 'amber' | 'red';
+  if (revenue <= 0) band = 'red';
+  else if (score >= 70) band = 'green';
+  else if (score >= 45) band = 'amber';
+  else band = 'red';
+
+  return {
+    score, band,
+    netMargin: revenue > 0 ? netMargin : 0,
+    leads, newClients, conversion, cac, valuePerClient,
+    revenueScore, leadsScore, conversionScore, cacScore, marginScore, contentScore,
+  };
+}
+
 function calcHealthScore(client: any) {
   // Margin-based scoring across 4 pillars: revenue, margin %, content posted, new clients
   const revenue   = Number(client.last_total_revenue || 0);
@@ -259,6 +342,9 @@ export default function ClientHealth() {
     },
   });
 
+  // Both scorings are computed so the difference can be seen before committing.
+  const [scoringMode, setScoringMode] = useState<'current' | 'new'>('current');
+
   const clientsWithHealth = useMemo(() =>
     clients.map((c: any) => {
       const clientCompletedKeys = allCompletions
@@ -276,16 +362,29 @@ export default function ClientHealth() {
 
       return {
         ...c,
-        health: calcHealthScore(c),
+        health: scoringMode === 'new' ? calcHealthScoreV2(c) : calcHealthScore(c),
+        healthCurrent: calcHealthScore(c),
+        healthNew: calcHealthScoreV2(c),
         conclusion: generateConclusion(c),
         readyForInFlow,
         readyForOver20k,
         monthlyRevenue,
       };
     }).sort((a: any, b: any) => b.health.score - a.health.score),
-    [clients, allCompletions]
+    [clients, allCompletions, scoringMode]
   );
 
+
+  const bandMoves = useMemo(() =>
+    clientsWithHealth
+      .filter((c: any) => c.healthCurrent.band !== c.healthNew.band)
+      .map((c: any) => ({
+        name: c.full_name || 'Unnamed Client',
+        from: c.healthCurrent.band as 'green' | 'amber' | 'red',
+        to: c.healthNew.band as 'green' | 'amber' | 'red',
+      })),
+    [clientsWithHealth],
+  );
 
   const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
@@ -320,6 +419,55 @@ export default function ClientHealth() {
           <HeartPulse className="w-6 h-6 text-primary" /> Client Health
         </h1>
         <p className="text-sm text-muted-foreground">Click any client to view their full profile and manage their tier.</p>
+      </div>
+
+      <div className="mb-6 border border-border rounded-xl p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Scoring</p>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              {scoringMode === 'current'
+                ? 'Current: bands come from net margin alone — the score underneath never moves anyone between colours.'
+                : 'New: revenue, leads, cost to acquire and conversion decide the score, and the score sets the band. Margin and content still count, as supporting detail.'}
+            </p>
+          </div>
+          <div className="flex gap-1 shrink-0">
+            {(['current', 'new'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setScoringMode(mode)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  scoringMode === mode
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                {mode === 'current' ? 'Current' : 'New'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {bandMoves.length > 0 ? (
+          <div className="mt-3 pt-3 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2">
+              {bandMoves.length} client{bandMoves.length === 1 ? '' : 's'} would change band:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {bandMoves.map(move => (
+                <span key={move.name} className="text-xs border border-border rounded-full px-2.5 py-1">
+                  <span className="text-foreground font-medium">{move.name}</span>
+                  <span className="text-muted-foreground"> {BAND[move.from].label} → </span>
+                  <span className={BAND[move.to].text}>{BAND[move.to].label}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
+            Both scorings put every client in the same band right now.
+          </p>
+        )}
       </div>
 
       {user?.id === OWNER_USER_ID && <TotalNewMrrCard />}
