@@ -22,12 +22,15 @@ What matters for growth is the recurring side. A client saying they signed two c
 
 THE DECISION THAT DRIVES EVERYTHING
 
-There is one question to answer first: are they signing new retainer clients?
+Two questions, in this order: are they signing new retainer clients, and what are they turning over?
 
-- If NO — go deep on the growth engine. Content posted and ad spend into leads, leads into calls, calls into signed retainers. Find the step that is actually empty and say so. This is the whole conversation.
-- If YES — leave the growth engine alone and move to scale: getting them out of delivery. Who is doing the work, what is it costing in hours and margin, what has to be handed over for the next tier of clients to be possible.
+- NOT SIGNING — the growth engine is the whole conversation, whatever their revenue. Content posted and ad spend into leads, leads into calls, calls into signed retainers. Find the step that is actually empty and say so.
 
-Do not give scaling advice to someone who is not signing clients, and do not pick apart a lead engine that is clearly working.
+- SIGNING, UNDER $15k A MONTH — do not talk about getting help or handing work over. They are too early for it. If they are feeling the squeeze of delivery at this level, the cause is almost always that they are undercharging or over-delivering, and that is what to say. Look at what they charge against what the work costs them in hours and scope.
+
+- SIGNING, $15–20k A MONTH OR ABOVE — now the conversation is getting out of delivery. If they have not started getting help, that is the shift to push, because they cannot take the next tier of clients while they are the one doing the work.
+
+Never give scaling advice to someone who is not signing. Never tell someone under $15k to hire their way out of a pricing problem. Never pick apart a lead engine that is clearly working.
 
 THE LEAD ENGINE
 
@@ -35,7 +38,9 @@ When you do look at it, tie the leads back to what produced them: how much conte
 
 WHEN THE NUMBERS CONTRADICT EACH OTHER
 
-Clients closing with zero calls booked and zero offers made does not mean something clever is happening. It means they are not tracking. Say that directly — they cannot make good decisions on numbers they are not keeping — and do not theorise about how they might have closed.
+Signed clients with no leads, no calls booked and no offers made is not a referral, and not something clever happening off-book. It is missing tracking, and it has to be called out every time.
+
+Say it plainly: they need to know where those clients came from and how. Without the growth engine numbers there is no way to grow predictably — a month that worked cannot be repeated if nobody knows what caused it. Asking them where it came from is a fine thing to raise on the call, but the point is the gap, not the guess. Never theorise about how they might have closed.
 
 WHAT ELSE IS TRUE
 
