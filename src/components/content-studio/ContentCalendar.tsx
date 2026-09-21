@@ -5,6 +5,9 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
+import type { Row } from '@/lib/db';
+
+type ContentPost = Row<'content_posts'>;
 
 const PLATFORMS = ['Instagram', 'YouTube', 'TikTok'] as const;
 const POST_TYPES = ['Reel', 'Story', 'Carousel', 'Long-form', 'Short'] as const;
@@ -96,7 +99,7 @@ export default function ContentCalendar() {
     },
   });
 
-  const openPanel = (date: Date, post?: any) => {
+  const openPanel = (date: Date, post?: ContentPost) => {
     setSelectedDate(date);
     if (post) {
       setEditingPost(post);
@@ -162,7 +165,7 @@ export default function ContentCalendar() {
           <div key={`pad-${i}`} className="bg-card min-h-[80px]" />
         ))}
         {days.map(day => {
-          const dayPosts = posts.filter((p: any) => p.date && isSameDay(parseISO(p.date), day));
+          const dayPosts = posts.filter(p => p.date && isSameDay(parseISO(p.date), day));
           return (
             <div
               key={day.toISOString()}
@@ -171,7 +174,7 @@ export default function ContentCalendar() {
             >
               <span className="text-xs text-muted-foreground">{format(day, 'd')}</span>
               <div className="mt-1 space-y-0.5">
-                {dayPosts.map((p: any) => {
+                {dayPosts.map(p => {
                   const statusObj = STATUSES.find(s => s.id === p.status) || STATUSES[0];
                   return (
                     <button

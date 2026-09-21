@@ -108,7 +108,7 @@ export default function Onboarding() {
     try {
       await setGoal.mutateAsync({ target_mrr: tm, starting_mrr: sm, target_date: targetDate });
       next();
-    } catch (e: any) {
+    } catch (e) {
       setError(e?.message ?? 'Could not save goal.');
     } finally {
       setSaving(false);
@@ -133,7 +133,7 @@ export default function Onboarding() {
           oneoff_revenue: Math.max(0, r - m),
           expenses: ex,
         } as any,
-        { onConflict: 'user_id,month' as any }
+        { onConflict: 'user_id,month' }
       );
     if (insErr) {
       // Fallback: plain insert if no unique constraint exists

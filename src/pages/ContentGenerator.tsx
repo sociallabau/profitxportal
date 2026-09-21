@@ -167,8 +167,9 @@ export function ContentGeneratorView({ hideHeader = false }: { hideHeader?: bool
       toast.error(error.message || "Generation failed");
       return null;
     }
-    if ((data as any)?.error) {
-      toast.error((data as any).error);
+    const result = data as { error?: string } | null;
+    if (result?.error) {
+      toast.error(result.error);
       return null;
     }
     return data as {
