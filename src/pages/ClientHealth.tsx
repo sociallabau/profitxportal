@@ -8,6 +8,27 @@ import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { OWNER_USER_ID } from '@/lib/owner';
 import { toast } from 'sonner';
+import type { Row, ViewRow } from '@/lib/db';
+
+/** One client as the admin overview returns them. */
+type ClientOverview = ViewRow<'admin_client_overview'>;
+
+type HealthResult = {
+  score: number;
+  band: 'green' | 'amber' | 'red';
+  netMargin: number;
+};
+
+/** A client with everything this page derives about them. */
+type ClientWithHealth = ClientOverview & {
+  health: HealthResult;
+  healthCurrent: HealthResult;
+  healthNew: HealthResult;
+  conclusion: string;
+  readyForInFlow: boolean;
+  readyForOver20k: boolean;
+  monthlyRevenue: number;
+};
 
 const TIER_OPTIONS = [
   { value: 'onboarding', label: 'Onboarding' },
@@ -66,7 +87,7 @@ function getMarginBand(netMargin: number): 'green' | 'amber' | 'red' {
  * The old scoring banded purely on margin, so the score itself never moved a
  * client between red, amber and green. Here the band comes from the score.
  */
-function calcHealthScoreV2(client: any) {
+function calcHealthScoreV2(client: ClientOverview) {
   const revenue    = Number(client.last_total_revenue || 0);
   const expenses   = Number(client.last_expenses || 0);
   const netMargin  = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : -1;
@@ -141,7 +162,7 @@ function calcHealthScoreV2(client: any) {
   };
 }
 
-function calcHealthScore(client: any) {
+function calcHealthScore(client: ClientOverview) {
   // Margin-based scoring across 4 pillars: revenue, margin %, content posted, new clients
   const revenue   = Number(client.last_total_revenue || 0);
   const expenses  = Number(client.last_expenses || 0);
@@ -195,7 +216,7 @@ function calcHealthScore(client: any) {
   };
 }
 
-function generateConclusion(client: any) {
+function generateConclusion(client: ClientOverview) {
   const name = client.full_name?.split(' ')[0] || 'This client';
   const parts: string[] = [];
   const revenue   = Number(client.last_total_revenue || 0);
@@ -231,7 +252,7 @@ const BAND = {
 export default function ClientHealth() {
   const { user } = useRequireAuth();
   const qc = useQueryClient();
-  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientWithHealth | null>(null);
 
   const { data: selfProfile } = useQuery({
     queryKey: ['self-profile', user?.id],
@@ -268,10 +289,10 @@ export default function ClientHealth() {
     },
     onSuccess: (nextTier) => {
       qc.invalidateQueries({ queryKey: ['admin-client-overview'] });
-      setSelectedClient((prev: any) => prev ? { ...prev, tier: nextTier } : prev);
+      setSelectedClient(prev => prev ? { ...prev, tier: nextTier } : prev);
       toast.success(`Tier updated to ${formatTierLabel(nextTier)}`);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Failed to update tier');
     },
   });
@@ -351,10 +372,10 @@ export default function ClientHealth() {
   const [scoringMode, setScoringMode] = useState<'current' | 'new'>('current');
 
   const clientsWithHealth = useMemo(() =>
-    clients.map((c: any) => {
+    clients.map((c: ClientOverview) => {
       const clientCompletedKeys = allCompletions
-        .filter((cp: any) => cp.user_id === c.id)
-        .map((cp: any) => cp.task_key);
+        .filter(cp => cp.user_id === c.id)
+        .map(cp => cp.task_key);
       const allOnRampDone = ON_RAMP_MODULE_IDS.every(id => clientCompletedKeys.includes(id));
 
       const tier = normalizeTier(c.tier);
@@ -375,15 +396,15 @@ export default function ClientHealth() {
         readyForOver20k,
         monthlyRevenue,
       };
-    }).sort((a: any, b: any) => b.health.score - a.health.score),
+    }).sort((a, b) => b.health.score - a.health.score),
     [clients, allCompletions, scoringMode]
   );
 
 
   const bandMoves = useMemo(() =>
     clientsWithHealth
-      .filter((c: any) => c.healthCurrent.band !== c.healthNew.band)
-      .map((c: any) => ({
+      .filter(c => c.healthCurrent.band !== c.healthNew.band)
+      .map(c => ({
         name: c.full_name || 'Unnamed Client',
         from: c.healthCurrent.band as 'green' | 'amber' | 'red',
         to: c.healthNew.band as 'green' | 'amber' | 'red',
@@ -391,11 +412,11 @@ export default function ClientHealth() {
     [clientsWithHealth],
   );
 
-  const greenCount = clientsWithHealth.filter((c: any) => c.health.band === 'green').length;
-  const amberCount = clientsWithHealth.filter((c: any) => c.health.band === 'amber').length;
-  const redCount   = clientsWithHealth.filter((c: any) => c.health.band === 'red').length;
-  const readyForInFlow = clientsWithHealth.filter((c: any) => c.readyForInFlow);
-  const readyForOver20k = clientsWithHealth.filter((c: any) => c.readyForOver20k);
+  const greenCount = clientsWithHealth.filter(c => c.health.band === 'green').length;
+  const amberCount = clientsWithHealth.filter(c => c.health.band === 'amber').length;
+  const redCount   = clientsWithHealth.filter(c => c.health.band === 'red').length;
+  const readyForInFlow = clientsWithHealth.filter(c => c.readyForInFlow);
+  const readyForOver20k = clientsWithHealth.filter(c => c.readyForOver20k);
 
 
 
@@ -409,7 +430,7 @@ export default function ClientHealth() {
   });
   const pageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    pageViewAgg.forEach((v: any) => { counts[v.page] = (counts[v.page] || 0) + 1; });
+    pageViewAgg.forEach(v => { counts[v.page] = (counts[v.page] || 0) + 1; });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [pageViewAgg]);
 
@@ -506,7 +527,7 @@ export default function ClientHealth() {
             {readyForInFlow.length === 1 ? 'This client has' : `${readyForInFlow.length} clients have`} finished all On-Ramp modules — ready to graduate from Onboarding.
           </p>
           <div className="space-y-2">
-            {readyForInFlow.map((client: any) => (
+            {readyForInFlow.map(client => (
               <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
                 <div>
                   <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
@@ -537,7 +558,7 @@ export default function ClientHealth() {
             {readyForOver20k.length === 1 ? 'This client has' : `${readyForOver20k.length} clients have`} crossed $20k/month — unlock the full roadmap.
           </p>
           <div className="space-y-2">
-            {readyForOver20k.map((client: any) => (
+            {readyForOver20k.map(client => (
               <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
                 <div>
                   <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
@@ -591,7 +612,7 @@ export default function ClientHealth() {
         <p className="text-sm text-muted-foreground">No clients have submitted data yet.</p>
       ) : (
         <div className="space-y-3">
-          {clientsWithHealth.map((client: any) => {
+          {clientsWithHealth.map(client => {
             const { health, conclusion } = client;
             const s = BAND[health.band as keyof typeof BAND];
             return (
@@ -646,7 +667,7 @@ export default function ClientHealth() {
 
       {/* SLIDE-OVER PANEL */}
       {selectedClient && (() => {
-        const c = clientsWithHealth.find((x: any) => x.id === selectedClient.id) || selectedClient;
+        const c = clientsWithHealth.find(x => x.id === selectedClient.id) || selectedClient;
         const h = c.health || calcHealthScore(c);
         const s = BAND[h.band as keyof typeof BAND];
         const daysLogin = Number(c.days_since_last_login ?? null);
@@ -786,13 +807,13 @@ export default function ClientHealth() {
                 {/* Hot List stats */}
                 {(() => {
                   const total = clientHotList.length;
-                  const closed = clientHotList.filter((h: any) => h.column_id === 'closed' || h.column_id === 'won').length;
+                  const closed = clientHotList.filter(h => h.column_id === 'closed' || h.column_id === 'won').length;
                   const pipelineValue = clientHotList
-                    .filter((h: any) => h.column_id !== 'closed' && h.column_id !== 'won' && h.column_id !== 'lost')
-                    .reduce((sum: number, h: any) => sum + Number(h.deal_value || 0), 0);
+                    .filter(h => h.column_id !== 'closed' && h.column_id !== 'won' && h.column_id !== 'lost')
+                    .reduce((sum, h) => sum + Number(h.deal_value || 0), 0);
                   const closedValue = clientHotList
-                    .filter((h: any) => h.column_id === 'closed' || h.column_id === 'won')
-                    .reduce((sum: number, h: any) => sum + Number(h.deal_value || 0), 0);
+                    .filter(h => h.column_id === 'closed' || h.column_id === 'won')
+                    .reduce((sum, h) => sum + Number(h.deal_value || 0), 0);
 
                   return (
                     <div className="bg-card border border-border rounded-xl p-4">
@@ -883,7 +904,7 @@ export default function ClientHealth() {
                   </div>
                   {clientCompletions.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {clientCompletions.map((comp: any) => (
+                      {clientCompletions.map(comp => (
                         <span key={comp.task_key} className="px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded-full capitalize">
                           {comp.task_key.replace(/-/g, ' ')}
                         </span>
@@ -926,7 +947,7 @@ export default function ClientHealth() {
                   <div className="bg-card border border-border rounded-xl p-4">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Submission History</p>
                     <div className="space-y-2">
-                      {clientHistory.map((row: any) => {
+                      {clientHistory.map(row => {
                         const r = Number(row.total_revenue) || (Number(row.mrr_manual || row.mrr || 0) + Number(row.oneoff_revenue || 0));
                         return (
                           <div key={row.month} className="flex items-center justify-between text-xs border-b border-border/50 pb-2 last:border-0 last:pb-0">
@@ -966,7 +987,7 @@ function TotalNewMrrCard() {
   // Per-student MRR growth: (latest MRR − first MRR), floored at 0. Sums total MRR
   // students have gained since their first submission — "how much MRR I've helped my clients add".
   const byUser: Record<string, { first: number; last: number }> = {};
-  for (const r of rows as any[]) {
+  for (const r of rows) {
     const m = Number(r.mrr_manual ?? r.mrr ?? 0) || 0;
     const u = r.user_id;
     if (!byUser[u]) byUser[u] = { first: m, last: m };
@@ -978,7 +999,7 @@ function TotalNewMrrCard() {
   const studentCount = Object.keys(byUser).length;
 
   // Secondary metric: cumulative new-client revenue booked across every submission.
-  const totalNewClientRevenue = (rows as any[]).reduce((s, r) => s + (Number(r.new_clients_total_value) || 0), 0);
+  const totalNewClientRevenue = rows.reduce((sum, r) => sum + (Number(r.new_clients_total_value) || 0), 0);
 
   return (
     <div className="bg-gradient-to-br from-primary/20 to-purple-600/10 border border-primary/40 rounded-xl p-5 mb-6">
