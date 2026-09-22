@@ -20,8 +20,6 @@ export type HealthResult = {
 /** A client with everything this page derives about them. */
 export type ClientWithHealth = ClientOverview & {
   health: HealthResult;
-  healthCurrent: HealthResult;
-  healthNew: HealthResult;
   conclusion: string;
   readyForInFlow: boolean;
   readyForOver20k: boolean;
@@ -82,10 +80,10 @@ export function getMarginBand(netMargin: number): 'green' | 'amber' | 'red' {
  * is that leads arrive consistently; the right number depends entirely on
  * their stage and price point.
  *
- * The old scoring banded purely on margin, so the score itself never moved a
- * client between red, amber and green. Here the band comes from the score.
+ * The band comes from the score itself. An earlier version banded on margin
+ * alone, so the score underneath never moved anyone between colours.
  */
-export function calcHealthScoreV2(client: ClientOverview) {
+export function calcHealthScore(client: ClientOverview) {
   const revenue    = Number(client.last_total_revenue || 0);
   const expenses   = Number(client.last_expenses || 0);
   const netMargin  = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : -1;
@@ -157,60 +155,6 @@ export function calcHealthScoreV2(client: ClientOverview) {
     netMargin: revenue > 0 ? netMargin : 0,
     leads, newClients, conversion, cac, valuePerClient,
     revenueScore, leadsScore, conversionScore, cacScore, marginScore, contentScore,
-  };
-}
-
-export function calcHealthScore(client: ClientOverview) {
-  // Margin-based scoring across 4 pillars: revenue, margin %, content posted, new clients
-  const revenue   = Number(client.last_total_revenue || 0);
-  const expenses  = Number(client.last_expenses || 0);
-  const netMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : -1;
-  const content   = Number(client.last_content_posts || 0);
-  const newClients = Number(client.last_new_clients || 0);
-
-  // Revenue (max 25)
-  let revenueScore = 0;
-  if (revenue >= 30000) revenueScore = 25;
-  else if (revenue >= 15000) revenueScore = 18;
-  else if (revenue >= 5000) revenueScore = 12;
-  else if (revenue > 0) revenueScore = 6;
-
-  // Margin (max 35) — primary driver
-  let marginScore = 0;
-  if (netMargin >= TARGET_MARGIN) marginScore = 35;
-  else if (netMargin >= MIN_MARGIN) marginScore = 22;
-  else if (netMargin >= 10) marginScore = 12;
-  else if (netMargin >= 0) marginScore = 5;
-
-  // Content posted (max 20)
-  let contentScore = 0;
-  if (content >= 12) contentScore = 20;
-  else if (content >= 8) contentScore = 14;
-  else if (content >= 4) contentScore = 8;
-  else if (content >= 1) contentScore = 3;
-
-  // New clients (max 20)
-  let clientsScore = 0;
-  if (newClients >= 3) clientsScore = 20;
-  else if (newClients >= 2) clientsScore = 14;
-  else if (newClients >= 1) clientsScore = 8;
-
-  const score = revenueScore + marginScore + contentScore + clientsScore;
-
-  // Overall band is driven by the margin band, refined by score for edge cases
-  const marginBand = getMarginBand(netMargin);
-  let band: 'green' | 'amber' | 'red' = marginBand;
-  // If they have no revenue at all, force red
-  if (revenue <= 0) band = 'red';
-
-  return {
-    score,
-    band,
-    netMargin: revenue > 0 ? netMargin : 0,
-    revenueScore,
-    marginScore,
-    contentScore,
-    clientsScore,
   };
 }
 

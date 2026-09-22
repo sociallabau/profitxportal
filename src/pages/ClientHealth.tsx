@@ -1,13 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  HeartPulse, X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign
-} from 'lucide-react';
+import { HeartPulse, ArrowUpCircle, Search } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import ClientDetailPanel from '@/components/client-health/ClientDetailPanel';
 import { useRequireAuth } from '@/hooks/useAuth';
-import { OWNER_USER_ID } from '@/lib/owner';
 import { toast } from 'sonner';
 import type { Row, ViewRow } from '@/lib/db';
 
@@ -24,7 +21,6 @@ import {
   TARGET_MARGIN,
   MIN_MARGIN,
   getMarginBand,
-  calcHealthScoreV2,
   calcHealthScore,
   generateConclusion,
   BAND,
@@ -111,10 +107,25 @@ export default function ClientHealth() {
   });
 
   // Both scorings are computed so the difference can be seen before committing.
-  const [scoringMode, setScoringMode] = useState<'current' | 'new'>('current');
+
+  const { data: archivedIds = [] } = useQuery({
+    queryKey: ['archived-clients'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .not('archived_at', 'is', null);
+      return (data ?? []).map(row => row.id);
+    },
+  });
+
+  const [search, setSearch] = useState('');
+  const [bandFilter, setBandFilter] = useState<'all' | 'green' | 'amber' | 'red'>('all');
 
   const clientsWithHealth = useMemo(() =>
-    clients.map((c: ClientOverview) => {
+    clients
+      .filter((c: ClientOverview) => !archivedIds.includes(c.id))
+      .map((c: ClientOverview) => {
       const clientCompletedKeys = allCompletions
         .filter(cp => cp.user_id === c.id)
         .map(cp => cp.task_key);
@@ -130,29 +141,16 @@ export default function ClientHealth() {
 
       return {
         ...c,
-        health: scoringMode === 'new' ? calcHealthScoreV2(c) : calcHealthScore(c),
-        healthCurrent: calcHealthScore(c),
-        healthNew: calcHealthScoreV2(c),
+        health: calcHealthScore(c),
         conclusion: generateConclusion(c),
         readyForInFlow,
         readyForOver20k,
         monthlyRevenue,
       };
     }).sort((a, b) => b.health.score - a.health.score),
-    [clients, allCompletions, scoringMode]
+    [clients, allCompletions, archivedIds]
   );
 
-
-  const bandMoves = useMemo(() =>
-    clientsWithHealth
-      .filter(c => c.healthCurrent.band !== c.healthNew.band)
-      .map(c => ({
-        name: c.full_name || 'Unnamed Client',
-        from: c.healthCurrent.band as 'green' | 'amber' | 'red',
-        to: c.healthNew.band as 'green' | 'amber' | 'red',
-      })),
-    [clientsWithHealth],
-  );
 
   const greenCount = clientsWithHealth.filter(c => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter(c => c.health.band === 'amber').length;
@@ -162,19 +160,6 @@ export default function ClientHealth() {
 
 
 
-  const { data: pageViewAgg = [] } = useQuery({
-    queryKey: ['page-view-agg'],
-    enabled: !!selfProfile?.is_admin,
-    queryFn: async () => {
-      const { data } = await supabase.from('page_views').select('page').limit(500);
-      return data ?? [];
-    },
-  });
-  const pageCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    pageViewAgg.forEach(v => { counts[v.page] = (counts[v.page] || 0) + 1; });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [pageViewAgg]);
 
   if (!selfProfile?.is_admin) {
     return <PageLayout><p className="text-muted-foreground">Admin access required.</p></PageLayout>;
@@ -189,56 +174,6 @@ export default function ClientHealth() {
         <p className="text-sm text-muted-foreground">Click any client to view their full profile and manage their tier.</p>
       </div>
 
-      <div className="mb-6 border border-border rounded-xl p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground">Scoring</p>
-            <p className="text-xs text-muted-foreground max-w-xl">
-              {scoringMode === 'current'
-                ? 'Current: bands come from net margin alone — the score underneath never moves anyone between colours.'
-                : 'New: net margin carries the most weight, with revenue, leads, cost to acquire and conversion alongside it — and the score sets the band rather than margin alone.'}
-            </p>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            {(['current', 'new'] as const).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setScoringMode(mode)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  scoringMode === mode
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                {mode === 'current' ? 'Current' : 'New'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {bandMoves.length > 0 ? (
-          <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-2">
-              {bandMoves.length} client{bandMoves.length === 1 ? '' : 's'} would change band:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {bandMoves.map(move => (
-                <span key={move.name} className="text-xs border border-border rounded-full px-2.5 py-1">
-                  <span className="text-foreground font-medium">{move.name}</span>
-                  <span className="text-muted-foreground"> {BAND[move.from].label} → </span>
-                  <span className={BAND[move.to].text}>{BAND[move.to].label}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
-            Both scorings put every client in the same band right now.
-          </p>
-        )}
-      </div>
-
-      {user?.id === OWNER_USER_ID && <TotalNewMrrCard />}
 
 
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -248,11 +183,16 @@ export default function ClientHealth() {
           { label: 'Needs Help', count: redCount,   band: 'red'   as const },
         ].map(({ label, count, band }) => {
           const s = BAND[band];
+          const active = bandFilter === band;
           return (
-            <div key={band} className={`${s.bg} border ${s.border} rounded-xl p-4 text-center`}>
+            <button
+              key={band}
+              onClick={() => setBandFilter(active ? 'all' : band)}
+              className={`${s.bg} border ${active ? 'border-primary ring-2 ring-primary/30' : s.border} rounded-xl p-4 text-center`}
+            >
               <p className={`text-3xl font-bold ${s.text}`}>{count}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -319,93 +259,105 @@ export default function ClientHealth() {
         </div>
       )}
 
-      {pageCounts.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-5 mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Eye className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Where Clients Spend Time</h2>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">Total page visits across all clients — tells you where to focus your coaching.</p>
-          <div className="space-y-2">
-            {pageCounts.slice(0, 6).map(([page, count]) => {
-              const pct = Math.round((count / (pageCounts[0]?.[1] || 1)) * 100);
-              return (
-                <div key={page} className="flex items-center gap-3">
-                  <span className="text-sm text-foreground capitalize w-28 shrink-0">{page.replace('-', ' ')}</span>
-                  <div className="flex-1 bg-muted rounded-full h-2">
-                    <div className="bg-primary rounded-full h-2" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="text-xs text-muted-foreground w-14 text-right">{count} visits</span>
-                </div>
-              );
-            })}
-          </div>
-          {pageCounts[0] && (
-            <p className="text-xs text-primary mt-3">
-              💡 Most visited: <strong className="capitalize">{pageCounts[0][0].replace('-', ' ')}</strong> — focus coaching effort here.
-            </p>
-          )}
-        </div>
-      )}
-
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading clients...</p>
       ) : clientsWithHealth.length === 0 ? (
         <p className="text-sm text-muted-foreground">No clients have submitted data yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {clientsWithHealth.map(client => {
-            const { health, conclusion } = client;
-            const s = BAND[health.band as keyof typeof BAND];
-            return (
-              <button
-                key={client.id}
-                onClick={() => setSelectedClient(client)}
-                className={`w-full text-left bg-card border ${s.border} rounded-xl p-4 hover:border-primary/50 transition-all flex items-center gap-4`}
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className={`w-3 h-3 rounded-full shrink-0 ${s.dot}`} />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">{client.full_name || 'Unnamed Client'}</p>
-                    <p className="text-xs text-muted-foreground">{formatTierLabel(client.tier)} tier</p>
-                  </div>
-                </div>
+      ) : (() => {
+        const term = search.trim().toLowerCase();
+        const visible = clientsWithHealth.filter(c =>
+          (bandFilter === 'all' || c.health.band === bandFilter) &&
+          (!term || (c.full_name ?? '').toLowerCase().includes(term)),
+        );
 
-                <div className="hidden sm:flex items-center gap-6 text-xs text-muted-foreground shrink-0">
-                  <span>{formatTierLabel(client.tier)}</span>
-                  <span className="flex items-center gap-1.5">
-                    ${Number(client.last_total_revenue || 0).toLocaleString()}/mo
-                    {(() => {
-                      const series = (revenueTrends as Record<string, number[]>)[client.id];
-                      if (!series || series.length < 2) return null;
-                      const [latest, previous] = series;
-                      if (!previous) return null;
-                      const change = Math.round(((latest - previous) / previous) * 100);
-                      if (Math.abs(change) < 5) return <span className="text-muted-foreground">flat</span>;
-                      return (
-                        <span className={change > 0 ? 'text-green-400' : 'text-orange-400'}>
-                          {change > 0 ? '▲' : '▼'} {Math.abs(change)}%
-                        </span>
-                      );
-                    })()}
-                  </span>
-                  {client.days_since_last_login !== null && (
-                    <span className={Number(client.days_since_last_login) > 14 ? 'text-orange-400' : ''}>
-                      Last login: {client.days_since_last_login}d ago
-                    </span>
-                  )}
-                </div>
+        return (
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="flex flex-wrap items-center gap-3 p-3 border-b border-border">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search clients"
+                  className="w-full pl-9 pr-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {visible.length} of {clientsWithHealth.length}
+                {bandFilter !== 'all' && (
+                  <button onClick={() => setBandFilter('all')} className="ml-2 text-primary hover:underline">
+                    clear filter
+                  </button>
+                )}
+              </span>
+            </div>
 
-                <span className={`hidden sm:inline-block px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${s.bg} ${s.text}`}>
-                  {s.label}
-                </span>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[620px]">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                    <th className="py-2.5 px-4 font-semibold">Client</th>
+                    <th className="py-2.5 px-3 font-semibold">Tier</th>
+                    <th className="py-2.5 px-3 font-semibold">Revenue</th>
+                    <th className="py-2.5 px-3 font-semibold">Last login</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map(client => {
+                    const s = BAND[client.health.band as keyof typeof BAND];
+                    const series = (revenueTrends as Record<string, number[]>)[client.id];
+                    const [latest, previous] = series ?? [];
+                    const change = series && series.length > 1 && previous
+                      ? Math.round(((latest - previous) / previous) * 100)
+                      : null;
+                    const days = client.days_since_last_login;
 
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </button>
-            );
-          })}
-        </div>
-      )}
+                    return (
+                      <tr
+                        key={client.id}
+                        onClick={() => setSelectedClient(client)}
+                        className="border-b border-border/60 last:border-0 cursor-pointer hover:bg-muted/40 transition-colors"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.dot}`} />
+                            <span className="font-semibold text-foreground truncate">
+                              {client.full_name || 'Unnamed Client'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">{formatTierLabel(client.tier)}</td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span className="text-foreground">${Number(client.last_total_revenue || 0).toLocaleString()}</span>
+                          {change !== null && (
+                            Math.abs(change) < 5
+                              ? <span className="ml-1.5 text-xs text-muted-foreground">flat</span>
+                              : <span className={`ml-1.5 text-xs ${change > 0 ? 'text-green-400' : 'text-orange-400'}`}>
+                                  {change > 0 ? '▲' : '▼'} {Math.abs(change)}%
+                                </span>
+                          )}
+                        </td>
+                        <td className={`py-3 px-3 whitespace-nowrap ${days !== null && Number(days) > 14 ? 'text-orange-400' : 'text-muted-foreground'}`}>
+                          {days !== null ? `${days}d ago` : '—'}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${s.bg} ${s.text}`}>
+                            {s.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {visible.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">No clients match that.</p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* SLIDE-OVER PANEL */}
       {selectedClient && (
@@ -418,55 +370,3 @@ export default function ClientHealth() {
     </PageLayout>
   );
 }
-
-function TotalNewMrrCard() {
-  const { data: rows = [] } = useQuery({
-    queryKey: ['owner-total-mrr-growth'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('monthly_totals')
-        .select('user_id, month, mrr, mrr_manual, new_clients_total_value, new_clients_is_mrr')
-        .order('month', { ascending: true });
-      return data ?? [];
-    },
-  });
-
-  // Per-student MRR growth: (latest MRR − first MRR), floored at 0. Sums total MRR
-  // students have gained since their first submission — "how much MRR I've helped my clients add".
-  const byUser: Record<string, { first: number; last: number }> = {};
-  for (const r of rows) {
-    const m = Number(r.mrr_manual ?? r.mrr ?? 0) || 0;
-    const u = r.user_id;
-    if (!byUser[u]) byUser[u] = { first: m, last: m };
-    else byUser[u].last = m; // rows are sorted ascending, so the last one wins
-  }
-  const perUserGrowth = Object.entries(byUser).map(([u, v]) => ({ u, growth: Math.max(v.last - v.first, 0) }));
-  const totalGrowth = perUserGrowth.reduce((s, x) => s + x.growth, 0);
-  const contributors = perUserGrowth.filter((x) => x.growth > 0).length;
-  const studentCount = Object.keys(byUser).length;
-
-  // Secondary metric: cumulative new-client revenue booked across every submission.
-  const totalNewClientRevenue = rows.reduce((sum, r) => sum + (Number(r.new_clients_total_value) || 0), 0);
-
-  return (
-    <div className="bg-gradient-to-br from-primary/20 to-purple-600/10 border border-primary/40 rounded-xl p-5 mb-6">
-      <div className="flex items-center gap-2 mb-1">
-        <DollarSign className="w-5 h-5 text-primary" />
-        <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Total ProfitX MRR Generated (Owner Only)</h2>
-      </div>
-      <p className="text-3xl font-bold text-foreground">
-        ${totalGrowth.toLocaleString()}
-        <span className="text-sm font-normal text-muted-foreground"> MRR gained</span>
-      </p>
-      <p className="text-xs text-muted-foreground mt-1">
-        Sum of every student's MRR growth from their first submission to their latest. {contributors} of {studentCount} student{studentCount === 1 ? '' : 's'} showing MRR growth.
-      </p>
-      <div className="mt-3 pt-3 border-t border-primary/20 flex items-baseline gap-2">
-        <span className="text-xs uppercase tracking-wider text-muted-foreground">New client revenue booked:</span>
-        <span className="text-lg font-bold text-foreground">${totalNewClientRevenue.toLocaleString()}</span>
-      </div>
-    </div>
-  );
-}
-
-

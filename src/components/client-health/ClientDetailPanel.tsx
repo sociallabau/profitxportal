@@ -100,6 +100,24 @@ export default function ClientDetailPanel({
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const archive = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', client.id)
+        .select('id');
+      if (error) throw error;
+      if (!data?.length) throw new Error('Archive blocked — check admin permissions');
+    },
+    onSuccess: () => {
+      toast.success(`${client.full_name || 'Client'} archived — their data is kept`);
+      queryClient.invalidateQueries({ queryKey: ['archived-clients'] });
+      onClose();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const c = client;
   const h = c.health || calcHealthScore(c);
   const s = BAND[h.band as keyof typeof BAND];
@@ -437,6 +455,23 @@ export default function ClientDetailPanel({
                     </div>
                   </div>
                 )}
+
+                <div className="pt-4 border-t border-border">
+                  <button
+                    onClick={() => {
+                      if (confirm(`Archive ${c.full_name || 'this client'}? They disappear from the portal, but every submission and review is kept.`)) {
+                        archive.mutate();
+                      }
+                    }}
+                    disabled={archive.isPending}
+                    className="text-xs font-semibold text-muted-foreground hover:text-destructive transition disabled:opacity-50"
+                  >
+                    {archive.isPending ? 'Archiving…' : 'Archive this client'}
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Hides them everywhere in the portal. Nothing is deleted.
+                  </p>
+                </div>
               </div>
             </div>
           </>

@@ -908,6 +908,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          archived_at: string | null
           access_revoked: boolean
           business_overview: string | null
           circle_url: string | null
@@ -924,6 +925,7 @@ export type Database = {
           tier_seen: string | null
         }
         Insert: {
+          archived_at?: string | null
           access_revoked?: boolean
           business_overview?: string | null
           circle_url?: string | null
@@ -940,6 +942,7 @@ export type Database = {
           tier_seen?: string | null
         }
         Update: {
+          archived_at?: string | null
           access_revoked?: boolean
           business_overview?: string | null
           circle_url?: string | null
