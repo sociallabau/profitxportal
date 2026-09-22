@@ -1,7 +1,6 @@
 import PageLayout from '@/components/PageLayout';
 import { Card } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText, ChevronDown, Sparkles } from 'lucide-react';
+import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText, Sparkles } from 'lucide-react';
 
 import vaultQaMarch from '@/assets/vault-qa-march.jpg';
 import vaultOrganic from '@/assets/vault-organic-content.jpg';
@@ -273,14 +272,6 @@ const categoryStyles: Record<VaultItem['category'], string> = {
   'Hot Seat': 'bg-destructive/15 text-destructive border-destructive/30',
 };
 
-const SECTIONS: { heading: string; categories: VaultItem['category'][] }[] = [
-  { heading: 'Momentum Calls', categories: ['Momentum Call'] },
-  { heading: 'Hot Seat', categories: ['Hot Seat'] },
-  { heading: 'Q&A Calls', categories: ['Q&A'] },
-  { heading: 'Workshops', categories: ['Workshop', 'Lesson'] },
-];
-
-
 export default function Vault() {
   return (
     <PageLayout>
@@ -288,123 +279,86 @@ export default function Vault() {
         <h1 className="text-3xl font-bold italic text-foreground">Vault</h1>
         <p className="text-muted-foreground mt-1">Recordings of momentum calls, Q&As and workshops — watch any time.</p>
       </div>
-      <div className="flex flex-col gap-10">
-        {SECTIONS.map((section) => {
-          const items = ITEMS.filter((i) => section.categories.includes(i.category)).slice().sort((a, b) => (b.sortDate ?? '').localeCompare(a.sortDate ?? ''));
-          if (items.length === 0) return null;
-          return (
-            <Collapsible key={section.heading} defaultOpen>
-              <section>
-                <CollapsibleTrigger className="group flex items-center gap-2 w-full text-left mb-4">
-                  <h2 className="text-xl font-bold text-foreground">{section.heading}</h2>
-                  <span className="text-xs text-muted-foreground">({items.length})</span>
-                  <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {items.map((item) => (
-                      <Card
-                        key={item.url}
-                        className="h-full overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col group"
-                      >
-                        <a href={item.url} target="_blank" rel="noopener noreferrer" className="block">
-                          <div className="relative aspect-video overflow-hidden bg-muted">
-                            <img
-                              src={item.thumbnail}
-                              alt={item.title}
-                              width={1024}
-                              height={576}
-                              loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <PlayCircle className="w-14 h-14 text-white drop-shadow-lg" />
-                            </div>
-                          </div>
-                        </a>
-                        <div className="p-5 flex flex-col gap-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[item.category]}`}
-                            >
-                              {item.category}
-                            </span>
-                            {item.date && (
-                              <span className="text-xs text-muted-foreground">{item.date}</span>
-                            )}
-                          </div>
-                          <h3 className="font-semibold text-foreground leading-snug">{item.title}</h3>
-                          <div className="mt-auto pt-2 flex flex-col gap-1.5">
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
-                            </a>
-                            {item.workbookUrl && (
-                              <a
-                                href={item.workbookUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                              >
-                                <BookOpen className="w-3 h-3" />
-                                {item.workbookLabel ?? 'Workbook'}
-                              </a>
-                            )}
-                            {item.transcriptUrl && (
-                              <a
-                                href={item.transcriptUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                              >
-                                <FileText className="w-3 h-3" />
-                                {item.transcriptLabel ?? 'Transcript & summary'}
-                              </a>
-                            )}
-                            {item.gptUrl && (
-                              <a
-                                href={item.gptUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                              >
-                                <Sparkles className="w-3 h-3" />
-                                {item.gptLabel ?? 'Custom GPT'}
-                              </a>
-                            )}
-                            {item.templates && item.templates.length > 0 && (
-                              <div className="pt-1.5 mt-1 border-t border-border/50 flex flex-col gap-1.5">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">Templates</span>
-                                {item.templates.map((tpl) => (
-                                  <a
-                                    key={tpl.url}
-                                    href={tpl.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                                  >
-                                    <FileSpreadsheet className="w-3 h-3" />
-                                    {tpl.label}
-                                  </a>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </section>
-            </Collapsible>
+      <p className="text-[11px] italic text-muted-foreground/70 mb-3">
+        Alee made me put these in chronological order haha
+      </p>
 
-          );
-        })}
+      {/* One timeline, newest first. Bars on desktop, centred tiles on mobile. */}
+      <div className="flex flex-col gap-4">
+        {[...ITEMS]
+          .sort((a, b) => (b.sortDate ?? '').localeCompare(a.sortDate ?? ''))
+          .map((item) => (
+            <Card
+              key={item.url}
+              className="w-full max-w-md mx-auto md:max-w-none overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col md:flex-row group"
+            >
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block md:w-72 lg:w-80 shrink-0"
+              >
+                <div className="relative aspect-video md:h-full overflow-hidden bg-muted">
+                  <img
+                    src={item.thumbnail}
+                    alt={item.title}
+                    width={1024}
+                    height={576}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <PlayCircle className="w-12 h-12 text-white drop-shadow-lg" />
+                  </div>
+                </div>
+              </a>
+
+              <div className="p-5 flex flex-col gap-2 flex-1 min-w-0 md:justify-center">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[item.category]}`}
+                  >
+                    {item.category}
+                  </span>
+                  {item.date && (
+                    <span className="text-xs text-muted-foreground">{item.date}</span>
+                  )}
+                </div>
+                <h3 className="font-semibold text-foreground leading-snug md:text-lg">{item.title}</h3>
+
+                <div className="pt-1 flex flex-col md:flex-row md:flex-wrap gap-x-5 gap-y-1.5">
+                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                    <ExternalLink className="w-3 h-3" />
+                    {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
+                  </a>
+                  {item.workbookUrl && (
+                    <a href={item.workbookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                      <BookOpen className="w-3 h-3" />
+                      {item.workbookLabel ?? 'Workbook'}
+                    </a>
+                  )}
+                  {item.transcriptUrl && (
+                    <a href={item.transcriptUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                      <FileText className="w-3 h-3" />
+                      {item.transcriptLabel ?? 'Transcript & summary'}
+                    </a>
+                  )}
+                  {item.gptUrl && (
+                    <a href={item.gptUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                      <Sparkles className="w-3 h-3" />
+                      {item.gptLabel ?? 'Custom GPT'}
+                    </a>
+                  )}
+                  {item.templates?.map((tpl) => (
+                    <a key={tpl.url} href={tpl.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                      <FileSpreadsheet className="w-3 h-3" />
+                      {tpl.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          ))}
       </div>
     </PageLayout>
   );
