@@ -909,6 +909,7 @@ export type Database = {
       profiles: {
         Row: {
           access_revoked: boolean
+          archived_at: string | null
           business_overview: string | null
           circle_url: string | null
           coach_notes: string | null
@@ -925,6 +926,7 @@ export type Database = {
         }
         Insert: {
           access_revoked?: boolean
+          archived_at?: string | null
           business_overview?: string | null
           circle_url?: string | null
           coach_notes?: string | null
@@ -941,6 +943,7 @@ export type Database = {
         }
         Update: {
           access_revoked?: boolean
+          archived_at?: string | null
           business_overview?: string | null
           circle_url?: string | null
           coach_notes?: string | null
