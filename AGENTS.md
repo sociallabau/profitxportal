@@ -1,0 +1,1 @@
+Keep admin-only copy-ready monthly coaching drafts in the authenticated monthly-review function, not in client-readable review rows, so private analysis and editable drafts never appear in members' data.
