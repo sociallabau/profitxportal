@@ -362,6 +362,7 @@ export default function ClientHealth() {
       {/* SLIDE-OVER PANEL */}
       {selectedClient && (
         <ClientDetailPanel
+          key={selectedClient.id}
           client={clientsWithHealth.find(x => x.id === selectedClient.id) || selectedClient}
           onClose={() => setSelectedClient(null)}
           changeTier={changeTier}
