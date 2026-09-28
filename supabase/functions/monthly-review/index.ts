@@ -152,6 +152,9 @@ Deno.serve(async (req) => {
       .from("profiles").select("is_admin").eq("id", userData.user.id).single();
 
     const body = await req.json().catch(() => ({}));
+    if (body?.action === "draft-message" && !profile?.is_admin) {
+      return json({ error: "Admin access required" }, 403);
+    }
     // A client can only ever generate their own; an admin can regenerate anyone's.
     const targetUser: string = profile?.is_admin && body?.userId ? body.userId : userData.user.id;
 
@@ -179,6 +182,34 @@ Deno.serve(async (req) => {
 
     const { data: voice } = await admin
       .from("voice_profile").select("content").eq("slug", "default").maybeSingle();
+
+    if (body?.action === "draft-message") {
+      const requestedMonth = String(body?.month ?? "");
+      const chosen = history.find(row => String(row.month) === requestedMonth);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedMonth) || !chosen) {
+        return json({ error: "No submission found for that month" }, 400);
+      }
+      const { data: review, error: reviewError } = await admin
+        .from("monthly_reviews")
+        .select("admin_breakdown, focus")
+        .eq("user_id", targetUser)
+        .eq("month", requestedMonth)
+        .maybeSingle();
+      if (reviewError) throw reviewError;
+      if (!review) return json({ error: "Build the monthly review first" }, 400);
+
+      const draftSystem = `${VOICE}${voice?.content ? `\n\n${voice.content}` : ""}
+
+${METHOD}
+
+Write a private, copy-and-paste message from Dan to this client, not the client-facing monthly round-up. Use the admin breakdown as your analysis, but DO NOT paste its internal observations, scores, or diagnostic language verbatim. Start with a short, enthusiastic, specific celebration of what they actually did this month, naming the good stuff. Make it feel like Dan is texting them, not a report. Use the client's own wording in their biggest win and what they are working on next to guide vocabulary, punctuation, spelling and energy. Mirror naturally; don't quote or parody them, invent typos, or claim a result they didn't report. Then add a brief transition like "let's get stuck into this next" and 1–3 simple dot points about where the actual breaks are and what to focus on. Only mention breaks supported by the data or breakdown; if the engine is working, don't invent problems. Keep it tight, encouraging, plain-text, first-person, and directly addressed to the client. No heading, markdown formatting, preamble, sign-off, or private coaching notes. Return only the message.`;
+
+      const message = await callModel(
+        `CLIENT: ${person?.full_name || "Client"}\nMONTH: ${requestedMonth}\n\nTHEIR SUBMISSION:\n${describe(chosen as MonthRow, "This month")}\n\nPRIVATE ANALYSIS:\n${review.admin_breakdown}\n\nREVIEW FOCUS:\n${review.focus ?? "Not set"}`,
+        draftSystem,
+      );
+      return json({ message: message.trim() });
+    }
 
     const timeline = history
       .map((row, i) => describe(row as MonthRow, i === 0 ? "This month" : `${i} month${i === 1 ? "" : "s"} earlier`))

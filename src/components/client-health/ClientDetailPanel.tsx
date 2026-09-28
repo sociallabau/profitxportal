@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign } from 'lucide-react';
+import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
@@ -33,6 +35,36 @@ export default function ClientDetailPanel({
   /** Passed whole rather than as a callback: the panel shows its pending state. */
   changeTier: UseMutationResult<string, Error, { clientId: string; tier: string }>;
 }) {
+   const [drafts, setDrafts] = useState<Record<string, string>>({});
+   const [draftingMonth, setDraftingMonth] = useState<string | null>(null);
+   const [copiedMonth, setCopiedMonth] = useState<string | null>(null);
+   const [draftError, setDraftError] = useState<string | null>(null);
+   const draftMessage = async (month: string) => {
+     setDraftingMonth(month);
+     setDraftError(null);
+     try {
+       const { data, error } = await supabase.functions.invoke('monthly-review', {
+         body: { action: 'draft-message', userId: client.id, month },
+       });
+       if (error || !data?.message) throw new Error(data?.error ?? 'Could not draft the message');
+       setDrafts(previous => ({ ...previous, [month]: data.message }));
+     } catch (error) {
+       setDraftError(error instanceof Error ? error.message : 'Could not draft the message');
+     } finally {
+       setDraftingMonth(null);
+     }
+   };
+
+   const copyMessage = async (month: string) => {
+     try {
+       await navigator.clipboard.writeText(drafts[month]);
+       setCopiedMonth(month);
+       toast.success('Message copied');
+     } catch {
+       toast.error('Could not copy — select the message to copy it');
+     }
+   };
+
   const { data: clientHistory = [] } = useQuery({
   queryKey: ['client-monthly-history', client.id],
       queryFn: async () => {
@@ -95,6 +127,7 @@ export default function ClientDetailPanel({
     },
     onSuccess: () => {
       toast.success('Review rebuilt');
+       setDrafts({});
       queryClient.invalidateQueries({ queryKey: ['client-monthly-reviews', client.id] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -428,6 +461,34 @@ export default function ClientDetailPanel({
                           <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
                             {r.admin_breakdown}
                           </p>
+                          <div className="mt-4 border-t border-border pt-4 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs font-semibold text-foreground">Message to send</p>
+                              <div className="flex items-center gap-2">
+                                <Button type="button" variant="outline" size="sm" disabled={draftingMonth !== null} onClick={() => draftMessage(r.month)}>
+                                  {draftingMonth === r.month ? 'Writing…' : drafts[r.month] ? 'Rewrite' : 'Write message'}
+                                </Button>
+                                {drafts[r.month] && (
+                                  <Button type="button" size="sm" onClick={() => copyMessage(r.month)} title="Copy message" aria-label={`Copy ${r.month} message`}>
+                                    <Copy /> {copiedMonth === r.month ? 'Copied' : 'Copy'}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            {draftError && draftingMonth === null && <p role="alert" className="text-xs text-destructive">{draftError}</p>}
+                            {drafts[r.month] && (
+                              <textarea
+                                aria-label={`Message for ${c.full_name}, ${r.month}`}
+                                value={drafts[r.month]}
+                                onChange={e => {
+                                  setDrafts(previous => ({ ...previous, [r.month]: e.target.value }));
+                                  setCopiedMonth(null);
+                                }}
+                                rows={9}
+                                className="w-full resize-y rounded-md border border-input bg-background p-3 text-sm text-foreground leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring"
+                              />
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
