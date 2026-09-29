@@ -27,7 +27,7 @@ type VaultItem = {
   title: string;
   category: 'Q&A' | 'Workshop' | 'Lesson' | 'Momentum Call' | 'Hot Seat';
   date?: string;
-  url: string;
+  url?: string;
   thumbnail: string;
   sortDate?: string;
   workbookUrl?: string;
@@ -40,6 +40,15 @@ type VaultItem = {
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Hot Seat — Colby Shaw (Cognition Media)',
+    category: 'Hot Seat',
+    thumbnail: hotSeatElijahThumb,
+    transcriptUrl: 'https://docs.google.com/document/d/1r9R4hIkfRjyUNKOIaaSS9JtZNjfJbUzlifTJkjPQBT4/edit?usp=sharing',
+    transcriptLabel: 'Notes & Transcript',
+    workbookUrl: 'https://drive.google.com/file/d/1z0ryVLovj0dRG1qVTBW2rdpjUEtMGtcL/view?usp=sharing',
+    workbookLabel: 'Chat Links',
+  },
   {
     title: 'Momentum Call - Setting Up Lead Generation Ads, Ad Creatives etc...',
     sortDate: '2026-09-15',
@@ -285,33 +294,27 @@ export default function Vault() {
 
       {/* One timeline, newest first. Bars on desktop, centred tiles on mobile. */}
       <div className="flex flex-col gap-4">
-        {[...ITEMS]
-          .sort((a, b) => (b.sortDate ?? '').localeCompare(a.sortDate ?? ''))
+         {[...ITEMS]
+           .sort((a, b) => (b.sortDate ?? '9999').localeCompare(a.sortDate ?? '9999'))
           .map((item) => (
             <Card
-              key={item.url}
+               key={item.title}
               className="w-full max-w-md mx-auto md:max-w-none overflow-hidden hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 transition-all flex flex-col md:flex-row group"
             >
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block md:w-72 lg:w-80 shrink-0"
-              >
+               <div className="block md:w-72 lg:w-80 shrink-0">
                 <div className="relative aspect-video md:h-full overflow-hidden bg-muted">
-                  <img
-                    src={item.thumbnail}
-                    alt={item.title}
-                    width={1024}
-                    height={576}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <PlayCircle className="w-12 h-12 text-white drop-shadow-lg" />
-                  </div>
+                   {item.url ? (
+                     <a href={item.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                       <img src={item.thumbnail} alt={item.title} width={1024} height={576} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                       <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                         <PlayCircle className="w-12 h-12 text-white drop-shadow-lg" />
+                       </div>
+                     </a>
+                   ) : (
+                     <img src={item.thumbnail} alt={item.title} width={1024} height={576} loading="lazy" className="w-full h-full object-cover" />
+                   )}
                 </div>
-              </a>
+               </div>
 
               <div className="p-5 flex flex-col gap-2 flex-1 min-w-0 md:justify-center">
                 <div className="flex items-center gap-2">
@@ -327,10 +330,12 @@ export default function Vault() {
                 <h3 className="font-semibold text-foreground leading-snug md:text-lg">{item.title}</h3>
 
                 <div className="pt-1 flex flex-col md:flex-row md:flex-wrap gap-x-5 gap-y-1.5">
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                    <ExternalLink className="w-3 h-3" />
-                    {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
-                  </a>
+                   {item.url && (
+                     <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                       <ExternalLink className="w-3 h-3" />
+                       {item.url.includes('drive.google.com') ? 'Watch recording' : 'Watch on Fathom'}
+                     </a>
+                   )}
                   {item.workbookUrl && (
                     <a href={item.workbookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
                       <BookOpen className="w-3 h-3" />
