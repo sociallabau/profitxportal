@@ -44,6 +44,7 @@ const ITEMS: VaultItem[] = [
     title: 'Hot Seat — Colby Shaw (Cognition Media)',
     category: 'Hot Seat',
     thumbnail: hotSeatElijahThumb,
+    url: 'https://drive.google.com/file/d/1W7Zvc_xSRvVrUuRROeK8UM9GKLPgzAKK/view?usp=sharing',
     transcriptUrl: 'https://docs.google.com/document/d/1r9R4hIkfRjyUNKOIaaSS9JtZNjfJbUzlifTJkjPQBT4/edit?usp=sharing',
     transcriptLabel: 'Notes & Transcript',
     workbookUrl: 'https://drive.google.com/file/d/1z0ryVLovj0dRG1qVTBW2rdpjUEtMGtcL/view?usp=sharing',
