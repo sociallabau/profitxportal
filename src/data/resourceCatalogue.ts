@@ -24,6 +24,11 @@ export type RoadmapResource = {
 
 export const VAULT_RESOURCES: VaultResource[] = [
   {
+    "title": "Hot Seat — Colby Shaw (Cognition Media)",
+    "category": "Hot Seat",
+    "date": null
+  },
+  {
     "title": "Momentum Call - Setting Up Lead Generation Ads, Ad Creatives etc...",
     "category": "Momentum Call",
     "date": "Sep 15"
