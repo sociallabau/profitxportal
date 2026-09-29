@@ -42,7 +42,9 @@ type VaultItem = {
 const ITEMS: VaultItem[] = [
   {
     title: 'Hot Seat — Colby Shaw (Cognition Media)',
+    sortDate: '2026-09-29',
     category: 'Hot Seat',
+    date: 'Sep 29',
     thumbnail: hotSeatElijahThumb,
     url: 'https://drive.google.com/file/d/1W7Zvc_xSRvVrUuRROeK8UM9GKLPgzAKK/view?usp=sharing',
     transcriptUrl: 'https://docs.google.com/document/d/1r9R4hIkfRjyUNKOIaaSS9JtZNjfJbUzlifTJkjPQBT4/edit?usp=sharing',
