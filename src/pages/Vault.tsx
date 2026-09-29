@@ -42,7 +42,6 @@ type VaultItem = {
 const ITEMS: VaultItem[] = [
   {
     title: 'Hot Seat — Colby Shaw (Cognition Media)',
-    sortDate: '2026-09-29',
     category: 'Hot Seat',
     thumbnail: hotSeatElijahThumb,
     transcriptUrl: 'https://docs.google.com/document/d/1r9R4hIkfRjyUNKOIaaSS9JtZNjfJbUzlifTJkjPQBT4/edit?usp=sharing',
@@ -295,8 +294,8 @@ export default function Vault() {
 
       {/* One timeline, newest first. Bars on desktop, centred tiles on mobile. */}
       <div className="flex flex-col gap-4">
-        {[...ITEMS]
-          .sort((a, b) => (b.sortDate ?? '').localeCompare(a.sortDate ?? ''))
+         {[...ITEMS]
+           .sort((a, b) => (b.sortDate ?? '9999').localeCompare(a.sortDate ?? '9999'))
           .map((item) => (
             <Card
                key={item.title}
