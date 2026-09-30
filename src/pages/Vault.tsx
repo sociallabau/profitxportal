@@ -20,6 +20,7 @@ import vaultSpringPlanning from '@/assets/vault-spring-planning.jpg';
 import vaultDeliveryMagic from '@/assets/vault-delivery-magic.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
+import vaultTheSystem from '@/assets/the-system-thumb.png';
 
 type Template = { label: string; url: string };
 
@@ -40,6 +41,18 @@ type VaultItem = {
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Workshop — The System™',
+    sortDate: '2026-09-30',
+    category: 'Workshop',
+    date: 'Sep 30',
+    url: 'https://drive.google.com/file/d/1n0G-elBO7EoGeElVGKUYprSFmCLGjE6k/view?usp=sharing',
+    thumbnail: vaultTheSystem,
+    transcriptUrl: 'https://docs.google.com/document/d/154VMVTAagqhy1Y2Dz0BwHLWIkw4dSp3GBaJ7jmC0R68/edit?usp=sharing',
+    transcriptLabel: 'Notes & Transcript',
+    workbookUrl: 'https://messy-arrow-f59.notion.site/The-System-3e8bdcf32ce480d29b58cb9f603349e6?source=copy_link',
+    workbookLabel: 'Workbook',
+  },
   {
     title: 'Hot Seat — Colby Shaw (Cognition Media)',
     sortDate: '2026-09-29',
