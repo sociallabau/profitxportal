@@ -24,6 +24,11 @@ export type RoadmapResource = {
 
 export const VAULT_RESOURCES: VaultResource[] = [
   {
+    "title": "Workshop — The System™",
+    "category": "Workshop",
+    "date": "Sep 30"
+  },
+  {
     "title": "Hot Seat — Colby Shaw (Cognition Media)",
     "category": "Hot Seat",
     "date": "Sep 29"
