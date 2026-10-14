@@ -24,6 +24,11 @@ export type RoadmapResource = {
 
 export const VAULT_RESOURCES: VaultResource[] = [
   {
+    "title": "Momentum Call - Paid Ads, Offers",
+    "category": "Momentum Call",
+    "date": "Oct 13"
+  },
+  {
     "title": "Workshop — The System™",
     "category": "Workshop",
     "date": "Sep 30"
