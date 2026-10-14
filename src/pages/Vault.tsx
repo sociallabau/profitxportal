@@ -42,6 +42,16 @@ type VaultItem = {
 
 const ITEMS: VaultItem[] = [
   {
+    title: 'Momentum Call - Paid Ads, Offers',
+    sortDate: '2026-10-13',
+    category: 'Momentum Call',
+    date: 'Oct 13',
+    url: 'https://drive.google.com/file/d/1QubJB6IVOtYnQSyu0U3advGYqGkQ0F36/view?usp=sharing',
+    thumbnail: vaultMomentumJun23,
+    transcriptUrl: 'https://docs.google.com/document/d/1b1xNlvFKXMc5V1xZtrn80As0YqHbVMnMXQFiuvNY6cs/edit?usp=sharing',
+    transcriptLabel: 'Summary',
+  },
+  {
     title: 'Workshop — The System™',
     sortDate: '2026-09-30',
     category: 'Workshop',
