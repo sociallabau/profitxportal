@@ -21,6 +21,7 @@ import vaultDeliveryMagic from '@/assets/vault-delivery-magic.jpg';
 import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 import vaultTheSystem from '@/assets/the-system-thumb.png';
+import vaultAdMetrics101 from '@/assets/ad-metrics-thumb.png';
 
 type Template = { label: string; url: string };
 
@@ -41,6 +42,21 @@ type VaultItem = {
 };
 
 const ITEMS: VaultItem[] = [
+  {
+    title: 'Workshop — Ad Metrics & Tracking 101™',
+    sortDate: '2026-10-14',
+    category: 'Workshop',
+    date: 'Oct 14',
+    url: 'https://drive.google.com/file/d/1wDK6YcLBI7mlDZCYjl8812XDtKNJ4iRB/view?usp=sharing',
+    thumbnail: vaultAdMetrics101,
+    transcriptUrl: 'https://docs.google.com/document/d/1h3yHNx-LdS8Z8t9adARu6pL4bmqRJrEMfcCw_Bdv-cA/edit?usp=sharing',
+    transcriptLabel: 'Notes & Transcript',
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Ad-Metrics-Tracking-101-4d2bdcf32ce48286af2a811528d0cd25?source=copy_link',
+    workbookLabel: 'Workbook',
+    templates: [
+      { label: 'Lead Tracker Template', url: 'https://docs.google.com/spreadsheets/d/1hjSAx0srg9jrmNW1Bm-7y5zTxZt7WwRE/edit?usp=sharing' },
+    ],
+  },
   {
     title: 'Momentum Call - Paid Ads, Offers',
     sortDate: '2026-10-13',
