@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText, Gate, ArrowUpRight, Crosshair } from 'lucide-react';
+import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText, Flag, ArrowUpRight, Crosshair } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import PageLayout from '@/components/PageLayout';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
