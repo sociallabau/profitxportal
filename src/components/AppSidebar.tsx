@@ -2,8 +2,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Gauge, Route, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X,
-  Banknote, Trophy, Sparkles, Flame, Rocket, Lock, Video, DollarSign,
-  Wrench, ChevronDown, Compass, Sparkle, MessagesSquare,
+  Trophy, Sparkles, Rocket, Lock, Video, DollarSign,
+  Compass, Sparkle, MessagesSquare,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -17,19 +17,14 @@ export const CIRCLE_URLS = {
 
 const mainNavItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
+  { label: 'Content Studio', path: '/content-studio', icon: Sparkles },
+  { label: 'Launch HQ', path: '/launch', icon: Rocket },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
   { label: 'Roadmap', path: '/roadmap', icon: Route },
   { label: 'Financials', path: '/financials', icon: Wallet },
   { label: 'Vault', path: '/vault', icon: Lock },
   { label: 'Upcoming Calls', path: '/calls', icon: Video },
   { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
-];
-
-const toolItems = [
-  { label: 'Content Studio', path: '/content-studio', icon: Sparkles },
-  { label: 'Hot List', path: '/hot-list', icon: Flame },
-  { label: 'Launch HQ', path: '/launch', icon: Rocket },
-  { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
 ];
 
 const adminItems = [
@@ -49,11 +44,6 @@ function NavContent({ onClose }: { onClose?: () => void }) {
   const { data: profile } = useProfile();
 
   const active = (path: string) => location.pathname === path;
-
-  // Tools starts open when one of its pages is the current route.
-  const [toolsOpen, setToolsOpen] = useState(
-    toolItems.some((item) => location.pathname === item.path)
-  );
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -90,48 +80,6 @@ function NavContent({ onClose }: { onClose?: () => void }) {
           <Gauge className="w-4 h-4 shrink-0" />
           Dashboard
         </Link>
-
-        <div>
-              <button
-                type="button"
-                onClick={() => setToolsOpen(!toolsOpen)}
-                className={cn(
-                  'flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  toolItems.some((item) => active(item.path))
-                    ? 'text-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                )}
-              >
-                <Wrench className="w-4 h-4 shrink-0" />
-                <span className="flex-1 text-left">Tools</span>
-                <ChevronDown
-                  className={cn(
-                    'w-3.5 h-3.5 shrink-0 transition-transform',
-                    toolsOpen && 'rotate-180'
-                  )}
-                />
-              </button>
-              {toolsOpen && (
-                <div className="pl-3 space-y-0.5">
-                  {toolItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={onClose}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                        active(item.path)
-                          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                      )}
-                    >
-                      <item.icon className="w-4 h-4 shrink-0" />
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-        </div>
 
         {mainNavItems.slice(1).map((item) => (
           <Link
