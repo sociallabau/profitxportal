@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Gauge, Route, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X,
-  Trophy, Sparkles, Rocket, Lock, Video, DollarSign,
+  Trophy, Flame, Banknote, Lock, Video, DollarSign,
   Compass, Sparkle, MessagesSquare,
 } from 'lucide-react';
 import { useState } from 'react';
