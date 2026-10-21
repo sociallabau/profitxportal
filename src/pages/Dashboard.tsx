@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText } from 'lucide-react';
+import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText, Flag, ArrowUpRight, Crosshair } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import PageLayout from '@/components/PageLayout';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
@@ -40,6 +40,46 @@ function currentCycle() {
   const nextMonthName = new Date(2000, nextMonthIdx, 1).toLocaleString(undefined, { month: 'long' });
   const monthName = new Date(2000, monthIdx, 1).toLocaleString(undefined, { month: 'long' });
   return { year, monthIdx, monthName, quarter, monthInQuarter, phase, nextPhase, nextMonthName };
+}
+
+// -------- Gate card --------
+function GateCard({ gate, keyTask, moveUp }: { gate: string; keyTask: string | null; moveUp: string | null }) {
+  return (
+    <div className="relative mb-6 rounded-2xl p-[1.5px] bg-gradient-to-br from-primary via-primary/60 to-primary/20 shadow-[0_0_40px_-8px_hsl(var(--primary)/0.55)]">
+      <div className="relative rounded-2xl bg-card overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-primary/5 pointer-events-none" />
+        <div className="relative p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-[0_0_16px_-2px_hsl(var(--primary)/0.6)]">
+              <Flag className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your current gate</p>
+              <h2 className="text-xl font-bold text-primary drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]">{gate}</h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {keyTask && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 mb-2">
+                  <Crosshair className="w-3 h-3" /> Key next task
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{keyTask}</p>
+              </div>
+            )}
+            {moveUp && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 mb-2">
+                  <ArrowUpRight className="w-3 h-3" /> To move up a gate
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{moveUp}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // -------- Upcoming calls bar --------
@@ -280,6 +320,11 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* Gate card */}
+      {profile?.gate && (
+        <GateCard gate={profile.gate} keyTask={profile.gate_key_task} moveUp={profile.gate_move_up} />
+      )}
+
       {/* Upcoming calls bar */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
@@ -301,32 +346,34 @@ export default function Dashboard() {
       </div>
 
       {/* Current cycle */}
-      <div className={`bg-gradient-to-br ${PHASE_META[cycle.phase].bg} bg-card border border-border rounded-xl p-6 mb-6`}>
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-xl bg-background/60 border border-border flex items-center justify-center ${PHASE_META[cycle.phase].color}`}>
-              <PhaseIcon className="w-6 h-6" />
+      <div className={`bg-gradient-to-br ${PHASE_META[cycle.phase].bg} bg-card border border-border rounded-xl p-4 mb-6`}>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-lg bg-background/60 border border-border flex items-center justify-center ${PHASE_META[cycle.phase].color}`}>
+              <PhaseIcon className="w-4 h-4" />
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Quarter {cycle.quarter} · Month {cycle.monthInQuarter} of 3 · {cycle.monthName} {cycle.year}
               </p>
-              <h2 className={`text-2xl font-bold mt-1 ${PHASE_META[cycle.phase].color}`}>
+              <h2 className={`text-lg font-bold ${PHASE_META[cycle.phase].color}`}>
                 {cycle.phase} Month
               </h2>
-              <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                {PHASE_META[cycle.phase].blurb}
-              </p>
+              {cycle.phase === 'Build' && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Focus: <span className="font-semibold text-foreground">Preparing for Christmas & Building Ad Campaigns</span>
+                </p>
+              )}
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Coming next</p>
-            <p className="text-sm font-semibold text-foreground mt-1">{cycle.nextMonthName} · {cycle.nextPhase}</p>
+            <p className="text-xs font-semibold text-foreground mt-0.5">{cycle.nextMonthName} · {cycle.nextPhase}</p>
           </div>
         </div>
 
         {/* Phase progress */}
-        <div className="mt-5 grid grid-cols-3 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {PHASES.map((p, idx) => {
             const active = idx + 1 === cycle.monthInQuarter;
             const done = idx + 1 < cycle.monthInQuarter;

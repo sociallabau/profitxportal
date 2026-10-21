@@ -15,7 +15,7 @@ export function useProfile() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, is_admin, tier, tier_seen, business_overview, onboarded, milestones_hit, circle_url, access_revoked')
+        .select('id, full_name, email, is_admin, tier, tier_seen, business_overview, onboarded, milestones_hit, circle_url, access_revoked, gate, gate_key_task, gate_move_up')
         .eq('id', user!.id)
         .maybeSingle();
       if (error) throw error;
