@@ -916,6 +916,9 @@ export type Database = {
           created_at: string | null
           email: string | null
           full_name: string | null
+          gate: string | null
+          gate_key_task: string | null
+          gate_move_up: string | null
           id: string
           is_admin: boolean | null
           milestones_hit: number[] | null
@@ -933,6 +936,9 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           full_name?: string | null
+          gate?: string | null
+          gate_key_task?: string | null
+          gate_move_up?: string | null
           id: string
           is_admin?: boolean | null
           milestones_hit?: number[] | null
@@ -950,6 +956,9 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           full_name?: string | null
+          gate?: string | null
+          gate_key_task?: string | null
+          gate_move_up?: string | null
           id?: string
           is_admin?: boolean | null
           milestones_hit?: number[] | null
