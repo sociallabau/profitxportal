@@ -350,7 +350,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className={`w-9 h-9 rounded-lg bg-background/60 border border-border flex items-center justify-center ${PHASE_META[cycle.phase].color}`}>
-              <PhaseIcon className="w-4.5 h-4.5" />
+              <PhaseIcon className="w-4 h-4" />
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
