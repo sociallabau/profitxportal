@@ -45,11 +45,6 @@ function NavContent({ onClose }: { onClose?: () => void }) {
 
   const active = (path: string) => location.pathname === path;
 
-  // Tools starts open when one of its pages is the current route.
-  const [toolsOpen, setToolsOpen] = useState(
-    toolItems.some((item) => location.pathname === item.path)
-  );
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/');
