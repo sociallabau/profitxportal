@@ -42,6 +42,46 @@ function currentCycle() {
   return { year, monthIdx, monthName, quarter, monthInQuarter, phase, nextPhase, nextMonthName };
 }
 
+// -------- Gate card --------
+function GateCard({ gate, keyTask, moveUp }: { gate: string; keyTask: string | null; moveUp: string | null }) {
+  return (
+    <div className="relative mb-6 rounded-2xl p-[1.5px] bg-gradient-to-br from-primary via-primary/60 to-primary/20 shadow-[0_0_40px_-8px_hsl(var(--primary)/0.55)]">
+      <div className="relative rounded-2xl bg-card overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-primary/5 pointer-events-none" />
+        <div className="relative p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-[0_0_16px_-2px_hsl(var(--primary)/0.6)]">
+              <Flag className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your current gate</p>
+              <h2 className="text-xl font-bold text-primary drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]">{gate}</h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {keyTask && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 mb-2">
+                  <Crosshair className="w-3 h-3" /> Key next task
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{keyTask}</p>
+              </div>
+            )}
+            {moveUp && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 mb-2">
+                  <ArrowUpRight className="w-3 h-3" /> To move up a gate
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{moveUp}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // -------- Upcoming calls bar --------
 function CallCard({ call }: { call: Call }) {
   const d = new Date(call.start);
