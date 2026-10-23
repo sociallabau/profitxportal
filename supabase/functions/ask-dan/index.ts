@@ -141,6 +141,20 @@ function parseJson(raw: string): Record<string, unknown> | null {
   try { return JSON.parse(cleaned); } catch { /* try the outer object */ }
   const m = cleaned.match(/\{[\s\S]*\}/);
   if (m) { try { return JSON.parse(m[0]); } catch { /* invalid */ } }
+  // Models sometimes put raw line breaks inside strings; pull the fields out directly.
+  const field = (k: string, next: string) =>
+    cleaned.match(new RegExp(`"${k}"\\s*:\\s*"([\\s\\S]*?)"\\s*,\\s*"${next}"`))?.[1];
+  const answer = field("answer", "next_steps");
+  if (answer) {
+    const steps = cleaned.match(/"next_steps"\s*:\s*\[([\s\S]*?)\]/)?.[1] ?? "";
+    const resource = cleaned.match(/"resource"\s*:\s*"([^"]*)"/)?.[1] ?? null;
+    const unq = (t: string) => t.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+    return {
+      answer: unq(answer),
+      next_steps: [...steps.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map(x => unq(x[1])),
+      resource,
+    };
+  }
   return null;
 }
 
