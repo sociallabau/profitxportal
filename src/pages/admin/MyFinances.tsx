@@ -287,6 +287,107 @@ export default function MyFinances() {
           </div>
         </>
       )}
+
+      {/* ── Retention & Unit Economics — ProfitX itself, admin only ── */}
+      <div className="mt-8 border-t border-border pt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Users className="w-4 h-4 text-primary" />
+          <h2 className="text-lg font-bold">Retention & Unit Economics</h2>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary font-semibold uppercase tracking-wider">Admin only</span>
+        </div>
+        <p className="text-xs text-muted-foreground mb-5">How your ProfitX members retain — never shown to members.</p>
+
+        {/* Editable inputs — member billing isn't stored, so these are manual */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          {[
+            { key: 'avg_member_price', label: 'Average member price ($/mo)', value: settings.avg_member_price ?? '' },
+            { key: 'acquisition_spend', label: 'Acquisition spend this month ($)', value: settings.acquisition_spend ?? '' },
+          ].map(field => (
+            <div key={field.key} className="bg-card border border-border rounded-xl p-4">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-2">{field.label}</label>
+              <input
+                type="number"
+                min="0"
+                defaultValue={field.value}
+                key={`${field.key}-${field.value}`}
+                onBlur={e => {
+                  if (e.target.value !== field.value) {
+                    saveSetting.mutate({ key: field.key, value: e.target.value });
+                    toast.success('Saved');
+                  }
+                }}
+                placeholder="0"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+          {[
+            { icon: Users, label: 'Active Members', value: `${counts.active}`, color: 'text-green-400' },
+            { icon: UserMinus, label: 'Churned', value: `${counts.churned}`, color: 'text-red-400' },
+            {
+              icon: TrendingUp, label: 'Churn Rate (this month)',
+              value: latestPoint?.churnRate !== null && latestPoint ? `${(latestPoint.churnRate * 100).toFixed(1)}%` : '—',
+              color: (latestPoint?.churnRate ?? 0) > 0.05 ? 'text-orange-400' : 'text-green-400',
+            },
+            {
+              icon: Repeat, label: 'Renewal Rate (this month)',
+              value: renewal.rate !== null ? `${Math.round(renewal.rate * 100)}%` : '—',
+              sub: renewal.due > 0 ? `${renewal.renewed} of ${renewal.due} renewals kept` : undefined,
+              color: (renewal.rate ?? 1) >= 0.9 ? 'text-green-400' : 'text-orange-400',
+            },
+            {
+              icon: DollarSign, label: 'Member LTV',
+              value: ltv !== null ? `$${Math.round(ltv).toLocaleString()}` : arpu > 0 ? '∞' : '—',
+              sub: arpu > 0 ? (avgChurnRate ? `ARPU $${arpu.toLocaleString()} ÷ ${(avgChurnRate * 100).toFixed(1)}% churn` : 'no churn in period') : 'set avg member price',
+              color: 'text-primary',
+            },
+            {
+              icon: Crosshair, label: 'CAC',
+              value: cacValue !== null ? `$${Math.round(cacValue).toLocaleString()}` : '—',
+              sub: acquisitionSpend > 0 ? `$${acquisitionSpend.toLocaleString()} ÷ ${latestPoint?.newMembers ?? 0} new` : 'set acquisition spend',
+              color: 'text-blue-400',
+            },
+            {
+              icon: TrendingUp, label: 'LTV : CAC',
+              value: ltvCac !== null ? `${ltvCac.toFixed(1)} : 1` : '—',
+              sub: ltvCacBandResult === 'green' ? '≥3 — outspend everyone' : ltvCacBandResult === 'amber' ? '1–3 — workable' : ltvCacBandResult === 'red' ? '<1 — losing money per member' : 'needs LTV and CAC',
+              color: ltvCacBandResult === 'green' ? 'text-green-400' : ltvCacBandResult === 'amber' ? 'text-yellow-400' : ltvCacBandResult === 'red' ? 'text-red-400' : 'text-muted-foreground',
+            },
+          ].map((s, i) => (
+            <div key={i} className="bg-card border border-border rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <s.icon className={`w-4 h-4 ${s.color}`} />
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{s.label}</span>
+              </div>
+              <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+              {s.sub && <p className="text-[11px] text-muted-foreground mt-0.5">{s.sub}</p>}
+            </div>
+          ))}
+        </div>
+
+        {ltvCacBandResult === 'green' && (
+          <div className="mb-5">
+            <FlagCard type="tip" message="The big purple monster: high LTV means you can outspend every competitor on acquisition and still win." />
+          </div>
+        )}
+
+        {/* 6-month churn trend */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-1">Member Churn Rate</h3>
+          <p className="text-xs text-muted-foreground mb-4">Last 6 months · churned ÷ active at start of month</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={churnChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(v: number | string) => [`${v}%`, 'Churn']} />
+              <Line type="monotone" dataKey="churn" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 3, fill: 'hsl(var(--primary))' }} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </PageLayout>
   );
 }
