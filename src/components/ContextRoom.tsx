@@ -86,6 +86,7 @@ export default function ContextRoom({ userId, adminView = false }: { userId: str
     if (adminView) {
       const { error } = await supabase.from('goals').upsert({ user_id: userId, ...values }, { onConflict: 'user_id' });
       if (error) throw error;
+      await save.mutateAsync({ section: 'now', answers: {}, adminEdit: true });
     } else await setGoal.mutateAsync(values);
     await qc.invalidateQueries({ queryKey: ['context-goal', userId] });
     setGoalDraft({});
@@ -157,7 +158,7 @@ export default function ContextRoom({ userId, adminView = false }: { userId: str
                 <div><p className="text-xs text-muted-foreground">Active retainers</p><p className="font-semibold">Not recorded</p></div>
                 <div><p className="text-xs text-muted-foreground">Month</p><p className="font-semibold">{totals?.month ? new Date(`${totals.month}T00:00:00`).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'}</p></div>
               </div>
-              {!adminView && <Link to="/submissions/monthly-totals" className="text-xs text-primary underline underline-offset-4">Update these in Monthly Totals</Link>}
+              {!adminView && <Link to="/submissions/monthly" className="text-xs text-primary underline underline-offset-4">Update these in Monthly Totals</Link>}
             </div>}
             {section.key === 'now' && <div className="border-b border-border pb-5 space-y-4">
               <h3 className="font-semibold text-sm">90-day MRR goal</h3>
