@@ -54,6 +54,19 @@
     --deep-purple: 257 63% 29%;      /* #3A1C7A — Tier 2 / Scale */
     --paper: 36 50% 97%;
     --canvas: 38 36% 87%;
+    --ladder-neutral: 220 9% 60%;
+    --ladder-green: 160 84% 39%;
+    --ladder-yellow: 38 92% 50%;
+    --ladder-orange: 25 95% 53%;
+    --ladder-red: 0 84% 60%;
+    --ladder-cyan: 189 94% 43%;
+    --ladder-purple: 271 91% 65%;
+    --ladder-black: 215 28% 17%;
+    --learn: 199 89% 70%;
+    --learn-foreground: 204 80% 16%;
+    --do: 25 95% 65%;
+    --do-foreground: 20 80% 16%;
+    --focus-glow: 0 0 24px -12px hsl(var(--primary) / 0.5);
   }
 
   /* === DARK THEME — original portal look (opt-in via class="dark") === */
@@ -143,6 +156,21 @@
 }
 
 #root { position: relative; z-index: 1; }
+
+.revenue-prism {
+  background: linear-gradient(to right,
+    hsl(var(--ladder-neutral)) 0% 12.5%,
+    hsl(var(--ladder-green)) 12.5% 25%,
+    hsl(var(--ladder-yellow)) 25% 37.5%,
+    hsl(var(--ladder-orange)) 37.5% 50%,
+    hsl(var(--ladder-red)) 50% 62.5%,
+    hsl(var(--ladder-cyan)) 62.5% 75%,
+    hsl(var(--ladder-purple)) 75% 87.5%,
+    hsl(var(--ladder-black)) 87.5% 100%);
+}
+.dashboard-focus { box-shadow: var(--focus-glow); }
+.workshop-learn { background: hsl(var(--learn)); color: hsl(var(--learn-foreground)); }
+.workshop-do { background: hsl(var(--do)); color: hsl(var(--do-foreground)); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }

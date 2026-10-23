@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { ALL_CALLS, thumbnailFor, type Call } from '@/data/calls';
+import { ALL_CALLS, thumbnailFor, workshopTypeFor, brisbaneDateKey, type Call } from '@/data/calls';
 
 /**
  * Upcoming calls, read live from the ProfitX Google Calendar.
@@ -35,11 +35,12 @@ export function useUpcomingCalls() {
         meetUrl: call.meetUrl,
         description: call.description || undefined,
         thumbnail: thumbnailFor(call.title),
+        workshopType: workshopTypeFor(call.title, new Date(new Date(call.start).getTime() + 10 * 3600000).toISOString()),
       }));
     },
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = brisbaneDateKey();
   const fallback = [...ALL_CALLS]
     .filter(c => c.start.slice(0, 10) >= today)
     .sort((a, b) => a.start.localeCompare(b.start));
