@@ -116,7 +116,7 @@ export default function ClientHealth() {
     queryKey: ['all-checklist-completions'],
     enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
-      const { data } = await supabase.from('checklist_progress').select('user_id, task_key, completed, updated_at').eq('completed', true);
+      const { data } = await supabase.from('checklist_progress').select('user_id, task_key, completed').eq('completed', true);
       return data ?? [];
     },
   });
@@ -143,10 +143,6 @@ export default function ClientHealth() {
   const [reviewIndex, setReviewIndex] = useState(0);
 
   const clientsWithHealth = useMemo(() => {
-    const now = Date.now();
-    const daysSince = (iso?: string | null) =>
-      iso ? Math.floor((now - new Date(iso).getTime()) / 86400000) : null;
-
     return clients
       .filter((c: ClientOverview) => !archivedIds.includes(c.id))
       .map((c: ClientOverview) => {
