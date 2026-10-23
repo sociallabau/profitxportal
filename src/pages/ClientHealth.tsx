@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HeartPulse, ArrowUpCircle, Search } from 'lucide-react';
+import { HeartPulse, ArrowUpCircle, Search, LayoutGrid, Table2, ClipboardCheck, ChevronRight, ChevronLeft } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import ClientDetailPanel from '@/components/client-health/ClientDetailPanel';
@@ -25,6 +25,7 @@ import {
   generateConclusion,
   BAND,
 } from '@/lib/clientHealth';
+import { computeDrift, DRIFT_BAND, type DriftBand } from '@/lib/driftRisk';
 
 export default function ClientHealth() {
   const { user } = useRequireAuth();
