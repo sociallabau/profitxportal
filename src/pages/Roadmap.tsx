@@ -312,17 +312,16 @@ function ProfitXRoadmapGrid({
 
           if (ONBOARDING_COVERED_CODES.has(code)) {
             return (
-              <div
-                key={code}
-                className={`relative rounded-xl border p-3 text-left ${stage.cardClass}`}
-              >
-                <div className="flex flex-row items-center gap-2 sm:gap-3">
-                  <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
-                    {code}
-                  </span>
-                  <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
-                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80">Covered in Onboarding</span>
+              <div key={code} className="flex flex-col gap-1 min-w-0">
+                <div className={`relative rounded-xl border p-3 text-left ${stage.cardClass}`}>
+                  <div className="flex flex-row items-center gap-2 sm:gap-3">
+                    <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                      {code}
+                    </span>
+                    <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  </div>
                 </div>
+                <span className="text-[11px] leading-snug text-foreground/70 px-1">Covered in Onboarding</span>
               </div>
             );
           }
@@ -346,24 +345,24 @@ function ProfitXRoadmapGrid({
 
           if (!hasContent) {
             return (
-              <a
-                key={code}
-                href={DAN_WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.02] hover:shadow-lg block ${stage.cardClass}`}
-              >
-                <div className="flex flex-row items-center gap-2 sm:gap-3">
-                  <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
-                    {code}
-                  </span>
-                  <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
-                  <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80">
-                    <ExternalLink className="w-2.5 h-2.5" />
-                    Book a call with Dan to cover
-                  </span>
+              <div key={code} className="flex flex-col gap-1 min-w-0">
+                <div className={`relative rounded-xl border p-3 text-left ${stage.cardClass}`}>
+                  <div className="flex flex-row items-center gap-2 sm:gap-3">
+                    <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                      {code}
+                    </span>
+                    <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  </div>
                 </div>
-              </a>
+                <a
+                  href={DAN_WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] leading-snug text-foreground/70 hover:text-foreground hover:underline underline-offset-2 px-1"
+                >
+                  Book a call with Dan to cover
+                </a>
+              </div>
             );
           }
 
