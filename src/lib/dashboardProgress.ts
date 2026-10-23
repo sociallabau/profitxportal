@@ -1,6 +1,6 @@
 export const REVENUE_STEPS = [0, 10000, 20000, 30000, 40000, 50000, 84000, 100000, 150000];
 
-const ASIDE = '';
+const ASIDE = String.fromCharCode(1);
 
 /** Split a run-on focus note into short, scannable dot points. */
 export function focusBullets(text?: string | null): string[] {
