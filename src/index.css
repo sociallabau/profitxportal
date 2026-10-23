@@ -377,15 +377,34 @@ select:focus {
 
 /* Dan AI page canvas (light ProfitX paper scoped to /dan-ai) */
 .dan-canvas {
-  --dan-bg: 39 30% 87%;
-  --dan-paper: 40 45% 97%;
-  --dan-ink: 0 0% 12%;
-  --dan-muted: 30 6% 40%;
-  --dan-violet: 265 91% 59%;
+  --dan-bg: 260 25% 7%;
+  --dan-paper: 260 18% 12%;
+  --dan-ink: 0 0% 96%;
+  --dan-muted: 260 8% 65%;
+  --dan-violet: 270 100% 62%;
   --dan-violet-fg: 0 0% 100%;
   background: hsl(var(--dan-bg));
   color: hsl(var(--dan-ink));
+  position: relative;
+  isolation: isolate;
 }
+.dan-canvas::before, .dan-canvas::after {
+  content: ""; position: fixed; z-index: -1; pointer-events: none;
+  border-radius: 9999px; filter: blur(90px); opacity: 0.45;
+}
+.dan-canvas::before {
+  width: 520px; height: 520px; top: -120px; left: 20%;
+  background: radial-gradient(circle, hsl(var(--dan-violet)) 0%, transparent 70%);
+  animation: dan-orb-a 22s ease-in-out infinite alternate;
+}
+.dan-canvas::after {
+  width: 440px; height: 440px; bottom: -140px; right: 5%;
+  background: radial-gradient(circle, hsl(285 90% 55%) 0%, transparent 70%);
+  animation: dan-orb-b 28s ease-in-out infinite alternate;
+}
+@keyframes dan-orb-a { from { transform: translate(0,0) scale(1); } to { transform: translate(260px,220px) scale(1.25); } }
+@keyframes dan-orb-b { from { transform: translate(0,0) scale(1.1); } to { transform: translate(-320px,-260px) scale(0.85); } }
+@media (prefers-reduced-motion: reduce) { .dan-canvas::before, .dan-canvas::after { animation: none; } }
 @keyframes dan-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .dan-fade-up { animation: dan-fade-up 0.5s ease-out 1s both; }
 @media (prefers-reduced-motion: reduce) { .dan-fade-up { animation: none; } }
