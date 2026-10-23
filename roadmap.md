@@ -1,3 +1,3 @@
-- [ ] Arrange dashboard progress, focus, monthly streak and revenue chart above upcoming calls and calendars.
-- [ ] Mark the next workshop as Learn in live and fallback listings.
-- [ ] Test tracking calculations and verify the dashboard.
+- [x] Arrange dashboard progress, focus, monthly streak and revenue chart above upcoming calls and calendars.
+- [x] Mark the next workshop as Learn in live and fallback listings.
+- [x] Test tracking calculations and verify the dashboard.
