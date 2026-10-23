@@ -360,7 +360,7 @@ export default function ClientHealth() {
                 { gate: '2', name: 'Fuel' },
                 { gate: '3', name: 'Scale' },
               ]).map(({ gate, name }) => {
-                const members = visible.filter(c => (c.gate ?? '1') === gate);
+                const members = visible.filter(c => gateNumber(c.gate) === gate);
                 return (
                   <div key={gate} className="bg-card border border-border rounded-xl p-4">
                     <h3 className="text-sm font-bold text-foreground mb-3">
@@ -446,7 +446,7 @@ export default function ClientHealth() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Gate {current.gate ?? '1'} · {formatTierLabel(current.tier)} · ${Number(current.last_total_revenue || 0).toLocaleString()}/mo
+                      {current.gate ?? `Gate ${gateNumber(current.gate)}`} · {formatTierLabel(current.tier)} · ${Number(current.last_total_revenue || 0).toLocaleString()}/mo
                     </p>
                     {current.drift && current.drift.signals.length > 0 ? (
                       <ul className="space-y-1 mb-5">
