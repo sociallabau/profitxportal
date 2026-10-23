@@ -147,6 +147,18 @@ export default function ClientDetailPanel({
     },
   });
 
+  const { data: audits = [] } = useQuery({
+    queryKey: ['client-audits', client.id],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('roadmap_audits')
+        .select('issue, focus, created_at')
+        .eq('user_id', client.id)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as { issue: string; focus: string[]; created_at: string }[];
+    },
+  });
+
   const regenerate = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('monthly-review', {
@@ -212,6 +224,15 @@ export default function ClientDetailPanel({
               </div>
 
               <div className="p-6 space-y-5">
+                {audits.length > 0 ? (
+                  <div className="rounded-xl border border-primary/40 bg-primary/10 p-4">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Latest Roadmap Audit · {new Date(audits[0].created_at).toLocaleDateString()} ({audits.length} total)</p>
+                    <p className="font-bold text-primary mt-1 capitalize">{audits[0].issue === 'balanced' ? 'No red flags' : `${audits[0].issue} issue`}</p>
+                    <p className="text-sm text-muted-foreground">Focus: {audits[0].focus.join(', ') || '—'}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No Roadmap Audit taken yet.</p>
+                )}
                 {/* Tier change */}
                 {(() => {
                   const currentTier = normalizeTier(client.tier ?? c.tier);
