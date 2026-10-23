@@ -80,11 +80,11 @@ export default function RoadmapAudit({ onOpenModule, includeScale }: { onOpenMod
               <div className="rounded-xl border border-primary/50 bg-primary/10 p-5 text-center">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground">You have a</p>
                 <p className="text-3xl font-bold text-primary mt-1">
-                  {result.issue === 'balanced' ? 'No red flags' : result.issue === 'supply' ? 'Supply Issue' : 'Demand Issue'}
+                  {result.issue === 'balanced' ? 'No red flags' : result.issue === 'supply' ? 'Lead Problem' : 'Capacity Problem'}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {result.issue === 'supply' && 'Your offer and client flow need work — fix what you sell and how leads come in.'}
-                  {result.issue === 'demand' && 'Your delivery is the bottleneck — systemise and build the team so you can handle more clients.'}
+                  {result.issue === 'supply' && 'Leads and new clients are your bottleneck — your offer and how people find you need work.'}
+                  {result.issue === 'demand' && 'Leads are coming in but delivery can’t keep up — you need SOPs and a team to handle the volume.'}
                   {result.issue === 'balanced' && 'No reds — keep tightening your ambers.'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">Offer + Clients reds: {result.supplyReds} · Delivery reds: {result.demandReds}</p>
