@@ -107,7 +107,55 @@ Return only JSON, no markdown fence:
 The answer field is what the client reads, so it must stand alone and sound like Dan wrote it.`;
 }
 
-async function callModel(prompt: string, system: string): Promise<string> {
+const BRAIN_HEADER = `DAN'S BRAIN — THIS IS THE RULEBOOK
+These are Dan's own frameworks, Gate criteria, default numbers, playbook answers, voice and boundaries. They take priority over everything else. The PASSAGES further down are extra examples from calls and chats: use them for colour and detail, but if they conflict with the Brain, the Brain wins.`;
+
+const BRAIN_RULES = `RULES FOR USING THE BRAIN
+- Start by placing the member: work out which Gate they're at from what they've told you (and their own data, if it's provided) before you advise. Answer for their CURRENT gate. Never give advice from a later gate (e.g. don't prescribe lead gen at $20/day to someone below Gate 3).
+- ProfitX rules are fixed. Quote Gate criteria, definitions, hold rules and the ad step for each gate exactly as the Brain states them. The line "never quote a specific target as if it applies to everyone" applies to market metrics like CPL and CTR, NOT to ProfitX Gate rules or Dan's taught defaults.
+- If the Brain's playbook-answers contains a matching question, base the answer on Dan's answer there, including his default numbers and phrasing.
+- Read questions literally: "I've got 2 retainers" means 2 in total, not 2 new signings.
+- Follow the Brain's boundaries file: billing, pausing, cancelling, refunds, legal and health always get "flag to Dan".
+- Follow the Brain's voice file, with one exception: never swear.
+- Never name another member or repeat their numbers unless it's one of the group case studies in the Brain.
+- Give one clear priority, not a list of equal tips ("keep the main thing the main thing").`;
+
+type SystemBlock = { text: string; cache?: boolean };
+
+/** Joins consecutive chunks, dropping the overlap the chunker added. */
+function joinChunks(parts: string[]): string {
+  let out = "";
+  for (const part of parts) {
+    if (!out) { out = part; continue; }
+    let overlap = 0;
+    for (let n = Math.min(400, out.length, part.length); n > 0; n--) {
+      if (out.endsWith(part.slice(0, n))) { overlap = n; break; }
+    }
+    out += overlap ? part.slice(overlap) : `\n${part}`;
+  }
+  return out;
+}
+
+// deno-lint-ignore no-explicit-any
+async function loadBrain(admin: any): Promise<string> {
+  const { data: docs } = await admin
+    .from("knowledge_docs").select("id, title, created_at")
+    .eq("source_type", "brain").order("created_at");
+  if (!docs?.length) return "";
+  const { data: rows } = await admin
+    .from("knowledge_chunks").select("doc_id, chunk_index, content")
+    .in("doc_id", docs.map((d: { id: string }) => d.id))
+    .order("chunk_index").limit(10000);
+  return docs.map((d: { id: string; title: string }) => {
+    const parts = (rows ?? [])
+      .filter((r: { doc_id: string }) => r.doc_id === d.id)
+      .map((r: { content: string }) => r.content);
+    return `## ${d.title}\n\n${joinChunks(parts)}`;
+  }).join("\n\n");
+}
+
+async function callModel(prompt: string, blocks: SystemBlock[]): Promise<string> {
+  const system = blocks.map(b => b.text).join("\n\n");
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (anthropicKey) {
     try {
@@ -121,7 +169,11 @@ async function callModel(prompt: string, system: string): Promise<string> {
         body: JSON.stringify({
           model: "claude-sonnet-5",
           max_tokens: 2000,
-          system,
+          system: blocks.map(b => ({
+            type: "text",
+            text: b.text,
+            ...(b.cache ? { cache_control: { type: "ephemeral" } } : {}),
+          })),
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -262,7 +314,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!chunks || chunks.length === 0) {
+    // The Brain is sent whole in the system prompt, so never repeat it here.
+    chunks = (chunks ?? []).filter((c: { source_type?: string }) => c.source_type !== "brain");
+
+    const brain = await loadBrain(admin);
+
+    if (chunks.length === 0 && !brain) {
       return json({
         answer: "I haven't covered that one yet — drop it in the Q&A chat and Dan will get to it.",
         next_steps: [],
@@ -282,9 +339,16 @@ Deno.serve(async (req) => {
       typeof catalogue === "string" && catalogue.trim() ? catalogue.slice(0, 6000) : "(none available)",
     );
 
+    const blocks: SystemBlock[] = [];
+    if (brain) {
+      blocks.push({ text: `${BRAIN_HEADER}\n\n${brain}`, cache: true });
+      blocks.push({ text: BRAIN_RULES });
+    }
+    blocks.push({ text: system });
+
     const raw = await callModel(
-      `PASSAGES FROM DAN'S TEACHING:\n\n${context}\n\n=====\n\nTHE CLIENT ASKED:\n${question}\n\nAnswer them.`,
-      system,
+      `PASSAGES FROM DAN'S TEACHING:\n\n${context || "(none found)"}\n\n=====\n\nTHE CLIENT ASKED:\n${question}\n\nAnswer them.`,
+      blocks,
     );
 
     const result = parseAnswer(raw);
