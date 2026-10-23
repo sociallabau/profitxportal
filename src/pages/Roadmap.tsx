@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import OnboardingNoticeModal from '@/components/OnboardingNoticeModal';
 import RevenueLadder from '@/components/RevenueLadder';
+import RoadmapAudit from '@/components/RoadmapAudit';
 
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
@@ -189,6 +190,8 @@ export default function Roadmap() {
         </p>
       </div>
 
+      <RoadmapAudit onOpenModule={(code) => navigate(`/module/${code}`)} />
+
       <ProfitXRoadmapGrid
         stages={profitxStages}
         completionMap={completionMap}
@@ -313,7 +316,7 @@ function ProfitXRoadmapGrid({
           if (ONBOARDING_COVERED_CODES.has(code)) {
             return (
               <div key={code} className="flex flex-col gap-1 min-w-0">
-                <div className={`relative rounded-xl border p-3 text-left ${stage.cardClass}`}>
+                <div className={`relative rounded-xl border p-3 text-left opacity-55 ${stage.cardClass}`}>
                   <div className="flex flex-row items-center gap-2 sm:gap-3">
                     <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
                       {code}
@@ -346,7 +349,7 @@ function ProfitXRoadmapGrid({
           if (!hasContent) {
             return (
               <div key={code} className="flex flex-col gap-1 min-w-0">
-                <div className={`relative rounded-xl border p-3 text-left ${stage.cardClass}`}>
+                <div className={`relative rounded-xl border p-3 text-left opacity-55 ${stage.cardClass}`}>
                   <div className="flex flex-row items-center gap-2 sm:gap-3">
                     <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
                       {code}
@@ -370,7 +373,7 @@ function ProfitXRoadmapGrid({
             <button
               key={code}
               onClick={() => onOpen(code)}
-              className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.02] hover:shadow-lg ${stage.cardClass}`}
+              className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.03] ring-2 ring-primary shadow-[0_0_18px_hsl(var(--primary)/0.6)] ${stage.cardClass}`}
             >
               <div className="flex flex-row items-center gap-2 sm:gap-3">
                 <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
