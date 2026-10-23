@@ -424,6 +424,51 @@ export type Database = {
           },
         ]
       }
+      context_rooms: {
+        Row: {
+          answers: Json
+          confirmed_at: string | null
+          created_at: string
+          prefilled_by_admin: boolean
+          section_updated_at: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          confirmed_at?: string | null
+          created_at?: string
+          prefilled_by_admin?: boolean
+          section_updated_at?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          confirmed_at?: string | null
+          created_at?: string
+          prefilled_by_admin?: boolean
+          section_updated_at?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "context_rooms_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "context_rooms_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dm_templates: {
         Row: {
           body: string
@@ -1431,6 +1476,15 @@ export type Database = {
           focus: string
           month: string
         }[]
+      }
+      save_context_section: {
+        Args: {
+          _admin_edit?: boolean
+          _answers: Json
+          _section: string
+          _user_id: string
+        }
+        Returns: undefined
       }
       search_knowledge: {
         Args: { limit_n?: number; q: string }

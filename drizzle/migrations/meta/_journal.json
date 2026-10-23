@@ -64,6 +64,13 @@
       "when": 1792740719849,
       "tag": "0008_roadmap_audits",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792742543880,
+      "tag": "0009_member_context_rooms",
+      "breakpoints": true
     }
   ]
 }
