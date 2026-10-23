@@ -139,7 +139,7 @@ export default function ClientHealth() {
   const [needsSupportOnly, setNeedsSupportOnly] = useState(false);
   const [sortByDrift, setSortByDrift] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'board' | 'quarterly'>('table');
-  const [reviewedIds, setReviewedIds] = useState<string[]>([]);
+  const [flaggedIds, setFlaggedIds] = useState<string[]>([]);
   const [reviewIndex, setReviewIndex] = useState(0);
 
   const clientsWithHealth = useMemo(() => {
@@ -303,12 +303,200 @@ export default function ClientHealth() {
         <p className="text-sm text-muted-foreground">No clients have submitted data yet.</p>
       ) : (() => {
         const term = search.trim().toLowerCase();
-        const visible = clientsWithHealth.filter(c =>
-          (bandFilter === 'all' || c.health.band === bandFilter) &&
-          (!term || (c.full_name ?? '').toLowerCase().includes(term)),
+        const driftWeight: Record<DriftBand, number> = { red: 2, amber: 1, green: 0 };
+        const visible = clientsWithHealth
+          .filter(c =>
+            (bandFilter === 'all' || c.health.band === bandFilter) &&
+            (!needsSupportOnly || c.drift?.band === 'red') &&
+            (!term || (c.full_name ?? '').toLowerCase().includes(term)),
+          )
+          .sort((a, b) => sortByDrift
+            ? driftWeight[b.drift?.band ?? 'green'] - driftWeight[a.drift?.band ?? 'green']
+            : 0);
+        const needsSupport = clientsWithHealth.filter(c => c.drift?.band === 'red');
+
+        const modeBtn = (mode: typeof viewMode, label: string, Icon: typeof Table2) => (
+          <button
+            key={mode}
+            onClick={() => setViewMode(mode)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              viewMode === mode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" /> {label}
+          </button>
         );
 
         return (
+          <>
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {modeBtn('table', 'Table', Table2)}
+            {modeBtn('board', 'Board', LayoutGrid)}
+            {modeBtn('quarterly', 'Quarterly Review', ClipboardCheck)}
+            <button
+              onClick={() => setNeedsSupportOnly(v => !v)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                needsSupportOnly ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/40' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+              }`}
+            >
+              Needs Support ({needsSupport.length})
+            </button>
+            {viewMode === 'table' && (
+              <button
+                onClick={() => setSortByDrift(v => !v)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  sortByDrift ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                }`}
+              >
+                Sort by drift risk
+              </button>
+            )}
+          </div>
+
+          {viewMode === 'board' ? (
+            <div className="grid md:grid-cols-3 gap-4">
+              {([
+                { gate: '1', name: 'Fix' },
+                { gate: '2', name: 'Fuel' },
+                { gate: '3', name: 'Scale' },
+              ]).map(({ gate, name }) => {
+                const members = visible.filter(c => (c.gate ?? '1') === gate);
+                return (
+                  <div key={gate} className="bg-card border border-border rounded-xl p-4">
+                    <h3 className="text-sm font-bold text-foreground mb-3">
+                      Gate {gate} · {name}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">{members.length}</span>
+                    </h3>
+                    <div className="space-y-2">
+                      {members.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No one here.</p>
+                      )}
+                      {members.map(client => {
+                        const d = DRIFT_BAND[client.drift?.band ?? 'green'];
+                        return (
+                          <button
+                            key={client.id}
+                            onClick={() => setSelectedClient(client)}
+                            className="w-full text-left bg-muted/30 border border-border rounded-lg p-3 hover:bg-muted/50 transition"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-foreground truncate">{client.full_name || 'Unnamed'}</span>
+                              <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${d.bg} ${d.text}`}>{d.label}</span>
+                            </div>
+                            {client.drift && client.drift.signals.length > 0 && (
+                              <p className="mt-1 text-[11px] text-muted-foreground">{client.drift.signals.join(' · ')}</p>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : viewMode === 'quarterly' ? (() => {
+            const queue = clientsWithHealth;
+            const done = reviewIndex >= queue.length;
+            const current = queue[reviewIndex];
+            const advance = (flag: boolean) => {
+              if (flag && current) setFlaggedIds(prev => [...new Set([...prev, current.id])]);
+              setReviewIndex(i => i + 1);
+            };
+            return (
+              <div className="bg-card border border-border rounded-xl p-6 max-w-xl mx-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-foreground">Quarterly Review</h3>
+                  <span className="text-xs text-muted-foreground">
+                    {Math.min(reviewIndex + 1, queue.length)} of {queue.length}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 mb-6">
+                  <div className="bg-primary rounded-full h-1.5 transition-all" style={{ width: `${(reviewIndex / Math.max(queue.length, 1)) * 100}%` }} />
+                </div>
+                {done ? (
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-3">
+                      Review done — {flaggedIds.length} flagged for support.
+                    </p>
+                    {flaggedIds.length > 0 && (
+                      <ul className="space-y-1.5 mb-4">
+                        {queue.filter(c => flaggedIds.includes(c.id)).map(c => (
+                          <li key={c.id} className="flex items-center justify-between text-sm">
+                            <button onClick={() => setSelectedClient(c)} className="font-semibold text-foreground hover:text-primary transition">
+                              {c.full_name}
+                            </button>
+                            <span className="text-xs text-muted-foreground">{c.drift?.signals.join(' · ') || 'flagged manually'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <button
+                      onClick={() => { setReviewIndex(0); setFlaggedIds([]); }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted text-muted-foreground hover:bg-muted/70 transition"
+                    >
+                      Start again
+                    </button>
+                  </div>
+                ) : current && (
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-lg font-bold text-foreground">{current.full_name}</p>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${DRIFT_BAND[current.drift?.band ?? 'green'].bg} ${DRIFT_BAND[current.drift?.band ?? 'green'].text}`}>
+                        {DRIFT_BAND[current.drift?.band ?? 'green'].label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Gate {current.gate ?? '1'} · {formatTierLabel(current.tier)} · ${Number(current.last_total_revenue || 0).toLocaleString()}/mo
+                    </p>
+                    {current.drift && current.drift.signals.length > 0 ? (
+                      <ul className="space-y-1 mb-5">
+                        {current.drift.signals.map(sig => (
+                          <li key={sig} className="text-sm text-orange-400">• {sig}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-green-400 mb-5">No drift signals — numbers are moving.</p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => advance(true)}
+                        className="flex-1 py-2 rounded-lg text-sm font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition"
+                      >
+                        Flag for support
+                      </button>
+                      <button
+                        onClick={() => advance(false)}
+                        className="flex-1 py-2 rounded-lg text-sm font-semibold bg-green-500/15 text-green-400 hover:bg-green-500/25 transition"
+                      >
+                        Looks fine
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <button
+                        onClick={() => setReviewIndex(i => Math.max(0, i - 1))}
+                        disabled={reviewIndex === 0}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition disabled:opacity-40"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" /> Back
+                      </button>
+                      <button
+                        onClick={() => setSelectedClient(current)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Open full profile
+                      </button>
+                      <button
+                        onClick={() => advance(false)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+                      >
+                        Skip <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })() : (
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex flex-wrap items-center gap-3 p-3 border-b border-border">
               <div className="relative flex-1 min-w-[200px]">
