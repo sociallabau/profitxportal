@@ -137,15 +137,15 @@ export default function ContextRoom({ userId, adminView = false }: { userId: str
       {contextSections.map(section => {
         const complete = section.fields.filter(f => !f.optional).every(f => isFilled(savedAnswers[f.key]));
         const age = sectionAge(timestamps[section.key]);
-        return <AccordionItem key={section.key} value={section.key} className="border border-border bg-card rounded-lg px-4 sm:px-5">
-          <AccordionTrigger className="hover:no-underline gap-3 text-left">
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 flex-1">
-              <span className="font-semibold text-sm text-foreground flex items-center gap-2">{complete && <Check className="h-4 w-4 text-success" />}{section.title}</span>
-              <span className="text-xs text-muted-foreground font-normal">{age.days === null ? 'Not updated yet' : age.days === 0 ? 'Updated today' : `Updated ${age.days} ${age.days === 1 ? 'day' : 'days'} ago`}</span>
-              {age.needsRefresh && <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded">Due a refresh</span>}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-5 pt-2">
+        const heading = <span className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 flex-1">
+          <span className="font-semibold text-sm text-foreground flex items-center gap-2">{complete && <Check className="h-4 w-4 text-success" />}{section.title}</span>
+          <span className="text-xs text-muted-foreground font-normal">{age.days === null ? 'Not updated yet' : age.days === 0 ? 'Updated today' : `Updated ${age.days} ${age.days === 1 ? 'day' : 'days'} ago`}</span>
+          {age.needsRefresh && <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded">Due a refresh</span>}
+        </span>;
+        const renderFields = (fields: ContextField[]) => <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {fields.filter(f => f.key !== 'lead_source_other' || answers.main_lead_source === 'Other').map(field => editable ? <ContextFieldInput key={field.key} field={field} value={answers[field.key] ?? ''} prefix={userId} onChange={value => setDraft(previous => ({ ...previous, [field.key]: value }))} /> : <div key={field.key} className="space-y-1 sm:col-span-2"><p className="text-xs text-muted-foreground">{field.label}</p><p className="text-sm whitespace-pre-wrap break-words">{Array.isArray(answers[field.key]) ? (answers[field.key] as string[]).join(', ') : answers[field.key] || '—'}</p></div>)}
+        </div>;
+        const content = <div className="space-y-5 pt-2">
             {section.key === 'about' && <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><label htmlFor={`${userId}-name`} className="block text-xs font-semibold text-muted-foreground">Full name</label>{editable ? <Input id={`${userId}-name`} value={fullName} onChange={e => setFullName(e.target.value)} className="bg-input" placeholder="Your name" /> : <p>{fullName || '—'}</p>}</div>
@@ -169,12 +169,15 @@ export default function ContextRoom({ userId, adminView = false }: { userId: str
                 finally { setSavingSection(null); }
               }}><Save />Save goal</Button>}
             </div>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {section.fields.filter(f => f.key !== 'lead_source_other' || answers.main_lead_source === 'Other').map(field => editable ? <ContextFieldInput key={field.key} field={field} value={answers[field.key] ?? ''} prefix={userId} onChange={value => setDraft(previous => ({ ...previous, [field.key]: value }))} /> : <div key={field.key} className="space-y-1 sm:col-span-2"><p className="text-xs text-muted-foreground">{field.label}</p><p className="text-sm whitespace-pre-wrap break-words">{Array.isArray(answers[field.key]) ? (answers[field.key] as string[]).join(', ') : answers[field.key] || '—'}</p></div>)}
-            </div>
+            {renderFields(section.key === 'about' ? section.fields.filter(field => field.type !== 'textarea') : section.fields)}
             {section.key === 'about' && <div className="space-y-3"><h3 className="text-sm font-semibold">Your retainer prices ($ / month)</h3><div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{[1, 2, 3].map(tier => renderGoalInput(`retainer_tier_${tier}`, `Tier ${tier}`, 'number', tier === 1 ? '1500' : tier === 2 ? '3000' : 'Optional'))}</div></div>}
+            {section.key === 'about' && <Accordion type="single" collapsible><AccordionItem value="offer-details" className="border-b border-border"><AccordionTrigger className="text-sm hover:no-underline">Offer details</AccordionTrigger><AccordionContent>{renderFields(section.fields.filter(field => field.type === 'textarea'))}</AccordionContent></AccordionItem></Accordion>}
             {editable && <div className="flex justify-end"><Button disabled={savingSection !== null} onClick={() => saveSection(section.key)}><Save />{savingSection === section.key ? 'Saving…' : 'Save'}</Button></div>}
-          </AccordionContent>
+          </div>;
+        if (section.key === 'about') return <section key={section.key} className="space-y-4 pb-5 border-b border-border"><h2>{heading}</h2>{content}</section>;
+        return <AccordionItem key={section.key} value={section.key} className="border border-border bg-card rounded-lg px-4 sm:px-5">
+          <AccordionTrigger className="hover:no-underline gap-3 text-left">{heading}</AccordionTrigger>
+          <AccordionContent>{content}</AccordionContent>
         </AccordionItem>;
       })}
     </Accordion>
