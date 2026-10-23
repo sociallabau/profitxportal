@@ -16,6 +16,7 @@ import ChecksAdmin from '@/components/dan-ai/ChecksAdmin';
 interface Answer { answer: string; next_steps: string[]; resource: string | null }
 interface Debug {
   about_member: string; member_id: string;
+  brain?: { docs: number; words: number }; goal?: string;
   monthly_totals: { count: number; months: string[] };
   context_room: { found: boolean; fields_filled: number };
   passage_titles: string[];
@@ -260,6 +261,8 @@ export default function DanAI() {
                           <summary className="cursor-pointer select-none">Context used</summary>
                           <div className="mt-2 space-y-2">
                             <p><b>Member ID:</b> {m.debug.member_id}</p>
+                            {m.debug.brain && <p><b>Brain:</b> {m.debug.brain.docs} docs loaded, {m.debug.brain.words.toLocaleString()} words</p>}
+                            {m.debug.goal && <p><b>Goal:</b> {m.debug.goal}</p>}
                             <p><b>Monthly totals:</b> {m.debug.monthly_totals.count} found{m.debug.monthly_totals.months.length ? ` (${m.debug.monthly_totals.months.join(', ')})` : ''}</p>
                             <p><b>Context Room:</b> {m.debug.context_room.found ? `found, ${m.debug.context_room.fields_filled} fields filled` : 'not found'}</p>
                             <div><b>Passages ({m.debug.passage_titles.length}):</b>
