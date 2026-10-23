@@ -77,7 +77,7 @@ export function computeDrift(input: DriftInput, now: Date = new Date()): DriftRe
     signals.push(`No submission ${input.daysSinceSubmission} days`);
   }
 
-  // 4. Sentiment pulse
+  // 3. Sentiment pulse
   const scores = input.confidenceSeries.filter((v): v is number => v !== null && v !== undefined);
   const [latest, previous] = scores;
   if (latest !== undefined && latest <= LOW_CONFIDENCE_SCORE) {

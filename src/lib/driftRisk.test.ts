@@ -2,10 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { computeDrift, isFlatOrDeclining } from './driftRisk';
 
 const base = {
-  gate: '1',
   revenueSeries: [12000, 11000],
   daysSinceSubmission: 10,
-  daysSinceCompletion: 5,
   confidenceSeries: [8, 8],
 };
 
@@ -14,17 +12,10 @@ describe('computeDrift', () => {
     expect(computeDrift(base)).toEqual({ band: 'green', signals: [] });
   });
 
-  it('flags a stalled gate: no completion in 60+ days and gate target not met', () => {
-    const r = computeDrift({ ...base, revenueSeries: [4000, 3900], daysSinceCompletion: 74 });
-    expect(r.signals).toContain('No module progress 74 days');
-    expect(r.signals).toContain('Revenue flat 2 months');
-    expect(r.band).toBe('red');
-  });
-
-  it('does not flag a stalled gate when the gate revenue target is met', () => {
-    const r = computeDrift({ ...base, daysSinceCompletion: 90 });
-    expect(r.signals).toEqual([]);
-    expect(r.band).toBe('green');
+  it('flags flat or declining revenue across the last submissions', () => {
+    const r = computeDrift({ ...base, revenueSeries: [4000, 3900] });
+    expect(r.signals).toEqual(['Revenue flat 2 months']);
+    expect(r.band).toBe('amber');
   });
 
   it('flags a submission gap over 45 days', () => {
@@ -50,14 +41,17 @@ describe('computeDrift', () => {
 
   it('goes red with two or more signals', () => {
     const r = computeDrift({
-      gate: '2',
       revenueSeries: [9000, 9000, 8800],
       daysSinceSubmission: 60,
-      daysSinceCompletion: 100,
       confidenceSeries: [3, 6],
     });
     expect(r.band).toBe('red');
     expect(r.signals.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('never uses module progress as a signal', () => {
+    const r = computeDrift(base);
+    expect(r.signals.join(' ')).not.toMatch(/module/i);
   });
 });
 
