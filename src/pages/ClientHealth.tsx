@@ -136,14 +136,22 @@ export default function ClientHealth() {
 
   const [search, setSearch] = useState('');
   const [bandFilter, setBandFilter] = useState<'all' | 'green' | 'amber' | 'red'>('all');
+  const [needsSupportOnly, setNeedsSupportOnly] = useState(false);
+  const [sortByDrift, setSortByDrift] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'board' | 'quarterly'>('table');
+  const [reviewedIds, setReviewedIds] = useState<string[]>([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
 
-  const clientsWithHealth = useMemo(() =>
-    clients
+  const clientsWithHealth = useMemo(() => {
+    const now = Date.now();
+    const daysSince = (iso?: string | null) =>
+      iso ? Math.floor((now - new Date(iso).getTime()) / 86400000) : null;
+
+    return clients
       .filter((c: ClientOverview) => !archivedIds.includes(c.id))
       .map((c: ClientOverview) => {
-      const clientCompletedKeys = allCompletions
-        .filter(cp => cp.user_id === c.id)
-        .map(cp => cp.task_key);
+      const clientCompletions = allCompletions.filter(cp => cp.user_id === c.id);
+      const clientCompletedKeys = clientCompletions.map(cp => cp.task_key);
       const allOnRampDone = ON_RAMP_MODULE_IDS.every(id => clientCompletedKeys.includes(id));
 
       const tier = normalizeTier(c.tier);
@@ -154,6 +162,20 @@ export default function ClientHealth() {
       // Ready to step up from "under $20k" → "over $20k" once they cross $20k/mth.
       const readyForOver20k = tier === 'in_flow_starter' && monthlyRevenue >= 20000;
 
+      const latestCompletion = clientCompletions
+        .map(cp => cp.updated_at)
+        .filter(Boolean)
+        .sort()
+        .at(-1) ?? null;
+
+      const drift = computeDrift({
+        gate: clientGates[c.id] ?? null,
+        revenueSeries: revenueTrends.revenue?.[c.id] ?? [],
+        daysSinceSubmission: c.days_since_submission != null ? Number(c.days_since_submission) : null,
+        daysSinceCompletion: daysSince(latestCompletion),
+        confidenceSeries: revenueTrends.confidence?.[c.id] ?? [],
+      });
+
       return {
         ...c,
         health: calcHealthScore(c),
@@ -161,10 +183,11 @@ export default function ClientHealth() {
         readyForInFlow,
         readyForOver20k,
         monthlyRevenue,
+        drift,
+        gate: clientGates[c.id] ?? null,
       };
-    }).sort((a, b) => b.health.score - a.health.score),
-    [clients, allCompletions, archivedIds]
-  );
+    }).sort((a, b) => b.health.score - a.health.score);
+  }, [clients, allCompletions, archivedIds, revenueTrends, clientGates]);
 
 
   const greenCount = clientsWithHealth.filter(c => c.health.band === 'green').length;
