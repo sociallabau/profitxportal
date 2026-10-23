@@ -239,6 +239,12 @@ const PROFITX_COLUMNS = [
   { key: 'D', label: 'DELIVERY' },
 ];
 
+// Modules covered during onboarding — tagged instead of needing module content.
+const ONBOARDING_COVERED_CODES = new Set(['O1', 'O2', 'O3', 'C3']);
+
+// Opens a WhatsApp chat with Dan so members can book a call to cover the module.
+const DAN_WHATSAPP_URL = 'https://wa.me/DAN_NUMBER?text=' + encodeURIComponent("Hey Dan — can we book a call to cover this module?");
+
 const PROFITX_MODULES: Record<string, string> = {
   O1: 'Market & Message', O2: 'Golden Retainer', O3: 'Tier Flow',
   O4: 'Revenue Architect', O5: 'Premium Positioning', O6: 'Financial Mastery',
