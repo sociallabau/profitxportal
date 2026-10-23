@@ -46,6 +46,7 @@ const SOURCE_LABELS: Record<string, string> = {
   call: 'Call',
   whatsapp: 'WhatsApp',
   note: 'Note',
+  brain: "Dan's Brain (rulebook)",
 };
 
 /** Splits a document into chunks on paragraph boundaries, with a little overlap. */
@@ -83,6 +84,7 @@ export default function DanAI() {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
   const [savedAnswers, setSavedAnswers] = useState<SavedAnswer[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadSource, setUploadSource] = useState('auto');
   const [uploadProgress, setUploadProgress] = useState('');
   const [jobs, setJobs] = useState<TranscriptionJob[]>([]);
   const [syncing, setSyncing] = useState(false);
@@ -279,11 +281,13 @@ export default function DanAI() {
         const chunks = chunkText(text);
         if (!chunks.length) continue;
 
-        const sourceType = /whatsapp|chat/i.test(file.name)
-          ? 'whatsapp'
-          : /call|meeting|momentum|q&a/i.test(file.name)
-            ? 'call'
-            : 'transcript';
+        const sourceType = uploadSource !== 'auto'
+          ? uploadSource
+          : /whatsapp|chat/i.test(file.name)
+            ? 'whatsapp'
+            : /call|meeting|momentum|q&a/i.test(file.name)
+              ? 'call'
+              : 'transcript';
 
         const { data: doc, error: docError } = await supabase
           .from('knowledge_docs')
@@ -538,6 +542,20 @@ export default function DanAI() {
                 }}
               />
             </label>
+            <div className="mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span>Source:</span>
+              <select
+                value={uploadSource}
+                onChange={e => setUploadSource(e.target.value)}
+                disabled={uploading}
+                className="bg-card border border-border rounded-md px-2 py-1 text-foreground"
+              >
+                <option value="auto">Detect from file name</option>
+                {Object.entries(SOURCE_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
             {uploadProgress && (
               <p className="text-[11px] text-muted-foreground mt-2">{uploadProgress}</p>
             )}
