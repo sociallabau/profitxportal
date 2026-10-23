@@ -525,6 +525,7 @@ export default function ClientHealth() {
                     <th className="py-2.5 px-4 font-semibold">Client</th>
                     <th className="py-2.5 px-3 font-semibold">Tier</th>
                     <th className="py-2.5 px-3 font-semibold">Revenue</th>
+                    <th className="py-2.5 px-3 font-semibold">Drift</th>
                     <th className="py-2.5 px-3 font-semibold">Last login</th>
                     <th className="py-2.5 px-4 font-semibold text-right">Status</th>
                   </tr>
@@ -532,7 +533,8 @@ export default function ClientHealth() {
                 <tbody>
                   {visible.map(client => {
                     const s = BAND[client.health.band as keyof typeof BAND];
-                    const series = (revenueTrends as Record<string, number[]>)[client.id];
+                    const d = DRIFT_BAND[client.drift?.band ?? 'green'];
+                    const series = revenueTrends.revenue?.[client.id];
                     const [latest, previous] = series ?? [];
                     const change = series && series.length > 1 && previous
                       ? Math.round(((latest - previous) / previous) * 100)
