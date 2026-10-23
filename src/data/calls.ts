@@ -216,6 +216,11 @@ const MOMENTUM_CALLS: Call[] = MOMENTUM_DATES.map((date) => ({
 
 export const ALL_CALLS: Call[] = [...CALLS, ...MOMENTUM_CALLS];
 
+export function workshopTypeFor(title: string, start: string): Call['workshopType'] {
+  if (start.startsWith('2026-10-28')) return 'learn';
+  return ALL_CALLS.find(call => call.start.slice(0, 10) === start.slice(0, 10) && call.category === 'Workshop')?.workshopType;
+}
+
 export function brisbaneDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-AU', {
     timeZone: 'Australia/Brisbane',

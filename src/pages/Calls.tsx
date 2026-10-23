@@ -97,7 +97,7 @@ export default function Calls() {
                   <span
                     className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryStyles[call.category]}`}
                   >
-                    {call.category}
+                    {call.category === 'Workshop' && call.workshopType ? `${call.workshopType === 'learn' ? 'Learn' : 'Do'} Workshop` : call.category}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {formatDateLong(call.start)} · {formatTimeRange(call.start, call.durationMins)}
