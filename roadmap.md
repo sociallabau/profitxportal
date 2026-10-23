@@ -7,3 +7,6 @@
 - [x] Shorten each focus point to a direct instruction and verify.
 - [x] Add the "what counts as a case study" note to focus points and verify.
 - [x] Give only the owner a light-blue, fully fictional screenshot dashboard with example labels; verify member isolation.
+- [x] Add private member Context Rooms with seven collapsible sections and per-section saving.
+- [x] Add admin inspection/editing, onboarding capture and AI-safe Markdown exports.
+- [x] Verify saving, privacy rules, and the dropdown layout.

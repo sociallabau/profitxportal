@@ -24,7 +24,7 @@ const mainNavItems = [
   { label: 'Financials', path: '/financials', icon: Wallet },
   { label: 'Vault', path: '/vault', icon: Lock },
   { label: 'Upcoming Calls', path: '/calls', icon: Video },
-  { label: 'Settings', path: '/settings', icon: SlidersHorizontal },
+  { label: 'Context Room', path: '/settings', icon: SlidersHorizontal },
 ];
 
 const adminItems = [
