@@ -7,6 +7,8 @@ const TAIL_JOINERS = /^(or|and|but|plus|if|that|which)\b/i;
 const METRIC = /(\d|→|->)/;
 
 const CASE_NOTE = '(either results from client or BTS posts with you talking)';
+// Points that already spell out what counts don't need the note again.
+const EXPLAINED = /\([^)]*(?:bts|testimonial)[^)]*\)|counts as/i;
 
 /** Strip hedged lead-ins so each point reads as an instruction. */
 function direct(chunk: string) {
@@ -14,7 +16,7 @@ function direct(chunk: string) {
   while (FILLERS.test(out)) out = out.replace(FILLERS, '').trim();
   if (!out) return '';
   const point = (out.charAt(0).toUpperCase() + out.slice(1)).replace(/[.!?]+$/, '');
-  return /case stud(y|ies)/i.test(point) && !point.includes(CASE_NOTE)
+  return /case stud(y|ies)/i.test(point) && !EXPLAINED.test(point)
     ? `${point} ${CASE_NOTE}`
     : point;
 }

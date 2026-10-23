@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { revenuePosition, submissionStreak, focusBullets } from './dashboardProgress';
 import { workshopTypeFor } from '@/data/calls';
 
+const CASE_NOTE = '(either results from client or BTS posts with you talking)';
+
 it('marks the next October 28 workshop as Learn, including calendar-feed titles', () => {
   expect(workshopTypeFor('ProfitX Workshop - Christmas Comes Early™', '2026-10-28T07:00:00')).toBe('learn');
 });
@@ -29,7 +31,7 @@ describe('focus dot points', () => {
       'Gate 1 is: 3 retainers',
       '4 convos a month',
       '4 posts a month',
-      '2 case studies',
+      `2 case studies ${CASE_NOTE}`,
       'BTS of shoots counts as a case study',
     ]);
   });
@@ -40,6 +42,13 @@ describe('focus dot points', () => {
       'Case studies (bts or testimonials) 2→4',
       'One extra bts or client based post',
     ]);
+  });
+  it('explains what counts as a case study only where it is not already spelled out', () => {
+    expect(focusBullets('Then 2 more case studies and 2ish case study posts')).toEqual([
+      `2 more case studies ${CASE_NOTE}`,
+      `2ish case study posts ${CASE_NOTE}`,
+    ]);
+    expect(focusBullets('Case studies (bts or testimonials) 2→4')).toEqual(['Case studies (bts or testimonials) 2→4']);
   });
   it('keeps compound subjects and tails together', () => {
     expect(focusBullets('Your convos, case studies/content and posts are all met bro')).toEqual([
