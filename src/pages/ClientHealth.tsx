@@ -82,17 +82,31 @@ export default function ClientHealth() {
     queryFn: async () => {
       const { data } = await supabase
         .from('monthly_totals')
-        .select('user_id, month, total_revenue, mrr, mrr_manual, oneoff_revenue')
+        .select('user_id, month, total_revenue, mrr, mrr_manual, oneoff_revenue, business_confidence')
         .order('month', { ascending: false })
         .limit(600);
 
       const byUser: Record<string, number[]> = {};
+      const confidenceByUser: Record<string, (number | null)[]> = {};
       for (const row of data ?? []) {
         const revenue = Number(row.total_revenue)
           || (Number(row.mrr_manual || row.mrr || 0) + Number(row.oneoff_revenue || 0));
         (byUser[row.user_id] ??= []).push(revenue);
+        (confidenceByUser[row.user_id] ??= []).push(row.business_confidence ?? null);
       }
-      return byUser;
+      return { revenue: byUser, confidence: confidenceByUser };
+    },
+  });
+
+  // profiles.gate per member — drives the stalled-gate drift signal.
+  const { data: clientGates = {} } = useQuery({
+    queryKey: ['client-gates'],
+    enabled: !!selfProfile?.is_admin,
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, gate');
+      const byId: Record<string, string | null> = {};
+      for (const row of data ?? []) byId[row.id] = row.gate ?? null;
+      return byId;
     },
   });
 
@@ -102,7 +116,7 @@ export default function ClientHealth() {
     queryKey: ['all-checklist-completions'],
     enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
-      const { data } = await supabase.from('checklist_progress').select('user_id, task_key, completed').eq('completed', true);
+      const { data } = await supabase.from('checklist_progress').select('user_id, task_key, completed, updated_at').eq('completed', true);
       return data ?? [];
     },
   });
