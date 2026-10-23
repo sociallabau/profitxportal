@@ -1,22 +1,42 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 import { AUDIT_QUESTIONS, classifyAudit, type Rating } from '@/lib/roadmapAudit';
 
-const DOTS: { r: Rating; cls: string }[] = [
-  { r: 'red', cls: 'bg-destructive' },
-  { r: 'amber', cls: 'bg-warning' },
-  { r: 'green', cls: 'bg-success' },
+const DOTS: { r: Rating; cls: string; label: string }[] = [
+  { r: 'red', cls: 'bg-destructive', label: 'Not yet' },
+  { r: 'amber', cls: 'bg-warning', label: 'Kind of' },
+  { r: 'green', cls: 'bg-success', label: 'Nailed it' },
 ];
 
 export default function RoadmapAudit({ onOpenModule }: { onOpenModule: (code: string) => void }) {
   const [open, setOpen] = useState(false);
   const [answers, setAnswers] = useState<Record<string, Rating>>({});
-  const [done, setDone] = useState(false);
-  const complete = AUDIT_QUESTIONS.every(q => answers[q.code]);
+  const [step, setStep] = useState(0);
+  const done = step >= AUDIT_QUESTIONS.length;
   const result = classifyAudit(answers);
 
-  const reset = () => { setAnswers({}); setDone(false); };
+  const reset = () => { setAnswers({}); setStep(0); };
+
+  const answer = async (r: Rating) => {
+    const q = AUDIT_QUESTIONS[step];
+    const next = { ...answers, [q.code]: r };
+    setAnswers(next);
+    setStep(step + 1);
+    if (step + 1 === AUDIT_QUESTIONS.length) {
+      const res = classifyAudit(next);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await (supabase as any).from('roadmap_audits').insert({
+        user_id: user.id, answers: next, issue: res.issue, focus: res.focus,
+      });
+      if (error) toast.error('Could not save your audit');
+    }
+  };
+
+  const q = AUDIT_QUESTIONS[step];
 
   return (
     <>
@@ -24,35 +44,35 @@ export default function RoadmapAudit({ onOpenModule }: { onOpenModule: (code: st
         Take the Roadmap Audit
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>ProfitX Diagnostic<span className="text-primary">™</span></DialogTitle>
-            {!done && <p className="text-sm text-muted-foreground">For each statement, mark where you're really at. Be honest — the reds are where the growth is.</p>}
+            {!done && <p className="text-sm text-muted-foreground">Be honest — the reds are where the growth is.</p>}
           </DialogHeader>
 
           {!done ? (
-            <div className="space-y-2">
-              {(['launchpad', 'scale'] as const).map(stage => (
-                <div key={stage} className="space-y-2">
-                  <p className="text-xs font-bold tracking-widest text-primary mt-3">{stage === 'launchpad' ? '$0–20K LAUNCHPAD' : '$30–84K SCALE'}</p>
-                  {AUDIT_QUESTIONS.filter(q => q.stage === stage).map(q => (
-                    <div key={q.code} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
-                      <span className="shrink-0 rounded bg-primary/20 px-2 py-0.5 text-xs font-bold text-primary">{q.code}</span>
-                      <span className="flex-1 text-sm">{q.text}</span>
-                      <div className="flex gap-1.5 shrink-0">
-                        {DOTS.map(d => (
-                          <button key={d.r} aria-label={`${q.code} ${d.r}`}
-                            onClick={() => setAnswers(a => ({ ...a, [q.code]: d.r }))}
-                            className={`h-5 w-5 rounded-full ${d.cls} transition ${answers[q.code] === d.r ? 'ring-2 ring-foreground scale-110' : 'opacity-30 hover:opacity-70'}`} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+            <div className="space-y-6">
+              <div>
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span className="font-bold tracking-widest text-primary">{q.stage === 'launchpad' ? '$0–20K LAUNCHPAD' : '$30–84K SCALE'} · {q.pillar.toUpperCase()}</span>
+                  <span>{step + 1} / {AUDIT_QUESTIONS.length}</span>
                 </div>
-              ))}
-              <Button className="w-full mt-4" disabled={!complete} onClick={() => setDone(true)}>
-                {complete ? 'See my results' : `Answer all ${AUDIT_QUESTIONS.length} statements`}
-              </Button>
+                <div className="h-1 rounded bg-muted"><div className="h-1 rounded bg-primary transition-all" style={{ width: `${(step / AUDIT_QUESTIONS.length) * 100}%` }} /></div>
+              </div>
+              <div className="text-center space-y-3 py-4">
+                <span className="inline-block rounded bg-primary/20 px-2 py-0.5 text-sm font-bold text-primary">{q.code}</span>
+                <p className="text-lg font-medium">{q.text}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {DOTS.map(d => (
+                  <button key={d.r} onClick={() => answer(d.r)}
+                    className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 hover:border-primary transition">
+                    <span className={`h-8 w-8 rounded-full ${d.cls}`} />
+                    <span className="text-sm">{d.label}</span>
+                  </button>
+                ))}
+              </div>
+              {step > 0 && <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>← Back</Button>}
             </div>
           ) : (
             <div className="space-y-5">
