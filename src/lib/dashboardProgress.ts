@@ -1,6 +1,5 @@
 export const REVENUE_STEPS = [0, 10000, 20000, 30000, 40000, 50000, 84000, 100000, 150000];
 
-const BULLET_JOINERS = /^(to|and|or|then|that|which|so|plus|basically|additionally)\b/i;
 
 /** Split a run-on focus note into short, scannable dot points. */
 export function focusBullets(text?: string | null): string[] {
@@ -17,13 +16,14 @@ export function focusBullets(text?: string | null): string[] {
   const bullets: string[] = [];
   for (const chunk of chunks) {
     const last = bullets.at(-1);
-    if (last && (chunk.length < 12 || BULLET_JOINERS.test(chunk))) {
-      bullets[bullets.length - 1] = `${last}, ${chunk}`;
+    // Lowercase openings ("to get engagement") are continuations, not new points.
+    if (last && (/^[a-z]/.test(chunk) || chunk.length < 12)) {
+      bullets[bullets.length - 1] = `${last.replace(/[.!?]+$/, '')}, ${chunk}`;
       continue;
     }
     bullets.push(chunk.charAt(0).toUpperCase() + chunk.slice(1));
   }
-  return bullets;
+  return bullets.map((bullet) => bullet.replace(/[.!?]+$/, ''));
 }
 
 
