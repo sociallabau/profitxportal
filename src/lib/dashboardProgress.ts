@@ -6,12 +6,20 @@ const FILLERS = /^(just|basically|additionally|plus|so|also|then|and|but|let's|i
 const TAIL_JOINERS = /^(or|and|but|plus|if|that|which)\b/i;
 const METRIC = /(\d|→|->)/;
 
+const CASE_NOTE = '(either results from client or BTS posts with you talking)';
+// Only a numbered target needs the explanation; status lines and notes that
+// already spell it out do not.
+const EXPLAINED = /\(|counts as/i;
+
 /** Strip hedged lead-ins so each point reads as an instruction. */
 function direct(chunk: string) {
   let out = chunk.replace(/^[-–—.,:;\s]+|[,;:\s]+$/g, '').trim();
   while (FILLERS.test(out)) out = out.replace(FILLERS, '').trim();
   if (!out) return '';
-  return (out.charAt(0).toUpperCase() + out.slice(1)).replace(/[.!?]+$/, '');
+  const point = (out.charAt(0).toUpperCase() + out.slice(1)).replace(/[.!?]+$/, '');
+  return /\d/.test(point) && /case stud(y|ies)/i.test(point) && !EXPLAINED.test(point)
+    ? `${point} ${CASE_NOTE}`
+    : point;
 }
 
 function splitClauses(chunk: string) {
