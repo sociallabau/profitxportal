@@ -245,6 +245,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Gate questions always get the gate criteria chunks on top, so the
+    // criteria table is in front of the model even when search missed it.
+    if (/\bgates?\b|next level|level up/i.test(question)) {
+      const { data: gateChunks } = await admin.rpc("search_knowledge_public", {
+        q: "Gate 1 Fix or Gate 2 Fuel", limit_n: 10,
+      });
+      if (gateChunks?.length) {
+        const seen = new Set(
+          (chunks ?? []).map((c: { title: string; content: string }) => `${c.title}|${c.content}`),
+        );
+        chunks = [
+          ...(chunks ?? []),
+          ...gateChunks.filter((c: { title: string; content: string }) => !seen.has(`${c.title}|${c.content}`)),
+        ];
+      }
+    }
+
     if (!chunks || chunks.length === 0) {
       return json({
         answer: "I haven't covered that one yet — drop it in the Q&A chat and Dan will get to it.",
