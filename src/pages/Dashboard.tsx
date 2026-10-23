@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText, Flag, ArrowUpRight, Crosshair } from 'lucide-react';
+import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, FileText } from 'lucide-react';
 import DashboardProgress from '@/components/DashboardProgress';
 import { Button } from '@/components/ui/button';
 import PageLayout from '@/components/PageLayout';
@@ -12,7 +12,6 @@ import { supabase } from '@/lib/supabase';
 import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
-import { dashboardUserId } from '@/lib/dashboardDemo';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
@@ -142,6 +141,8 @@ function YearlyCalendar() {
 }
 
 function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
+  const cycle = currentCycle();
+  const PhaseIcon = PHASE_META[cycle.phase].icon;
   const todayKey = brisbaneDateKey();
   const [ty, tm, td] = todayKey.split('-').map(Number);
   const start = new Date(Date.UTC(ty, tm - 1, td));
@@ -169,15 +170,26 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
   return (
     <div className="bg-card border border-border rounded-xl p-5 mb-6">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">Next 3 Weeks</h2>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Next 3 Weeks</h2>
+          </div>
+          <div className="flex items-center gap-2 border-l border-border pl-3">
+            <PhaseIcon className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs font-semibold">{cycle.phase} Month</span>
+            <span className="text-[10px] text-muted-foreground">{cycle.monthName} · Q{cycle.quarter}</span>
+          </div>
         </div>
         <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Do Workshop</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400" /> Learn Workshop</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> Coaching</span>
         </div>
+      </div>
+      <div className="flex items-center justify-between gap-3 flex-wrap border-t border-border pt-3 mb-4">
+        <p className="text-xs text-muted-foreground">{cycle.phase === 'Build' ? 'Preparing for Christmas & Building Ad Campaigns' : PHASE_META[cycle.phase].blurb}</p>
+        <span className="text-[10px] text-muted-foreground">Next: {cycle.nextMonthName} · {cycle.nextPhase}</span>
       </div>
       <div className="grid grid-cols-7 gap-1.5">
         {days.map((d) => {
@@ -224,23 +236,9 @@ export default function Dashboard() {
   const { data: profile } = useProfile();
   usePageTracking('dashboard');
   const navigate = useNavigate();
-  const dataUserId = dashboardUserId(user?.id, profile?.is_admin);
-  const isMemberDemo = Boolean(user?.id && dataUserId !== user.id);
-  const { data: demoProfile } = useQuery({
-    queryKey: ['dashboard-demo-profile', dataUserId],
-    enabled: isMemberDemo,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('profiles')
-        .select('full_name, gate, gate_key_task, gate_move_up')
-        .eq('id', dataUserId ?? '').single();
-      if (error) throw error;
-      return data;
-    },
-  });
-  const dashboardProfile = isMemberDemo ? demoProfile : profile;
+  const dataUserId = user?.id;
+  const dashboardProfile = profile;
 
-  const cycle = currentCycle();
-  const PhaseIcon = PHASE_META[cycle.phase].icon;
   const { calls: allUpcoming } = useUpcomingCalls();
   const upcomingCalls = allUpcoming.slice(0, 2);
   const threeWeekCalls = allUpcoming;
@@ -283,13 +281,12 @@ export default function Dashboard() {
 
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-semibold">
             Welcome back{dashboardProfile?.full_name ? `, ${dashboardProfile.full_name.split(' ')[0]}` : ''}.
           </h1>
-          <p className="text-sm text-muted-foreground">{isMemberDemo ? `${dashboardProfile?.full_name?.split(' ')[0] ?? 'Member'}’s dashboard · Read-only demo` : "Here's where ProfitX is right now."}</p>
+          <p className="text-sm text-muted-foreground">Here’s where ProfitX is right now.</p>
         </div>
         <Button
-          disabled={isMemberDemo}
           onClick={() => navigate('/submissions/monthly')}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-lg shadow-primary/20"
         >
@@ -318,45 +315,6 @@ export default function Dashboard() {
             {upcomingCalls.map(c => <CallCard key={c.meetUrl + c.start} call={c} />)}
           </div>
         )}
-      </div>
-
-      {/* Current cycle */}
-      <div className={`bg-gradient-to-br ${PHASE_META[cycle.phase].bg} bg-card border border-border rounded-xl p-4 mb-6`}>
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg bg-background/60 border border-border flex items-center justify-center ${PHASE_META[cycle.phase].color}`}>
-              <PhaseIcon className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Quarter {cycle.quarter} · Month {cycle.monthInQuarter} of 3 · {cycle.monthName} {cycle.year}
-              </p>
-              <h2 className={`text-lg font-bold ${PHASE_META[cycle.phase].color}`}>
-                {cycle.phase} Month
-              </h2>
-              {cycle.phase === 'Build' && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Focus: <span className="font-semibold text-foreground">Preparing for Christmas & Building Ad Campaigns</span>
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Coming next</p>
-            <p className="text-xs font-semibold text-foreground mt-0.5">{cycle.nextMonthName} · {cycle.nextPhase}</p>
-          </div>
-        </div>
-
-        {/* Phase progress */}
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {PHASES.map((p, idx) => {
-            const active = idx + 1 === cycle.monthInQuarter;
-            const done = idx + 1 < cycle.monthInQuarter;
-            return (
-              <div key={p} className={`h-1.5 rounded-full ${active ? 'bg-primary' : done ? 'bg-primary/40' : 'bg-border'}`} />
-            );
-          })}
-        </div>
       </div>
 
       {/* Next 3 weeks calendar */}
