@@ -43,12 +43,17 @@ describe('focus dot points', () => {
       'One extra bts or client based post',
     ]);
   });
-  it('explains what counts as a case study only where it is not already spelled out', () => {
+  it('explains what counts only on numbered case study targets', () => {
     expect(focusBullets('Then 2 more case studies and 2ish case study posts')).toEqual([
       `2 more case studies ${CASE_NOTE}`,
       `2ish case study posts ${CASE_NOTE}`,
     ]);
-    expect(focusBullets('Case studies (bts or testimonials) 2→4')).toEqual(['Case studies (bts or testimonials) 2→4']);
+    expect(focusBullets('You have enough retainers and case studies to move up')).toEqual([
+      'You have enough retainers and case studies to move up',
+    ]);
+    expect(focusBullets('Post 2 result or testimonial case studies or pieces (client on camera if you can)')).toEqual([
+      'Post 2 result or testimonial case studies or pieces (client on camera if you can)',
+    ]);
   });
   it('keeps compound subjects and tails together', () => {
     expect(focusBullets('Your convos, case studies/content and posts are all met bro')).toEqual([
