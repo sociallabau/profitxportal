@@ -280,13 +280,20 @@ async function answerPipeline(p: PipelineInput) {
     const banned = findBanned(text);
     if (banned.length) out.push(`rewrite the lines containing banned phrases/swearing: ${banned.join(", ")}`);
     if (looksTruncated(a.answer)) out.push("the answer is cut off — finish it cleanly");
-    if (wordCount(a.answer) > 220) out.push("cut to under 170 words");
-    // Ads/scaling/pricing questions must use the member's cost per client when we have it.
+    const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
+    if (wordCount(a.answer) > (shortReply ? 60 : 220)) out.push(shortReply ? "cut to under 60 words" : "cut to under 170 words");
+    // Ads/scaling/pricing questions must use the member's cost per client — only when it was actually computed.
     const cpc = block.derived?.cost_per_client;
-    if (cpc != null && ["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(a.answer.replace(/\$(15|20)\b/g, ""))) {
-      out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client vs their lowest retainer${block.derived?.lowest_retainer_price ? ` $${block.derived.lowest_retainer_price}` : ""}) and say whether it's under half`);
-    } else if (cpc != null && ["ads"].includes(String(plan.topic)) && !a.answer.includes(String(Math.round(cpc)))) {
-      out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client) and say whether it's under half their first month's fee`);
+    if (typeof cpc === "number" && Number.isFinite(cpc) && !shortReply) {
+      if (["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(a.answer.replace(/\$(15|20)\b/g, ""))) {
+        out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client vs their lowest retainer${block.derived?.lowest_retainer_price ? ` $${block.derived.lowest_retainer_price}` : ""}) and say whether it's under half`);
+      } else if (plan.topic === "ads" && !a.answer.includes(String(Math.round(cpc)))) {
+        out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client) and say whether it's under half their first month's fee`);
+      }
+    }
+    // Sequence rule: follow-up problem + allowed to scale → scaling must be conditional on speed to lead.
+    if (/no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(question) && /\bscal/i.test(a.answer) && !/15\s*[–-]\s*30/.test(a.answer)) {
+      out.push(`put follow-up first and make scaling conditional: "you can scale, but only once you're calling every lead within 15–30 mins"`);
     }
     return { out, names };
   };
@@ -330,15 +337,16 @@ function buildDebug(mode: string, memberId: string | null, member: MemberInput |
   };
 }
 
-function codeChecks(a: Answer, catalogueLines: string[], tokens: string[]) {
+function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short = false) {
   const text = [a.answer, ...a.next_steps].join("\n");
   const wc = wordCount(a.answer);
   const names = findNames(text, tokens);
   const banned = findBanned(text);
+  const [min, max] = short ? [15, 60] : [40, 220];
   return [
     { check: "no swear words or banned phrases", pass: banned.length === 0, why: banned.join(", ") || "clean" },
     { check: "no real member names", pass: names.length === 0, why: names.join(", ") || "none" },
-    { check: "answer 40–220 words", pass: wc >= 40 && wc <= 220, why: `${wc} words` },
+    { check: `answer ${min}–${max} words`, pass: wc >= min && wc <= max, why: `${wc} words` },
     { check: "ends cleanly", pass: !looksTruncated(a.answer), why: a.answer.trim().slice(-30) },
     { check: "valid JSON", pass: true, why: "parsed" },
     { check: "resource null or exact catalogue title", pass: a.resource === null || catalogueLines.includes(a.resource), why: a.resource ?? "null" },
@@ -384,7 +392,8 @@ Deno.serve(async (req) => {
         const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, mode: "test", member, memberId: null });
         const { data: allProfiles } = await admin.from("profiles").select("full_name");
         const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
-        const checks = codeChecks(r.final, catalogueLines, tokens);
+        const short = ["privacy", "boundary"].includes(String(test.category));
+        const checks = codeChecks(r.final, catalogueLines, tokens, short);
         const debug = buildDebug("test", null, member, r);
         await admin.from("dan_ai_test_results").upsert({ run_id: body.run_id, test_id: test.id, answer: r.final, debug, code_checks: checks, criteria: [], pass: null }, { onConflict: "run_id,test_id" });
         await admin.from("dan_ai_checks").insert({ user_id: userId, question: `[TEST ${test.name}] ${test.question}`, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues });
