@@ -1062,6 +1062,33 @@ export type Database = {
         }
         Relationships: []
       }
+      roadmap_audits: {
+        Row: {
+          answers: Json
+          created_at: string
+          focus: string[]
+          id: string
+          issue: string
+          user_id: string
+        }
+        Insert: {
+          answers: Json
+          created_at?: string
+          focus?: string[]
+          id?: string
+          issue: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          focus?: string[]
+          id?: string
+          issue?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       roadmap_scores: {
         Row: {
           id: string
