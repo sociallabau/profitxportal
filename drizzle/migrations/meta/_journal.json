@@ -57,6 +57,13 @@
       "when": 1792735244083,
       "tag": "0007_admin_settings_retention_inputs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792740719849,
+      "tag": "0008_roadmap_audits",
+      "breakpoints": true
     }
   ]
 }
