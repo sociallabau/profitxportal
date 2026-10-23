@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { functionErrorMessage } from '@/lib/functionError';
+import BrainSummary from './BrainSummary';
 import {
   Sparkles, Copy, Check, Trash2, Upload, BookmarkPlus, Loader2, FileText, MessageSquare,
   RefreshCw, Clapperboard, Wand2, Mic, HelpCircle,
@@ -305,6 +306,7 @@ export default function KnowledgeAdmin() {
 
   return (
     <div>
+      <BrainSummary />
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
         {tabs.map(t => (

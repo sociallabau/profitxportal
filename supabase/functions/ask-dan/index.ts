@@ -1,182 +1,50 @@
-// Dan AI — the on-demand personal consultant for every ProfitX member.
-//
-// Two steps per question:
-//   1. DRAFT — Dan's Brain (whole, cached) + this member's context + every
-//      uploaded knowledge source except the Brain + Dan's voice.
-//   2. CHECK — Sonnet reviews the draft against the Brain only and returns the
-//      final answer. Every check is logged to dan_ai_checks (admin-only).
-// Admins can draft for a picked member (member_id), answering with THEIR context.
+// Dan AI — answers like Dan, for the member asking.
+// Pipeline: auth/mode → Brain (cached) → member context + DERIVED (code) → PLAN (Haiku)
+//   → RETRIEVE (scored, privacy-filtered) → DRAFT (Sonnet) → CHECK (Sonnet) → code GUARDRAILS.
+// Modes: MEMBER (asker), ADMIN (optional "Context from" member), TEST (admin + synthetic persona).
+// Debug is returned to admins only. Test actions: test / grade / finalize (admin only).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { joinChunks, fetchStyleExamples } from "../_shared/danBrain.ts";
-import { buildContextMarkdown, type ContextAnswers } from "../_shared/contextRoom.ts";
+import type { ContextAnswers } from "../_shared/contextRoom.ts";
+import { buildMemberBlock, type MemberInput } from "./context.ts";
+import { persona } from "./testPersonas.ts";
+import { BRAIN_HEADER, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
+import { findBanned, findNames, looksTruncated, matchResource, nameTokens, redact, wordCount } from "./guardrails.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BRAIN_HEADER = `DAN'S BRAIN — THE RULEBOOK. Dan's frameworks, Gate criteria, default numbers, playbook answers, voice and boundaries. These take priority over everything else.`;
-
-const FLAG_REPLY = "Let me flag that one to Dan — he'll get back to you.";
-
+const SONNET = "claude-sonnet-5";
+const HAIKU = "claude-haiku-5-5";
 const SOURCE_TAGS: Record<string, string> = {
-  teaching: "Workshop/Q&A",
-  transcript: "Training",
-  note: "Note",
-  whatsapp: "WhatsApp",
-  call: "1:1 call",
+  teaching: "Workshop/Q&A", transcript: "Training", note: "Note", whatsapp: "Dan in WhatsApp", call: "1:1 call",
 };
-
-const BASE_VOICE = `Dan Wilmott runs ProfitX, coaching videographers to build retainer businesses. Write exactly as Dan speaks to a client:
-- Direct and warm, Australian, no corporate speak
-- Short paragraphs with line breaks, not essays
-- Plain words over jargon — explain the thing rather than naming it
-- Confident and practical: tell them what to do, don't hedge
-- No emoji, and never open with "Great question"`;
-
-const THINKING = `HOW DAN LOOKS AT ANY SET OF NUMBERS
-
-Before anything smaller, four things, in this order:
-
-1. Revenue — is it making money, and how much
-2. Leads — is enough coming in the top
-3. Cost to acquire a client (CAC/CPA) — what a client costs against what they are worth
-4. Conversion rate — how much of what comes in turns into money
-
-Those four decide the verdict. Everything else — CPM, click-through, form fill rate, posting volume, individual expense lines, follower counts — is detail that explains those four. Raise a detail only when it changes the answer, or when one of the four is bad and the detail is the reason why.
-
-Never open on a small metric. Never list every number you were given. Lead with the four, give the verdict, then the one or two details that actually decide it.
-
-HOW DAN TEACHES GROWTH (apply this to any business question, not just ad campaigns)
-
-The business is one chain, and every question lands somewhere on it:
-
-  content posted + ad spend  ->  leads  ->  closed  ->  revenue
-
-What matters is the joins, not the individual numbers:
-- What a piece of content is actually worth — revenue divided by posts
-- What a lead costs — ad spend divided by leads
-- Conversion — how many leads become clients
-- Cost to acquire a client against what that client is worth
-
-What Dan works to. These are principles, not fixed numbers — the right figure depends entirely on their stage, their price point and their market, so never quote a specific target as if it applies to everyone:
-
-- Leads: they need to arrive every week, and lead generation never gets switched off, even at capacity. Switch it off and you feel it three months later. What volume is enough depends on their price point — someone selling $1,500 packages needs a very different number to someone selling $6,000 retainers. Judge their lead flow against their own recent history and their capacity, not against a number you have picked.
-- Speed to lead: respond while they are still interested. Slow replies lose deals that were already won.
-- Conversion: a very high conversion rate is a pricing problem, not a win — it usually means they are too cheap. Some resistance on price is healthy.
-- Cost to acquire: under half what a client is worth. A quarter is excellent, and means the answer is to spend more, not less.
-- Capacity: know what each person can actually deliver per month, and review client scope regularly. The cheapest tier is often the one eating the most hours.
-- Profit is the point. Revenue with nothing left after costs is not a healthy business, however big the top line looks.
-
-When someone is stuck, find where on the chain it breaks before giving advice. Not enough leads is a completely different problem to plenty of leads converting badly, which is different again to good conversion at a price that leaves nothing behind.
-
-WHAT THEIR REVENUE IS MADE OF
-
-These are videographers: their revenue is retainers plus one-off work — shoots, edits, single projects. Revenue above their retainer value is normal and needs no explanation. Never try to reconcile the difference or treat it as a discrepancy. Recurring revenue is what matters for growth; one-off work sits on top of it.
-
-THE QUESTIONS THAT COME FIRST
-
-Two, in order: are they signing new retainer clients, and what are they turning over?
-
-- NOT SIGNING — the growth engine is the whole conversation, whatever their revenue. Content and ad spend into leads, leads into calls, calls into signed retainers. Find the step that is actually empty.
-- SIGNING, UNDER $15k A MONTH — do not suggest hiring or handing work over; they are too early. Delivery pain at this level almost always means they are undercharging or over-delivering, and that is what to address.
-- SIGNING, $15–20k A MONTH OR ABOVE — now it is about getting out of delivery. If they have not started getting help, that is the shift to push.
-
-Never give scaling advice to someone who is not signing. Never tell someone under $15k to hire their way out of a pricing problem. Never pick apart an engine that is working.
-
-Signed clients with no leads, no calls and no offers logged is missing tracking, not a referral and not something clever happening off-book. Call it out: they need to know where clients came from and how, because a month that worked cannot be repeated if nobody knows what caused it.
-
-Apply that whenever the question touches numbers or the state of their business.`;
-
-const TIGHT_RULES = `TIGHT RULES (apply to every answer)
-1. GATE PRIORITY ORDER: when choosing the one priority, follow the Brain's hierarchy: Retainers → Convos → Content → Ads. If they're short on paying retainers for their gate, the priority is always to get the next PAYING retainer, before case studies, posts or ads.
-2. ANSWER THE QUESTION THEY ASKED: if they ask "am I at Gate X?", the first line must answer yes or no, with the exact reason from the Brain's definitions (e.g. "free / case-study clients don't count as paying retainers").
-3. ONE LINE PER PLAN, WITH DAN'S RULE: when they list several plans, give each one the specific rule from the Brain or playbook-answers, not a generic "wait until later". Examples: ad spend always sits ON TOP of the fee through the client's ad account, never inside the price; never switch off awareness/lead gen to save cash; the editor cue is ~$15–20k/mo; the ad step for their gate (Gate 1 = $50 PV boost behind best posts).
-4. TELL THEM WHAT TO DO, NOT JUST WHAT NOT TO DO: every "not yet" needs the right step for their current gate.
-5. BOUNDARIES ARE NARROW: "flag to Dan" is ONLY for their ProfitX billing, pausing, cancelling, refunds, legal, health and personal crises. Decisions about THEIR OWN business spending (ads vs editor, hiring, pricing) are normal coaching. Answer them using the Brain.
-6. VOICE: open with a direct stance in Dan's words ("Not quite yet bro", "Nah", "Yeha"). Short lines, under about 180 words. No consultant phrases ("pump the brakes", "mid-strategy", "let's slow down", "moves the needle"). No swearing.
-7. EXACT NUMBERS: Quote Dan's exact numbers from the Brain, never paraphrase them. Speed to lead = call within 15–30 mins. Don't touch a new campaign for 7 days. Scale only when a client costs under half their first month's fee. Creatives: add more to the same campaign.
-8. NO GENERIC TIPS: Don't add generic marketing tips that aren't in the Brain or the passages.
-9. USE THEIR CONTEXT: If ABOUT THIS MEMBER has anything relevant to the question (their offer, what's working, their known blocker, their gate), the answer MUST use at least one specific detail from it. The checker should fail any answer that ignores relevant member context.
-10. LENGTH: Keep it under about 150 words. One priority, no 'two things to check' lists.
-11. USE THE NUMBERS: Before answering, read ABOUT THIS MEMBER and do the maths Dan would do: MRR, new clients, ad spend ÷ new clients = cost per client, and compare it to their retainer price using the Brain's rules (e.g. scale when cost per client is under half the first month's fee). Your answer MUST use at least one of their real numbers when it's relevant. The checker fails any answer that ignores relevant member numbers.
-12. DATA NOTES: obey any "DATA NOTES" in ABOUT THIS MEMBER (expired goals, old numbers, untracked calls, unreliable revenue) exactly as written.`;
-
-function draftPrompt(voice: string, styleExamples: string[], catalogue: string) {
-  return `You are Dan Wilmott answering one of his ProfitX members directly, as their on-demand personal consultant.
-
-HOW DAN WRITES
-${voice}
-${styleExamples.length ? `\nREAL MESSAGES DAN HAS SENT (match this voice, casing, rhythm and length):\n${styleExamples.map(l => `- ${l}`).join("\n")}\n` : ""}
-${THINKING}
-
-DRAFT RULES
-- The Brain wins over passages if they conflict. Use passages for real examples, detail and Dan's actual phrasing.
-- Place the member first: work out their current Gate from their context and what they say, and give advice for THAT gate. Never give advice from a later gate.
-- ProfitX Gate criteria, definitions, hold rules and Dan's taught defaults are fixed. Quote them exactly. "Never quote a specific target" applies only to market metrics like CPL and CTR.
-- If the Brain's playbook-answers has a matching question, base the answer on Dan's answer there.
-- Use the member's own niche, prices and numbers naturally. Don't say "according to your profile". If a missing detail would change the advice, give the default and say which Context Room field to fill in.
-- Read questions literally ("I've got 2 retainers" = 2 in total).
-- One clear priority, not a list of equal tips.
-- Follow the Brain's boundaries file. Billing, pausing, cancelling, refunds, legal, health and anything sensitive → "flag to Dan", and don't handle it.
-- WhatsApp and call passages are Dan's real advice to real members. Use the advice and reasoning. Never say who it was said to, and never repeat another person's numbers or situation, unless it's a group case study in the Brain.
-- Dan's voice from the Brain's voice file and the style examples. Never swear.
-- This is a conversation: earlier messages are included, so answer the latest message in that context.
-- Give 1 to 3 concrete next steps only if the question calls for action. Point to one resource from the catalogue only if it genuinely fits, using its exact title.
-
-${TIGHT_RULES}
-
-RESOURCES YOU CAN POINT TO
-${catalogue}
-
-RETURN FORMAT
-Output JSON only, no markdown fence: {"answer": "...", "next_steps": ["..."], "resource": "exact title or null"}`;
-}
-
-const CHECKER_PROMPT = `You are Dan's quality checker. Check the DRAFT against DAN'S BRAIN and fix it. Check, in this order:
-1. PRIVACY: does it name another member, or reveal another person's revenue, numbers, health, finances, family or situation (other than a group case study in the Brain)? If so, remove it.
-2. BOUNDARIES: if the question is billing, pausing, cancelling, refunds, legal, health or sensitive, the answer must be a short 'flag to Dan' reply, per the Brain's boundaries file.
-3. GATE: has it placed the member at the right Gate and given advice for that gate only? Are the Gate criteria, definitions and defaults quoted exactly as the Brain states them?
-4. PLAYBOOK: if the Brain has a matching playbook answer, does the draft follow it, including Dan's default numbers?
-5. ACCURACY: does it state any number, rule or claim that contradicts the Brain? Fix it to match the Brain.
-6. QUESTION: did it answer what was actually asked, read literally?
-7. FOCUS + VOICE: one clear priority, short lines, Dan's voice, no swearing, no corporate language.
-Also enforce these:
-${TIGHT_RULES}
-13. Don't make the draft more cautious or more formal. Only change it to fix a rule breach, a privacy issue or a wrong fact. If you rewrite, keep it in Dan's voice and at the same length or shorter.
-If the draft passes everything, return it unchanged. If not, rewrite only what's needed, keeping Dan's voice.
-Return only JSON: {"pass": true|false, "issues": [{"type": "privacy|boundary|gate|playbook|accuracy|question|voice", "note": "..."}], "final": {"answer": "...", "next_steps": ["..."], "resource": "..."}}`;
+const GROUP_CALL = /momentum|q&a|q & a|workshop|hot seat|powerup|power up|pay to play|edit flow/i;
 
 type Answer = { answer: string; next_steps: string[]; resource: string | null };
 type Turn = { role: "user" | "assistant"; content: string };
 type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
+type Plan = { topic?: string; is_boundary?: boolean; asks_about_other_member?: boolean; search_terms?: string[]; member_facts_needed?: string[]; gate_relevant?: boolean };
+// deno-lint-ignore no-explicit-any
+type DB = any;
 
+// ---------- JSON helpers ----------
 function stripFence(raw: string) {
   return raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
 }
-
 function parseJson(raw: string): Record<string, unknown> | null {
   const cleaned = stripFence(raw);
-  try { return JSON.parse(cleaned); } catch { /* try the outer object */ }
+  try { return JSON.parse(cleaned); } catch { /* next */ }
   const m = cleaned.match(/\{[\s\S]*\}/);
-  if (m) { try { return JSON.parse(m[0]); } catch { /* invalid */ } }
-  // Models sometimes put raw line breaks inside strings; pull the fields out directly.
-  const field = (k: string, next: string) =>
-    cleaned.match(new RegExp(`"${k}"\\s*:\\s*"([\\s\\S]*?)"\\s*,\\s*"${next}"`))?.[1];
-  const answer = field("answer", "next_steps");
-  if (answer) {
-    const steps = cleaned.match(/"next_steps"\s*:\s*\[([\s\S]*?)\]/)?.[1] ?? "";
-    const resource = cleaned.match(/"resource"\s*:\s*"([^"]*)"/)?.[1] ?? null;
-    const unq = (t: string) => t.replace(/\\n/g, "\n").replace(/\\"/g, '"');
-    return {
-      answer: unq(answer),
-      next_steps: [...steps.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map(x => unq(x[1])),
-      resource,
-    };
+  if (m) {
+    try { return JSON.parse(m[0]); } catch { /* next */ }
+    // Raw newlines inside strings: escape them and retry.
+    try { return JSON.parse(m[0].replace(/"(?:[^"\\]|\\.)*"/g, s => s.replace(/\n/g, "\\n"))); } catch { /* invalid */ }
   }
   return null;
 }
-
 function toAnswer(v: unknown): Answer | null {
   if (!v || typeof v !== "object") return null;
   const o = v as Record<string, unknown>;
@@ -189,28 +57,24 @@ function toAnswer(v: unknown): Answer | null {
   };
 }
 
-const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const SHORTER = "Your last reply was cut off. Give the same answer again, much shorter, and return the complete JSON.";
-
-async function callAnthropic(system: Block[], messages: Turn[], maxTokens = 4000, retried = false): Promise<string> {
+// ---------- model calls ----------
+async function callAnthropic(model: string, system: Block[], messages: Turn[], retried = false): Promise<string> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("No Anthropic key");
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: maxTokens, system, messages }),
+    body: JSON.stringify({ model, max_tokens: 4000, system, messages }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("");
   if (data.stop_reason === "max_tokens" && !retried) {
-    return callAnthropic(system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: SHORTER }], maxTokens, true);
+    return callAnthropic(model, system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: "Be shorter. Return the complete JSON." }], true);
   }
   if (!text) throw new Error(`Claude returned no content (stop_reason: ${data.stop_reason ?? "unknown"})`);
   return text;
 }
-
 async function callGemini(system: Block[], messages: Turn[], retried = false): Promise<string> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("No AI key configured");
@@ -218,8 +82,7 @@ async function callGemini(system: Block[], messages: Turn[], retried = false): P
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      max_tokens: 4000,
+      model: "google/gemini-2.5-flash", max_tokens: 4000,
       messages: [{ role: "system", content: system.map(b => b.text).join("\n\n") }, ...messages],
     }),
   });
@@ -227,79 +90,262 @@ async function callGemini(system: Block[], messages: Turn[], retried = false): P
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content ?? "";
   if (data.choices?.[0]?.finish_reason === "length" && !retried) {
-    return callGemini(system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: SHORTER }], true);
+    return callGemini(system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: "Be shorter. Return the complete JSON." }], true);
   }
-  if (!text) throw new Error(`Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`);
+  if (!text) throw new Error("Gateway returned no content");
   return text;
 }
-
-// deno-lint-ignore no-explicit-any
-async function loadBrain(admin: any): Promise<{ text: string; docs: number; words: number }> {
-  const { data: docs } = await admin
-    .from("knowledge_docs").select("id, title, created_at").eq("source_type", "brain").order("created_at");
-  if (!docs?.length) return { text: "", docs: 0, words: 0 };
-  const { data: rows } = await admin
-    .from("knowledge_chunks").select("doc_id, chunk_index, content")
-    .in("doc_id", docs.map((d: { id: string }) => d.id)).order("chunk_index").limit(10000);
-  const text = docs.map((d: { id: string; title: string }) => {
-    const parts = (rows ?? []).filter((r: { doc_id: string }) => r.doc_id === d.id).map((r: { content: string }) => r.content);
-    return `## ${d.title}\n\n${joinChunks(parts)}`;
-  }).join("\n\n");
-  return { text, docs: docs.length, words: text.split(/\s+/).filter(Boolean).length };
+/** Sonnet, falling back to Gemini if Anthropic fails. */
+async function callMain(system: Block[], messages: Turn[]): Promise<string> {
+  try { return await callAnthropic(SONNET, system, messages); }
+  catch (err) {
+    if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
+    console.error("Claude failed, falling back to Gemini:", err);
+    return await callGemini(system, messages);
+  }
 }
 
-// deno-lint-ignore no-explicit-any
-async function loadMember(admin: any, memberId: string): Promise<{ text: string; name: string | null; stats: { totals_count: number; totals_months: string[]; room_found: boolean; room_fields_filled: number }; goalStatus: string }> {
+// ---------- Brain (cached 10 min) ----------
+let brainCache: { at: number; text: string; docs: number; words: number } | null = null;
+async function loadBrain(admin: DB) {
+  if (brainCache && Date.now() - brainCache.at < 10 * 60 * 1000) return brainCache;
+  const { data: docs } = await admin.from("knowledge_docs").select("id, title, created_at").eq("source_type", "brain").order("created_at");
+  let text = "";
+  if (docs?.length) {
+    const { data: rows } = await admin.from("knowledge_chunks").select("doc_id, chunk_index, content")
+      .in("doc_id", docs.map((d: { id: string }) => d.id)).order("chunk_index").limit(10000);
+    text = docs.map((d: { id: string; title: string }) => {
+      const parts = (rows ?? []).filter((r: { doc_id: string }) => r.doc_id === d.id).map((r: { content: string }) => r.content);
+      return `### ${d.title}\n\n${joinChunks(parts)}`;
+    }).join("\n\n");
+  }
+  brainCache = { at: Date.now(), text, docs: docs?.length ?? 0, words: text.split(/\s+/).filter(Boolean).length };
+  return brainCache;
+}
+
+// ---------- member context ----------
+async function loadMemberInput(admin: DB, memberId: string): Promise<MemberInput> {
   const [{ data: profile }, { data: room }, { data: totals }, { data: goal }] = await Promise.all([
-    admin.from("profiles").select("full_name, business_overview").eq("id", memberId).maybeSingle(),
+    admin.from("profiles").select("full_name, business_overview, gate, gate_key_task, gate_move_up").eq("id", memberId).maybeSingle(),
     admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
     admin.from("monthly_totals")
       .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts")
       .eq("user_id", memberId).order("month", { ascending: false }).limit(3),
-    admin.from("goals")
-      .select("starting_mrr, target_mrr, target_date, retainer_tier_1, retainer_tier_2, retainer_tier_3")
-      .eq("user_id", memberId).maybeSingle(),
+    admin.from("goals").select("starting_mrr, target_mrr, target_date, retainer_tier_1, retainer_tier_2, retainer_tier_3").eq("user_id", memberId).maybeSingle(),
   ]);
   const answers = { ...((room?.answers ?? {}) as ContextAnswers) };
   delete (answers as Record<string, unknown>).anything_else;
-  const lines: string[] = [];
-  if (profile?.full_name) lines.push(`Name: ${profile.full_name}`);
-  if (profile?.business_overview) lines.push(`Business overview: ${profile.business_overview}`);
-  lines.push("", "Context Room:", buildContextMarkdown(answers, null, null) || "(not filled in yet)");
-  const notes: string[] = [];
-  const today = new Date();
-  const goalExpired = !!goal?.target_date && new Date(goal.target_date) < today;
-  if (goalExpired) notes.push(`The 90-day goal's target date (${goal!.target_date}) has passed — do NOT treat it as a current goal. Add one line asking them to set a new goal in their Context Room.`);
-  const latest = totals?.[0];
-  if (latest) {
-    // month is the first of the month; count age from the end of that month.
-    const ageDays = (today.getTime() - new Date(latest.month).getTime()) / 86400000 - 31;
-    if (ageDays > 45) {
-      const mName = new Date(latest.month).toLocaleString("en-AU", { month: "long", timeZone: "UTC" });
-      notes.push(`Latest monthly totals are old. Use them, but say "based on your ${mName} numbers" and nudge them to submit their latest totals.`);
-    }
-  }
-  for (const t of totals ?? []) {
-    if (t.booked_calls === 0 && (t.new_clients ?? 0) > 0) notes.push(`${t.month}: booked_calls = 0 with new clients signed means calls were NOT TRACKED, not that there were no calls.`);
-    const mrr = t.mrr ?? t.mrr_manual;
-    if (t.total_revenue != null && mrr != null && t.total_revenue < mrr) notes.push(`${t.month}: total_revenue is lower than MRR, so it's unreliable — use MRR (${mrr}) instead.`);
-  }
-  lines.push("", "Last 3 monthly totals:");
-  if (totals?.length) {
-    for (const t of totals) {
-      lines.push(`- ${t.month}: ${Object.entries(t).filter(([k, v]) => k !== "month" && v !== null).map(([k, v]) => `${k} ${v}`).join(", ")}`);
-    }
-  } else lines.push("- none submitted yet");
-  lines.push("", "90-day goal:");
-  lines.push(goal ? Object.entries(goal).filter(([, v]) => v !== null).map(([k, v]) => `- ${k}: ${v}`).join("\n") || "- not set" : "- not set");
-  const filled = Object.values(answers).filter(v => v !== null && v !== undefined && String(v).trim() !== "").length;
   return {
-    text: [...lines, ...(notes.length ? ["", "DATA NOTES:", ...notes.map(n => `- ${n}`)] : [])].join("\n"), name: profile?.full_name ?? null,
-    goalStatus: !goal?.target_date ? "not set" : goalExpired ? "expired" : "current",
-    stats: { totals_count: totals?.length ?? 0, totals_months: (totals ?? []).map((t: { month: string }) => t.month), room_found: !!room, room_fields_filled: filled },
+    name: profile?.full_name ?? null, business_overview: profile?.business_overview ?? null,
+    gate: profile?.gate ?? null, gate_key_task: profile?.gate_key_task ?? null, gate_move_up: profile?.gate_move_up ?? null,
+    answers, totals: totals ?? [], goal: goal ?? null,
   };
 }
 
+// ---------- plan ----------
+const STOP = new Set("the and for with that this what how should does have from your about just into they them then than when will would could i'm i've my me you are can get got its it's".split(" "));
+function keywordTerms(q: string) {
+  return [...new Set(q.toLowerCase().replace(/[^a-z0-9$\s]/g, " ").split(/\s+/).filter(w => w.length > 2 && !STOP.has(w)))].slice(0, 12);
+}
+async function runPlan(question: string, history: Turn[], summary: string): Promise<{ plan: Plan; fallback: boolean }> {
+  const convo = history.slice(-4).map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content.slice(0, 500)}`).join("\n") || "(none)";
+  const msg: Turn[] = [{ role: "user", content: `MEMBER SUMMARY: ${summary}\n\nRECENT CONVERSATION:\n${convo}\n\nQUESTION: ${question}` }];
+  const sys: Block[] = [{ type: "text", text: PLAN_PROMPT }];
+  for (const model of [HAIKU, SONNET]) {
+    try {
+      const p = parseJson(await callAnthropic(model, sys, msg)) as Plan | null;
+      if (p && Array.isArray(p.search_terms)) return { plan: p, fallback: false };
+    } catch (err) { console.error(`plan via ${model} failed`, err); }
+  }
+  return { plan: { topic: "other", search_terms: keywordTerms(question) }, fallback: true };
+}
+
+// ---------- retrieval ----------
+type Chunk = { chunk_id: string; doc_id: string; title: string; source_type: string; content: string; rank: number };
+type Scored = Chunk & { score: number };
+async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy: boolean; askerName: string | null; otherTokens: string[] }) {
+  const search = async (q: string, n: number): Promise<Chunk[]> => q.trim() ? ((await admin.rpc("search_knowledge", { q, limit_n: n })).data ?? []) : [];
+  const terms = (plan.search_terms ?? []).map(s => String(s).trim()).filter(Boolean).slice(0, 15);
+  const ladder = [terms.join(" or "), question, keywordTerms(question).join(" or ")];
+  const seen = new Map<string, Chunk>();
+  for (const q of ladder) {
+    if (seen.size >= 60) break;
+    for (const c of await search(q, 60)) if (!seen.has(c.chunk_id) && seen.size < 60) seen.set(c.chunk_id, c);
+  }
+  let cands = [...seen.values()].filter(c => c.source_type !== "brain");
+
+  if (opts.privacy) {
+    cands = cands.filter(c => c.source_type !== "call" || GROUP_CALL.test(c.title) || findNames(c.title, opts.otherTokens).length === 0
+      && (opts.askerName ? c.title.toLowerCase().includes(opts.askerName.split(/\s+/)[0].toLowerCase()) : false));
+    cands = cands.map(c => {
+      let content = c.content;
+      if (c.source_type === "whatsapp") content = content.split("\n").filter(l => /\]\s*You:/.test(l)).join("\n");
+      return { ...c, title: redact(c.title, opts.otherTokens), content: redact(content, opts.otherTokens) };
+    }).filter(c => c.content.trim().length > 40);
+  }
+
+  const { data: docs } = cands.length
+    ? await admin.from("knowledge_docs").select("id, created_at").in("id", [...new Set(cands.map(c => c.doc_id))])
+    : { data: [] };
+  const age = new Map<string, number>((docs ?? []).map((d: { id: string; created_at: string }) => [d.id, (Date.now() - Date.parse(d.created_at)) / 86400000]));
+  const typeBoost: Record<string, number> = { teaching: 4, transcript: 4, note: 2, whatsapp: 2, call: 0 };
+  const lowerTerms = [...new Set([...terms, ...keywordTerms(question)].map(t => t.toLowerCase()))];
+  const scored: Scored[] = cands.map(c => {
+    const lc = c.content.toLowerCase();
+    const hits = lowerTerms.filter(t => lc.includes(t)).length;
+    const days = age.get(c.doc_id) ?? 365;
+    return { ...c, score: hits * 3 + (typeBoost[c.source_type] ?? 1) + Math.max(0, 1 - days / 365) };
+  }).sort((a, b) => b.score - a.score);
+
+  const words = (t: string) => new Set(t.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+  const picked: Scored[] = [];
+  const perDoc = new Map<string, number>();
+  for (const c of scored) {
+    if (picked.length >= 20) break;
+    if ((perDoc.get(c.doc_id) ?? 0) >= 2) continue;
+    const w = words(c.content);
+    const dup = picked.some(p => {
+      const pw = words(p.content);
+      let inter = 0; for (const x of w) if (pw.has(x)) inter++;
+      return inter / Math.max(1, Math.min(w.size, pw.size)) > 0.6;
+    });
+    if (dup) continue;
+    perDoc.set(c.doc_id, (perDoc.get(c.doc_id) ?? 0) + 1);
+    picked.push(c);
+  }
+  return picked;
+}
+
+// ---------- the pipeline ----------
+type PipelineInput = {
+  admin: DB; question: string; history: Turn[]; catalogue: string;
+  mode: "member" | "admin" | "test"; member: MemberInput | null; memberId: string | null;
+};
+async function answerPipeline(p: PipelineInput) {
+  const issues: { type: string; note: string }[] = [];
+  const privacy = p.mode !== "admin";
+  const [brain, styleExamples, { data: allProfiles }] = await Promise.all([
+    loadBrain(p.admin), fetchStyleExamples(p.admin, 30), p.admin.from("profiles").select("id, full_name"),
+  ]);
+  const askerName = p.member?.name ?? null;
+  const otherNames = ((allProfiles ?? []) as { id: string; full_name: string | null }[])
+    .filter(x => x.id !== p.memberId && x.full_name).map(x => x.full_name!);
+  const tokens = nameTokens(otherNames, p.mode === "test" ? null : askerName);
+
+  const block = p.member ? buildMemberBlock(p.member) : { text: "ABOUT THIS MEMBER: none (general answer, no member selected).", derived: null, hasContext: false, summary: "no member" };
+  const { plan, fallback: planFallback } = await runPlan(p.question, p.history, block.summary);
+  const passages = await retrieve(p.admin, p.question, plan, { privacy, askerName, otherTokens: tokens });
+  const passageText = passages.map(c => `[${SOURCE_TAGS[c.source_type] ?? c.source_type}] ${c.title}\n${c.content}`).join("\n\n---\n\n");
+
+  const brainBlock: Block[] = brain.text ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }] : [];
+  const catalogueLines = p.catalogue.split("\n").map(l => l.trim()).filter(Boolean);
+  const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt(styleExamples, p.catalogue) }];
+  const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
+  const userTurn = `${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+
+  // DRAFT (retry once on invalid JSON)
+  let draft: Answer | null = null;
+  for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await callMain(draftSystem, [{ role: "user", content: userTurn }])));
+  if (!draft) {
+    issues.push({ type: "guardrail", note: "Draft JSON invalid twice — flagged to Dan" });
+    const final = { answer: FLAG_REPLY, next_steps: [], resource: null };
+    return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback };
+  }
+
+  // CHECK
+  const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT }];
+  const checkBase = `${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
+  const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
+    for (let i = 0; i < 2; i++) {
+      try {
+        const parsed = parseJson(await callMain(checkSystem, [{ role: "user", content: `${checkBase}\n\n=====\n\nDRAFT\n${JSON.stringify(current)}${extra ? `\n\n=====\n\nMUST FIX: ${extra}` : ""}` }]));
+        const fin = toAnswer(parsed?.final);
+        if (parsed && fin) return { final: fin, pass: parsed.pass === true, issues: Array.isArray(parsed.issues) ? parsed.issues as { type: string; note: string }[] : [] };
+      } catch (err) { console.error("checker call failed", err); }
+    }
+    return null;
+  };
+  let pass = false;
+  let final: Answer = draft;
+  const checked = await runCheck(draft);
+  if (checked) { final = checked.final; pass = checked.pass; issues.push(...checked.issues); }
+  else { issues.push({ type: "guardrail", note: "Checker returned invalid JSON twice — using draft with code checks" }); }
+
+  // GUARDRAILS — collect problems, send back to the checker once.
+  const problems = (a: Answer) => {
+    const text = [a.answer, ...a.next_steps].join("\n");
+    const out: string[] = [];
+    const names = privacy ? findNames(text, tokens) : [];
+    if (names.length) out.push(`remove other member names (${names.join(", ")})`);
+    const banned = findBanned(text);
+    if (banned.length) out.push(`rewrite the lines containing banned phrases/swearing: ${banned.join(", ")}`);
+    if (looksTruncated(a.answer)) out.push("the answer is cut off — finish it cleanly");
+    if (wordCount(a.answer) > 220) out.push("cut to under 170 words");
+    // Ads/scaling/pricing questions must use the member's cost per client when we have it.
+    const cpc = block.derived?.cost_per_client;
+    if (cpc != null && ["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(a.answer.replace(/\$(15|20)\b/g, ""))) {
+      out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client vs their lowest retainer${block.derived?.lowest_retainer_price ? ` $${block.derived.lowest_retainer_price}` : ""}) and say whether it's under half`);
+    } else if (cpc != null && ["ads"].includes(String(plan.topic)) && !a.answer.includes(String(Math.round(cpc)))) {
+      out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client) and say whether it's under half their first month's fee`);
+    }
+    return { out, names };
+  };
+  let probs = problems(final);
+  if (probs.out.length) {
+    issues.push({ type: "guardrail", note: `Sent back to checker: ${probs.out.join("; ")}` });
+    const again = await runCheck(final, probs.out.join("; "));
+    if (again) { final = again.final; issues.push(...again.issues.map(x => ({ ...x, note: `(round 2) ${x.note}` }))); }
+    probs = problems(final);
+    if (probs.names.length) {
+      issues.push({ type: "guardrail", note: "Member names still present — replaced with the privacy reply" });
+      final = { answer: NAME_FALLBACK, next_steps: [], resource: null };
+    } else if (probs.out.length) {
+      issues.push({ type: "guardrail", note: `Still failing after rewrite: ${probs.out.join("; ")}` });
+    }
+    pass = false;
+  }
+  // JSON parsed fine, so an unpunctuated ending is style, not a cut-off: close it.
+  if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final = { ...final, answer: final.answer.trim() + "." };
+  const matched = matchResource(final.resource, catalogueLines);
+  if (final.resource && !matched) issues.push({ type: "guardrail", note: `Resource "${final.resource}" not in catalogue — removed` });
+  final = { ...final, resource: matched };
+
+  return { draft, final, pass, issues, plan, passages, brain, block, planFallback };
+}
+
+function buildDebug(mode: string, memberId: string | null, member: MemberInput | null, r: Awaited<ReturnType<typeof answerPipeline>>) {
+  return {
+    mode, member_id: memberId,
+    brain_loaded: r.brain.docs > 0, brain: { docs: r.brain.docs, words: r.brain.words },
+    monthly_totals: { count: member?.totals.length ?? 0, months: (member?.totals ?? []).map(t => t.month) },
+    data_freshness: r.block.derived?.data_freshness ?? "none",
+    goal: r.block.derived?.goal_status ?? "none",
+    context_room: { fields_filled: r.block.derived?.context_room_filled ?? 0, missing: r.block.derived?.context_room_missing ?? [] },
+    derived: r.block.derived, about_member: r.block.text,
+    context_used: r.block.hasContext,
+    plan: r.plan, plan_fallback: r.planFallback,
+    passages: r.passages.map(c => ({ title: c.title, source_type: c.source_type, score: Math.round(c.score * 10) / 10 })),
+    checker_issues: r.issues.filter(i => i.type !== "guardrail"),
+    guardrails: r.issues.filter(i => i.type === "guardrail"),
+  };
+}
+
+function codeChecks(a: Answer, catalogueLines: string[], tokens: string[]) {
+  const text = [a.answer, ...a.next_steps].join("\n");
+  const wc = wordCount(a.answer);
+  const names = findNames(text, tokens);
+  const banned = findBanned(text);
+  return [
+    { check: "no swear words or banned phrases", pass: banned.length === 0, why: banned.join(", ") || "clean" },
+    { check: "no real member names", pass: names.length === 0, why: names.join(", ") || "none" },
+    { check: "answer 40–220 words", pass: wc >= 40 && wc <= 220, why: `${wc} words` },
+    { check: "ends cleanly", pass: !looksTruncated(a.answer), why: a.answer.trim().slice(-30) },
+    { check: "valid JSON", pass: true, why: "parsed" },
+    { check: "resource null or exact catalogue title", pass: a.resource === null || catalogueLines.includes(a.resource), why: a.resource ?? "null" },
+  ];
+}
+
+// ---------- handler ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const json = (body: unknown, status = 200) =>
@@ -308,182 +354,123 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
-    const scoped = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const scoped = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
     const { data: userData } = await scoped.auth.getUser();
     if (!userData?.user) return json({ error: "Unauthorized" }, 401);
     const userId = userData.user.id;
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: isAdminRaw } = await admin.rpc("is_admin", { _user_id: userId });
+    const isAdmin = isAdminRaw === true;
 
     const body = await req.json().catch(() => ({}));
-    const question = typeof body.question === "string" ? body.question.trim().slice(0, 4000) : "";
-    if (!question) return json({ error: "Ask a question first" }, 400);
     const uuidRe = /^[0-9a-f-]{36}$/i;
-    const threadId = typeof body.thread_id === "string" && uuidRe.test(body.thread_id) ? body.thread_id : crypto.randomUUID();
-    const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 6000) : "(none available)";
+    const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 20000) : "(none available)";
+    const catalogueLines = catalogue.split("\n").map((l: string) => l.trim()).filter(Boolean);
 
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
-    // Admin draft mode: answer as the picked member, with their context.
-    let memberId = userId;
-    let draftMode = false;
-    const { data: isAdmin } = await admin.rpc("is_admin", { _user_id: userId });
-    if (typeof body.member_id === "string" && uuidRe.test(body.member_id) && body.member_id !== userId) {
+    // ----- TEST actions (admin only) -----
+    if (body.action) {
       if (!isAdmin) return json({ error: "Admins only" }, 403);
-      memberId = body.member_id;
-      draftMode = true;
+
+      if (body.action === "start_run") {
+        const { data } = await admin.from("dan_ai_test_runs").insert({ round: Number(body.round) || 1 }).select("id").single();
+        return json({ run_id: data.id });
+      }
+
+      if (body.action === "test") {
+        if (!uuidRe.test(body.run_id ?? "") || !uuidRe.test(body.test_id ?? "")) return json({ error: "run_id and test_id required" }, 400);
+        const { data: test } = await admin.from("dan_ai_tests").select("*").eq("id", body.test_id).single();
+        const member = persona(test.persona_key);
+        if (!member) return json({ error: `Unknown persona ${test.persona_key}` }, 400);
+        const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, mode: "test", member, memberId: null });
+        const { data: allProfiles } = await admin.from("profiles").select("full_name");
+        const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
+        const checks = codeChecks(r.final, catalogueLines, tokens);
+        const debug = buildDebug("test", null, member, r);
+        await admin.from("dan_ai_test_results").upsert({ run_id: body.run_id, test_id: test.id, answer: r.final, debug, code_checks: checks, criteria: [], pass: null }, { onConflict: "run_id,test_id" });
+        await admin.from("dan_ai_checks").insert({ user_id: userId, question: `[TEST ${test.name}] ${test.question}`, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues });
+        return json({ ok: true, answer: r.final, code_checks: checks });
+      }
+
+      if (body.action === "grade") {
+        const { data: res } = await admin.from("dan_ai_test_results").select("*, dan_ai_tests(*)").eq("run_id", body.run_id).eq("test_id", body.test_id).single();
+        if (!res) return json({ error: "No result to grade" }, 404);
+        const test = res.dan_ai_tests;
+        const brain = await loadBrain(admin);
+        const member = persona(test.persona_key)!;
+        let compare = "";
+        if (test.name === "ADS_5_DAYS_SCALE") {
+          const { data: t9 } = await admin.from("dan_ai_test_results").select("answer, dan_ai_tests!inner(name)").eq("run_id", body.run_id).eq("dan_ai_tests.name", "ADS_5_DAYS_EARLY").maybeSingle();
+          compare = `\n\n=====\n\nTEST 9 ANSWER (for comparison)\n${t9?.answer?.answer ?? "(missing)"}`;
+        }
+        const criteria = [
+          ...(test.must_include as string[]).map(c => `include: ${c}`),
+          ...(test.must_not as string[]).map(c => `must_not: ${c}`),
+        ].join("\n");
+        const sys: Block[] = [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }, { type: "text", text: GRADER_PROMPT }];
+        const msg = `${buildMemberBlock(member).text}\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
+        let graded: Record<string, unknown> | null = null;
+        for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
+        const crit = Array.isArray(graded?.criteria) ? graded!.criteria as { pass: boolean }[] : [];
+        const codeOk = (res.code_checks as { pass: boolean }[]).every(c => c.pass);
+        const pass = crit.length > 0 && crit.every(c => c.pass === true) && codeOk;
+        await admin.from("dan_ai_test_results").update({ criteria: crit, pass }).eq("id", res.id);
+        return json({ ok: true, pass, criteria: crit });
+      }
+
+      if (body.action === "finalize") {
+        const { data: rows } = await admin.from("dan_ai_test_results").select("pass, criteria, code_checks, answer, debug, dan_ai_tests(name, category, position)").eq("run_id", body.run_id);
+        const list = (rows ?? []) as { pass: boolean | null; criteria: { pass: boolean }[]; code_checks: { pass: boolean }[]; dan_ai_tests: { name: string; category: string; position: number } }[];
+        const critTotal = list.reduce((n, r) => n + r.criteria.length, 0);
+        const critPass = list.reduce((n, r) => n + r.criteria.filter(c => c.pass).length, 0);
+        const summary = {
+          tests_total: list.length, tests_passed: list.filter(r => r.pass).length,
+          criteria_total: critTotal, criteria_passed: critPass,
+          failed: list.filter(r => !r.pass).map(r => r.dan_ai_tests.name),
+          privacy_boundary_pass: list.filter(r => ["privacy", "boundary"].includes(r.dan_ai_tests.category)).every(r => r.pass),
+        };
+        await admin.from("dan_ai_test_runs").update({ summary, results: list }).eq("id", body.run_id);
+        return json({ summary });
+      }
+      return json({ error: "Unknown action" }, 400);
     }
 
-    // Conversation history for this thread (last 10 messages).
-    const { data: past } = await admin.from("dan_ai_messages")
-      .select("role, content").eq("user_id", userId).eq("thread_id", threadId)
+    // ----- chat -----
+    const question = typeof body.question === "string" ? body.question.trim().slice(0, 4000) : "";
+    if (!question) return json({ error: "Ask a question first" }, 400);
+    const threadId = typeof body.thread_id === "string" && uuidRe.test(body.thread_id) ? body.thread_id : crypto.randomUUID();
+
+    let mode: "member" | "admin" = "member";
+    let memberId: string | null = userId;
+    if (isAdmin) {
+      mode = "admin";
+      memberId = typeof body.member_id === "string" && uuidRe.test(body.member_id) ? body.member_id : null;
+    } else if (body.member_id && body.member_id !== userId) {
+      return json({ error: "Admins only" }, 403);
+    }
+
+    const { data: past } = await admin.from("dan_ai_messages").select("role, content").eq("user_id", userId).eq("thread_id", threadId)
       .order("created_at", { ascending: false }).limit(10);
     const history: Turn[] = (past ?? []).reverse().map((m: Turn) => {
-      if (m.role === "assistant") {
-        const a = toAnswer(parseJson(m.content));
-        return { role: "assistant", content: a ? a.answer : m.content };
-      }
+      if (m.role === "assistant") { const a = toAnswer(parseJson(m.content)); return { role: "assistant", content: a ? a.answer : m.content }; }
       return { role: "user", content: m.content };
     });
 
-    // C. All knowledge except the Brain — same search ladder, limit 30.
-    const search = async (q: string, n = 80) => (await admin.rpc("search_knowledge", { q, limit_n: n })).data ?? [];
-    let chunks = await search(question);
-    if (!chunks.length) {
-      const anyOf = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w: string) => w.length > 2).join(" or ");
-      if (anyOf) chunks = await search(anyOf);
-    }
-    if (!chunks.length) {
-      const longest = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w: string) => w.length > 3).sort((a: string, b: string) => b.length - a.length)[0];
-      if (longest) chunks = await search(longest, 40);
-    }
-    chunks = chunks.filter((c: { source_type: string }) => c.source_type !== "brain");
-
-    const [brain, member, { data: voice }, styleExamples, { data: allProfiles }] = await Promise.all([
-      loadBrain(admin),
-      loadMember(admin, memberId),
-      admin.from("voice_profile").select("content").eq("slug", "default").maybeSingle(),
-      fetchStyleExamples(admin, 30),
-      admin.from("profiles").select("id, full_name"),
-    ]);
-
-    // Other members' names, for scrubbing and the fallback privacy check.
-    const others = ((allProfiles ?? []) as { id: string; full_name: string | null }[])
-      .filter(p => p.id !== memberId && p.full_name && p.full_name.trim().length > 2)
-      .map(p => p.full_name!.trim());
-    const ownNames = new Set((member.name ?? "").toLowerCase().split(/\s+/).filter(Boolean));
-    const scrub = (text: string) => {
-      let out = text;
-      for (const full of others) out = out.replace(new RegExp(`\\b${escapeRe(full)}\\b`, "gi"), "a member");
-      for (const full of others) {
-        const first = full.split(/\s+/)[0];
-        if (first.length < 3 || ownNames.has(first.toLowerCase())) continue;
-        out = out.replace(new RegExp(`\\b${escapeRe(first)}\\b`, "gi"), "a member");
-      }
-      return out;
-    };
-
-    // Passage quality: <=2 per doc, <=6 1:1 calls, preference order, member-mode call privacy.
-    {
-      const own = (member.name ?? "").toLowerCase().split(/\s+/).filter(w => w.length > 2);
-      const groupCall = /workshop|group|q&a|q & a|hot seat|momentum/i;
-      const pref: Record<string, number> = { teaching: 0, transcript: 1, whatsapp: 2, note: 3, call: 4 };
-      const pool = (chunks as { doc_id: string; title: string; source_type: string }[]).filter(c => {
-        if (c.source_type !== "call" || draftMode || groupCall.test(c.title)) return true;
-        const t = c.title.toLowerCase();
-        return own.length > 0 && own.some(w => t.includes(w));
-      });
-      const ordered = pool.map((c, i) => ({ c, i }))
-        .sort((a, b) => ((pref[a.c.source_type] ?? 3) - (pref[b.c.source_type] ?? 3)) || a.i - b.i).map(x => x.c);
-      const perDoc = new Map<string, number>();
-      let calls = 0;
-      const picked: typeof pool = [];
-      for (const c of ordered) {
-        if (picked.length >= 30) break;
-        const n = perDoc.get(c.doc_id) ?? 0;
-        if (n >= 2) continue;
-        if (c.source_type === "call") { if (calls >= 6) continue; calls++; }
-        perDoc.set(c.doc_id, n + 1);
-        picked.push(c);
-      }
-      chunks = picked;
-    }
-
-    const passages = (chunks as { title: string; source_type: string; content: string }[]).map(c => {
-      const tag = SOURCE_TAGS[c.source_type] ?? c.source_type;
-      const sensitive = c.source_type === "whatsapp" || c.source_type === "call";
-      const content = !draftMode && sensitive ? scrub(c.content) : c.content;
-      const title = !draftMode && sensitive ? scrub(c.title) : c.title;
-      return `[${tag}] ${title}\n${content}`;
-    }).join("\n\n---\n\n");
-
-    const brainBlock: Block[] = brain.text
-      ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }]
-      : [];
-    const voiceText = voice?.content ? `${BASE_VOICE}\n\n${voice.content}` : BASE_VOICE;
-    const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt(voiceText, styleExamples, catalogue) }];
-
-    const userTurn = `ABOUT THIS MEMBER\n${member.text}\n\n=====\n\nDAN'S KNOWLEDGE: real advice Dan has given\n\n${passages || "(nothing matched)"}\n\n=====\n\nTHE MEMBER ASKED:\n${question}\n\nAnswer them.`;
-
-    // Step one: the draft.
-    let draftRaw = "";
-    try {
-      draftRaw = await callAnthropic(draftSystem, [...history, { role: "user", content: userTurn }]);
-    } catch (err) {
-      if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
-      console.error("Claude draft failed, falling back to Gemini:", err);
-      draftRaw = await callGemini(draftSystem, [...history, { role: "user", content: userTurn }]);
-    }
-    const draft = toAnswer(parseJson(draftRaw)) ?? { answer: stripFence(draftRaw), next_steps: [], resource: null };
-    if (!draft.answer) return json({ error: "The model returned an empty answer — try again" }, 502);
-
-    // Step two: the check, against the Brain only.
-    let final: Answer;
-    let pass = false;
-    let issues: unknown[] = [];
-    try {
-      const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT }];
-      const convo = history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-      const checkRaw = await callAnthropic(checkSystem, [{
-        role: "user",
-        content: `ABOUT THIS MEMBER\n${member.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${question}\n\n=====\n\nDRAFT\n${JSON.stringify(draft)}`,
-      }], 4000);
-      const parsed = parseJson(checkRaw);
-      const checked = toAnswer(parsed?.final);
-      if (!parsed || !checked) throw new Error("Checker returned invalid JSON");
-      final = checked;
-      pass = parsed.pass === true;
-      issues = Array.isArray(parsed.issues) ? parsed.issues : [];
-    } catch (err) {
-      console.error("Checker failed, using the code check:", err);
-      const lower = draft.answer.toLowerCase();
-      const leaked = others.some(n => new RegExp(`\\b${escapeRe(n.toLowerCase())}\\b`).test(lower));
-      final = leaked ? { answer: FLAG_REPLY, next_steps: [], resource: null } : draft;
-      pass = false;
-      issues = [{ type: leaked ? "privacy" : "question", note: `Checker failed (${err instanceof Error ? err.message : "unknown"}); code check ${leaked ? "blocked a member name" : "found no member names"}.` }];
-    }
+    const member = memberId ? await loadMemberInput(admin, memberId) : null;
+    const r = await answerPipeline({ admin, question, history, catalogue, mode, member, memberId });
 
     await Promise.all([
-      admin.from("dan_ai_checks").insert({ user_id: userId, question, draft, final, pass, issues }),
+      admin.from("dan_ai_checks").insert({ user_id: userId, question, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues }),
       admin.from("dan_ai_messages").insert([
         { user_id: userId, thread_id: threadId, role: "user", content: question },
-        { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify(final) },
+        { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...r.final, context_used: r.block.hasContext }) },
       ]),
-      admin.from("client_questions").insert({
-        user_id: userId, question, answer: final.answer, next_steps: final.next_steps, resource: final.resource,
-      }),
+      admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.next_steps, resource: r.final.resource }),
     ]);
 
-    const debug = isAdmin === true ? {
-      about_member: member.text || "none loaded",
-      member_id: memberId,
-      brain: { docs: brain.docs, words: brain.words },
-      goal: member.goalStatus,
-      monthly_totals: { count: member.stats.totals_count, months: member.stats.totals_months },
-      context_room: { found: member.stats.room_found, fields_filled: member.stats.room_fields_filled },
-      passage_titles: (chunks as { title: string; source_type: string }[]).map(c => `[${SOURCE_TAGS[c.source_type] ?? c.source_type}] ${c.title}`),
-    } : undefined;
-    return json({ ...final, thread_id: threadId, ...(debug ? { debug } : {}) });
+    return json({
+      ...r.final, thread_id: threadId, context_used: r.block.hasContext,
+      ...(isAdmin ? { debug: buildDebug(mode, memberId, member, r) } : {}),
+    });
   } catch (err) {
     console.error("ask-dan error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);

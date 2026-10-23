@@ -529,6 +529,120 @@ export type Database = {
         }
         Relationships: []
       }
+      dan_ai_test_results: {
+        Row: {
+          answer: Json | null
+          code_checks: Json
+          created_at: string
+          criteria: Json
+          debug: Json | null
+          id: string
+          pass: boolean | null
+          run_id: string
+          test_id: string
+        }
+        Insert: {
+          answer?: Json | null
+          code_checks?: Json
+          created_at?: string
+          criteria?: Json
+          debug?: Json | null
+          id?: string
+          pass?: boolean | null
+          run_id: string
+          test_id: string
+        }
+        Update: {
+          answer?: Json | null
+          code_checks?: Json
+          created_at?: string
+          criteria?: Json
+          debug?: Json | null
+          id?: string
+          pass?: boolean | null
+          run_id?: string
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dan_ai_test_results_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "dan_ai_test_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dan_ai_test_results_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "dan_ai_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dan_ai_test_runs: {
+        Row: {
+          id: string
+          results: Json
+          round: number
+          run_at: string
+          summary: Json
+        }
+        Insert: {
+          id?: string
+          results?: Json
+          round?: number
+          run_at?: string
+          summary?: Json
+        }
+        Update: {
+          id?: string
+          results?: Json
+          round?: number
+          run_at?: string
+          summary?: Json
+        }
+        Relationships: []
+      }
+      dan_ai_tests: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          id: string
+          must_include: Json
+          must_not: Json
+          name: string
+          persona_key: string
+          position: number
+          question: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          must_include?: Json
+          must_not?: Json
+          name: string
+          persona_key: string
+          position?: number
+          question: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          must_include?: Json
+          must_not?: Json
+          name?: string
+          persona_key?: string
+          position?: number
+          question?: string
+        }
+        Relationships: []
+      }
       dm_templates: {
         Row: {
           body: string

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import BrainSummary from './BrainSummary';
 
 interface Check {
   id: string;
@@ -30,6 +31,7 @@ export default function ChecksAdmin() {
 
   return (
     <div className="space-y-3">
+      <BrainSummary bannerOnly />
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
         <input type="checkbox" checked={privacyOnly} onChange={e => setPrivacyOnly(e.target.checked)} />
         Only show privacy issues

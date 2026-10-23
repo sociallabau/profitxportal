@@ -12,14 +12,19 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import DanAiOrb, { type OrbState } from '@/components/DanAiOrb';
 import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
 import ChecksAdmin from '@/components/dan-ai/ChecksAdmin';
+import TestsAdmin from '@/components/dan-ai/TestsAdmin';
 
-interface Answer { answer: string; next_steps: string[]; resource: string | null }
+interface Answer { answer: string; next_steps: string[]; resource: string | null; context_used?: boolean }
 interface Debug {
-  about_member: string; member_id: string;
+  mode?: string; data_freshness?: string; brain_loaded?: boolean;
+  derived?: Record<string, unknown> | null; plan?: unknown;
+  passages?: { title: string; source_type: string; score: number }[];
+  checker_issues?: { type: string; note: string }[]; guardrails?: { type: string; note: string }[];
+  about_member: string; member_id: string | null;
   brain?: { docs: number; words: number }; goal?: string;
   monthly_totals: { count: number; months: string[] };
-  context_room: { found: boolean; fields_filled: number };
-  passage_titles: string[];
+  context_room: { found?: boolean; fields_filled: number; missing?: string[] };
+  passage_titles?: string[];
 }
 interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer; debug?: Debug }
 
@@ -41,13 +46,13 @@ function parseAnswer(content: string): Answer {
   try {
     const o = JSON.parse(content);
     if (o && typeof o.answer === 'string') {
-      return { answer: o.answer, next_steps: Array.isArray(o.next_steps) ? o.next_steps : [], resource: o.resource ?? null };
+      return { answer: o.answer, next_steps: Array.isArray(o.next_steps) ? o.next_steps : [], resource: o.resource ?? null, context_used: typeof o.context_used === 'boolean' ? o.context_used : undefined };
     }
   } catch { /* plain text */ }
   return { answer: content, next_steps: [], resource: null };
 }
 
-type Tab = 'chat' | 'knowledge' | 'checks';
+type Tab = 'chat' | 'knowledge' | 'checks' | 'tests';
 
 export default function DanAI() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -128,7 +133,7 @@ export default function DanAI() {
       setInput(asked);
       return;
     }
-    const parsed: Answer = { answer: data.answer ?? '', next_steps: data.next_steps ?? [], resource: data.resource ?? null };
+    const parsed: Answer = { answer: data.answer ?? '', next_steps: data.next_steps ?? [], resource: data.resource ?? null, context_used: data.context_used };
     setThreadId(data.thread_id);
     setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, debug: isAdmin ? data.debug : undefined }]);
     loadThreads();
@@ -166,7 +171,7 @@ export default function DanAI() {
           <span>Context from:</span>
           <select value={memberId} onChange={e => setMemberId(e.target.value)}
             className="bg-transparent text-[hsl(var(--dan-ink))] text-xs focus:outline-none cursor-pointer">
-            <option value="">Myself</option>
+            <option value="">No member (general answer)</option>
             {members.map(m => <option key={m.id} value={m.id}>{m.full_name ?? m.id}</option>)}
           </select>
         </div>
@@ -197,7 +202,7 @@ export default function DanAI() {
           ) : <span />}
           {isAdmin && (
             <div className="flex rounded-full bg-[hsl(var(--dan-ink)/0.06)] p-0.5 text-xs">
-              {(['chat', 'knowledge', 'checks'] as Tab[]).map(t => (
+              {(['chat', 'knowledge', 'checks', 'tests'] as Tab[]).map(t => (
                 <button key={t} onClick={() => setTab(t)}
                   className={`px-3 py-1 rounded-full capitalize transition-colors ${tab === t ? 'bg-[hsl(var(--dan-paper))] text-[hsl(var(--dan-ink))] shadow-sm' : 'text-[hsl(var(--dan-muted))]'}`}>
                   {t}
@@ -209,7 +214,7 @@ export default function DanAI() {
 
         {tab !== 'chat' && isAdmin && (
           <div className="dark mt-4 rounded-2xl bg-card text-foreground p-4 sm:p-6">
-            {tab === 'knowledge' ? <KnowledgeAdmin /> : <ChecksAdmin />}
+            {tab === 'knowledge' ? <KnowledgeAdmin /> : tab === 'checks' ? <ChecksAdmin /> : <TestsAdmin />}
           </div>
         )}
 
@@ -260,14 +265,20 @@ export default function DanAI() {
                         <details className="text-[11px] text-[hsl(var(--dan-muted))] rounded-lg border border-[hsl(var(--dan-ink)/0.1)] px-3 py-2">
                           <summary className="cursor-pointer select-none">Context used</summary>
                           <div className="mt-2 space-y-2">
-                            <p><b>Member ID:</b> {m.debug.member_id}</p>
-                            {m.debug.brain && <p><b>Brain:</b> {m.debug.brain.docs} docs loaded, {m.debug.brain.words.toLocaleString()} words</p>}
-                            {m.debug.goal && <p><b>Goal:</b> {m.debug.goal}</p>}
-                            <p><b>Monthly totals:</b> {m.debug.monthly_totals.count} found{m.debug.monthly_totals.months.length ? ` (${m.debug.monthly_totals.months.join(', ')})` : ''}</p>
-                            <p><b>Context Room:</b> {m.debug.context_room.found ? `found, ${m.debug.context_room.fields_filled} fields filled` : 'not found'}</p>
-                            <div><b>Passages ({m.debug.passage_titles.length}):</b>
-                              <ul className="list-disc pl-4">{m.debug.passage_titles.map((t, i) => <li key={i}>{t}</li>)}</ul>
+                            <p><b>Mode:</b> {m.debug.mode ?? '–'} · <b>Member ID:</b> {m.debug.member_id ?? 'none'}</p>
+                            {m.debug.brain && <p><b>Brain:</b> {m.debug.brain_loaded === false ? 'NOT LOADED' : `${m.debug.brain.docs} docs loaded, ${m.debug.brain.words.toLocaleString()} words`}</p>}
+                            <p><b>Monthly totals:</b> {m.debug.monthly_totals.count} found{m.debug.monthly_totals.months.length ? ` (${m.debug.monthly_totals.months.join(', ')})` : ''} · <b>Freshness:</b> {m.debug.data_freshness ?? '–'} · <b>Goal:</b> {m.debug.goal ?? '–'}</p>
+                            <p><b>Context Room:</b> {m.debug.context_room.fields_filled} fields filled{m.debug.context_room.missing?.length ? ` · missing: ${m.debug.context_room.missing.join(', ')}` : ''}</p>
+                            {m.debug.derived && <div><b>Derived:</b><pre className="whitespace-pre-wrap mt-1">{JSON.stringify(m.debug.derived, null, 2)}</pre></div>}
+                            {m.debug.plan != null && <div><b>Plan:</b><pre className="whitespace-pre-wrap mt-1">{JSON.stringify(m.debug.plan, null, 2)}</pre></div>}
+                            <div><b>Passages ({m.debug.passages?.length ?? m.debug.passage_titles?.length ?? 0}):</b>
+                              <ul className="list-disc pl-4">
+                                {m.debug.passages?.map((p, i) => <li key={i}>[{p.source_type}] {p.title} — {p.score}</li>)}
+                                {!m.debug.passages && m.debug.passage_titles?.map((t, i) => <li key={i}>{t}</li>)}
+                              </ul>
                             </div>
+                            {!!m.debug.checker_issues?.length && <div><b>Checker issues:</b><ul className="list-disc pl-4">{m.debug.checker_issues.map((x, i) => <li key={i}>{x.type}: {x.note}</li>)}</ul></div>}
+                            {!!m.debug.guardrails?.length && <div><b>Guardrails:</b><ul className="list-disc pl-4">{m.debug.guardrails.map((x, i) => <li key={i}>{x.note}</li>)}</ul></div>}
                             <div><b>About this member:</b>
                               <pre className="whitespace-pre-wrap font-sans mt-1">{m.debug.about_member}</pre>
                             </div>
@@ -276,7 +287,7 @@ export default function DanAI() {
                       )}
                       <div className="flex items-center gap-3 flex-wrap">
                         <Link to="/settings" className="text-[11px] text-[hsl(var(--dan-muted))] hover:underline">
-                          Personalised using your Context Room, monthly totals and 90-day goal
+                          {m.parsed?.context_used === false ? 'Fill in your Context Room for more personal answers →' : 'Personalised using your Context Room and monthly totals'}
                         </Link>
                         {isAdmin && (
                           <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
