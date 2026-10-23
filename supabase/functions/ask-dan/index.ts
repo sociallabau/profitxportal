@@ -392,7 +392,7 @@ Deno.serve(async (req) => {
         const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, mode: "test", member, memberId: null });
         const { data: allProfiles } = await admin.from("profiles").select("full_name");
         const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
-        const short = ["privacy", "boundary"].includes(String(test.category));
+        const short = !!r.plan.is_boundary || !!r.plan.asks_about_other_member;
         const checks = codeChecks(r.final, catalogueLines, tokens, short);
         const debug = buildDebug("test", null, member, r);
         await admin.from("dan_ai_test_results").upsert({ run_id: body.run_id, test_id: test.id, answer: r.final, debug, code_checks: checks, criteria: [], pass: null }, { onConflict: "run_id,test_id" });
