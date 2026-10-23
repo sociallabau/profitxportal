@@ -77,9 +77,9 @@ export default function ClientHealth() {
 
   // Direction matters more than position: 20k -> 15k -> 10k and a flat 10k
   // look identical on a last-month-only view, and only one needs a call.
-  const { data: revenueTrends = {} } = useQuery({
+  const { data: revenueTrends = { revenue: {}, confidence: {} } } = useQuery({
     queryKey: ['client-revenue-trends'],
-    queryFn: async () => {
+    queryFn: async (): Promise<{ revenue: Record<string, number[]>; confidence: Record<string, (number | null)[]> }> => {
       const { data } = await supabase
         .from('monthly_totals')
         .select('user_id, month, total_revenue, mrr, mrr_manual, oneoff_revenue, business_confidence')
