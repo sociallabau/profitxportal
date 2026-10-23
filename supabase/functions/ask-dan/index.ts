@@ -98,7 +98,9 @@ const TIGHT_RULES = `TIGHT RULES (apply to every answer)
 7. EXACT NUMBERS: Quote Dan's exact numbers from the Brain, never paraphrase them. Speed to lead = call within 15–30 mins. Don't touch a new campaign for 7 days. Scale only when a client costs under half their first month's fee. Creatives: add more to the same campaign.
 8. NO GENERIC TIPS: Don't add generic marketing tips that aren't in the Brain or the passages.
 9. USE THEIR CONTEXT: If ABOUT THIS MEMBER has anything relevant to the question (their offer, what's working, their known blocker, their gate), the answer MUST use at least one specific detail from it. The checker should fail any answer that ignores relevant member context.
-10. LENGTH: Keep it under about 150 words. One priority, no 'two things to check' lists.`;
+10. LENGTH: Keep it under about 150 words. One priority, no 'two things to check' lists.
+11. USE THE NUMBERS: Before answering, read ABOUT THIS MEMBER and do the maths Dan would do: MRR, new clients, ad spend ÷ new clients = cost per client, and compare it to their retainer price using the Brain's rules (e.g. scale when cost per client is under half the first month's fee). Your answer MUST use at least one of their real numbers when it's relevant. The checker fails any answer that ignores relevant member numbers.
+12. DATA NOTES: obey any "DATA NOTES" in ABOUT THIS MEMBER (expired goals, old numbers, untracked calls, unreliable revenue) exactly as written.`;
 
 function draftPrompt(voice: string, styleExamples: string[], catalogue: string) {
   return `You are Dan Wilmott answering one of his ProfitX members directly, as their on-demand personal consultant.
@@ -141,7 +143,7 @@ const CHECKER_PROMPT = `You are Dan's quality checker. Check the DRAFT against D
 7. FOCUS + VOICE: one clear priority, short lines, Dan's voice, no swearing, no corporate language.
 Also enforce these:
 ${TIGHT_RULES}
-11. Don't make the draft more cautious or more formal. Only change it to fix a rule breach, a privacy issue or a wrong fact. If you rewrite, keep it in Dan's voice and at the same length or shorter.
+13. Don't make the draft more cautious or more formal. Only change it to fix a rule breach, a privacy issue or a wrong fact. If you rewrite, keep it in Dan's voice and at the same length or shorter.
 If the draft passes everything, return it unchanged. If not, rewrite only what's needed, keeping Dan's voice.
 Return only JSON: {"pass": true|false, "issues": [{"type": "privacy|boundary|gate|playbook|accuracy|question|voice", "note": "..."}], "final": {"answer": "...", "next_steps": ["..."], "resource": "..."}}`;
 
@@ -232,21 +234,22 @@ async function callGemini(system: Block[], messages: Turn[], retried = false): P
 }
 
 // deno-lint-ignore no-explicit-any
-async function loadBrain(admin: any): Promise<string> {
+async function loadBrain(admin: any): Promise<{ text: string; docs: number; words: number }> {
   const { data: docs } = await admin
     .from("knowledge_docs").select("id, title, created_at").eq("source_type", "brain").order("created_at");
-  if (!docs?.length) return "";
+  if (!docs?.length) return { text: "", docs: 0, words: 0 };
   const { data: rows } = await admin
     .from("knowledge_chunks").select("doc_id, chunk_index, content")
     .in("doc_id", docs.map((d: { id: string }) => d.id)).order("chunk_index").limit(10000);
-  return docs.map((d: { id: string; title: string }) => {
+  const text = docs.map((d: { id: string; title: string }) => {
     const parts = (rows ?? []).filter((r: { doc_id: string }) => r.doc_id === d.id).map((r: { content: string }) => r.content);
     return `## ${d.title}\n\n${joinChunks(parts)}`;
   }).join("\n\n");
+  return { text, docs: docs.length, words: text.split(/\s+/).filter(Boolean).length };
 }
 
 // deno-lint-ignore no-explicit-any
-async function loadMember(admin: any, memberId: string): Promise<{ text: string; name: string | null; stats: { totals_count: number; totals_months: string[]; room_found: boolean; room_fields_filled: number } }> {
+async function loadMember(admin: any, memberId: string): Promise<{ text: string; name: string | null; stats: { totals_count: number; totals_months: string[]; room_found: boolean; room_fields_filled: number }; goalStatus: string }> {
   const [{ data: profile }, { data: room }, { data: totals }, { data: goal }] = await Promise.all([
     admin.from("profiles").select("full_name, business_overview").eq("id", memberId).maybeSingle(),
     admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
@@ -263,6 +266,24 @@ async function loadMember(admin: any, memberId: string): Promise<{ text: string;
   if (profile?.full_name) lines.push(`Name: ${profile.full_name}`);
   if (profile?.business_overview) lines.push(`Business overview: ${profile.business_overview}`);
   lines.push("", "Context Room:", buildContextMarkdown(answers, null, null) || "(not filled in yet)");
+  const notes: string[] = [];
+  const today = new Date();
+  const goalExpired = !!goal?.target_date && new Date(goal.target_date) < today;
+  if (goalExpired) notes.push(`The 90-day goal's target date (${goal!.target_date}) has passed — do NOT treat it as a current goal. Add one line asking them to set a new goal in their Context Room.`);
+  const latest = totals?.[0];
+  if (latest) {
+    // month is the first of the month; count age from the end of that month.
+    const ageDays = (today.getTime() - new Date(latest.month).getTime()) / 86400000 - 31;
+    if (ageDays > 45) {
+      const mName = new Date(latest.month).toLocaleString("en-AU", { month: "long", timeZone: "UTC" });
+      notes.push(`Latest monthly totals are old. Use them, but say "based on your ${mName} numbers" and nudge them to submit their latest totals.`);
+    }
+  }
+  for (const t of totals ?? []) {
+    if (t.booked_calls === 0 && (t.new_clients ?? 0) > 0) notes.push(`${t.month}: booked_calls = 0 with new clients signed means calls were NOT TRACKED, not that there were no calls.`);
+    const mrr = t.mrr ?? t.mrr_manual;
+    if (t.total_revenue != null && mrr != null && t.total_revenue < mrr) notes.push(`${t.month}: total_revenue is lower than MRR, so it's unreliable — use MRR (${mrr}) instead.`);
+  }
   lines.push("", "Last 3 monthly totals:");
   if (totals?.length) {
     for (const t of totals) {
@@ -273,7 +294,8 @@ async function loadMember(admin: any, memberId: string): Promise<{ text: string;
   lines.push(goal ? Object.entries(goal).filter(([, v]) => v !== null).map(([k, v]) => `- ${k}: ${v}`).join("\n") || "- not set" : "- not set");
   const filled = Object.values(answers).filter(v => v !== null && v !== undefined && String(v).trim() !== "").length;
   return {
-    text: lines.join("\n"), name: profile?.full_name ?? null,
+    text: [...lines, ...(notes.length ? ["", "DATA NOTES:", ...notes.map(n => `- ${n}`)] : [])].join("\n"), name: profile?.full_name ?? null,
+    goalStatus: !goal?.target_date ? "not set" : goalExpired ? "expired" : "current",
     stats: { totals_count: totals?.length ?? 0, totals_months: (totals ?? []).map((t: { month: string }) => t.month), room_found: !!room, room_fields_filled: filled },
   };
 }
@@ -325,7 +347,7 @@ Deno.serve(async (req) => {
     });
 
     // C. All knowledge except the Brain — same search ladder, limit 30.
-    const search = async (q: string, n = 30) => (await admin.rpc("search_knowledge", { q, limit_n: n })).data ?? [];
+    const search = async (q: string, n = 80) => (await admin.rpc("search_knowledge", { q, limit_n: n })).data ?? [];
     let chunks = await search(question);
     if (!chunks.length) {
       const anyOf = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w: string) => w.length > 2).join(" or ");
@@ -333,7 +355,7 @@ Deno.serve(async (req) => {
     }
     if (!chunks.length) {
       const longest = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w: string) => w.length > 3).sort((a: string, b: string) => b.length - a.length)[0];
-      if (longest) chunks = await search(longest, 20);
+      if (longest) chunks = await search(longest, 40);
     }
     chunks = chunks.filter((c: { source_type: string }) => c.source_type !== "brain");
 
@@ -361,6 +383,32 @@ Deno.serve(async (req) => {
       return out;
     };
 
+    // Passage quality: <=2 per doc, <=6 1:1 calls, preference order, member-mode call privacy.
+    {
+      const own = (member.name ?? "").toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const groupCall = /workshop|group|q&a|q & a|hot seat|momentum/i;
+      const pref: Record<string, number> = { teaching: 0, transcript: 1, whatsapp: 2, note: 3, call: 4 };
+      const pool = (chunks as { doc_id: string; title: string; source_type: string }[]).filter(c => {
+        if (c.source_type !== "call" || draftMode || groupCall.test(c.title)) return true;
+        const t = c.title.toLowerCase();
+        return own.length > 0 && own.some(w => t.includes(w));
+      });
+      const ordered = pool.map((c, i) => ({ c, i }))
+        .sort((a, b) => ((pref[a.c.source_type] ?? 3) - (pref[b.c.source_type] ?? 3)) || a.i - b.i).map(x => x.c);
+      const perDoc = new Map<string, number>();
+      let calls = 0;
+      const picked: typeof pool = [];
+      for (const c of ordered) {
+        if (picked.length >= 30) break;
+        const n = perDoc.get(c.doc_id) ?? 0;
+        if (n >= 2) continue;
+        if (c.source_type === "call") { if (calls >= 6) continue; calls++; }
+        perDoc.set(c.doc_id, n + 1);
+        picked.push(c);
+      }
+      chunks = picked;
+    }
+
     const passages = (chunks as { title: string; source_type: string; content: string }[]).map(c => {
       const tag = SOURCE_TAGS[c.source_type] ?? c.source_type;
       const sensitive = c.source_type === "whatsapp" || c.source_type === "call";
@@ -369,8 +417,8 @@ Deno.serve(async (req) => {
       return `[${tag}] ${title}\n${content}`;
     }).join("\n\n---\n\n");
 
-    const brainBlock: Block[] = brain
-      ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain}`, cache_control: { type: "ephemeral" } }]
+    const brainBlock: Block[] = brain.text
+      ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }]
       : [];
     const voiceText = voice?.content ? `${BASE_VOICE}\n\n${voice.content}` : BASE_VOICE;
     const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt(voiceText, styleExamples, catalogue) }];
@@ -429,6 +477,8 @@ Deno.serve(async (req) => {
     const debug = isAdmin === true ? {
       about_member: member.text || "none loaded",
       member_id: memberId,
+      brain: { docs: brain.docs, words: brain.words },
+      goal: member.goalStatus,
       monthly_totals: { count: member.stats.totals_count, months: member.stats.totals_months },
       context_room: { found: member.stats.room_found, fields_filled: member.stats.room_fields_filled },
       passage_titles: (chunks as { title: string; source_type: string }[]).map(c => `[${SOURCE_TAGS[c.source_type] ?? c.source_type}] ${c.title}`),
