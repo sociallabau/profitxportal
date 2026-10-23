@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { functionErrorMessage } from '@/lib/functionError';
 import { resourceCatalogue } from '@/data/resourceCatalogue';
-import { Sparkle, Send, Loader2, ListChecks, PlayCircle, Plus, Copy, Check, BookmarkPlus } from 'lucide-react';
+import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import DanAiOrb, { type OrbState } from '@/components/DanAiOrb';
 import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
 import ChecksAdmin from '@/components/dan-ai/ChecksAdmin';
 
@@ -49,6 +51,8 @@ export default function DanAI() {
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [memberId, setMemberId] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [answered, setAnswered] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -86,10 +90,11 @@ export default function DanAI() {
     const { data } = await supabase.from('dan_ai_messages')
       .select('id, role, content').eq('thread_id', id).eq('user_id', user!.id).order('created_at');
     setMessages((data ?? []).map(m => ({ ...m, role: m.role as Msg['role'], parsed: m.role === 'assistant' ? parseAnswer(m.content) : undefined })));
+    setHistoryOpen(false);
     inputRef.current?.focus();
   };
 
-  const newThread = () => { setThreadId(null); setMessages([]); setInput(''); inputRef.current?.focus(); };
+  const newThread = () => { setHistoryOpen(false); setThreadId(null); setMessages([]); setInput(''); inputRef.current?.focus(); };
 
   const send = async (q?: string) => {
     const asked = (q ?? input).trim();
@@ -114,6 +119,7 @@ export default function DanAI() {
     setThreadId(data.thread_id);
     setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed }]);
     loadThreads();
+    setAnswered(true); setTimeout(() => setAnswered(false), 1300);
     inputRef.current?.focus();
   };
 
@@ -127,149 +133,163 @@ export default function DanAI() {
     if (error) toast.error('Could not save'); else toast.success('Saved — this wording gets reused next time');
   };
 
+  // auto-grow textarea
+  useEffect(() => {
+    const el = inputRef.current; if (!el) return;
+    el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [input]);
+
   if (authLoading) return null;
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'chat', label: 'Chat' }, { id: 'knowledge', label: 'Knowledge' }, { id: 'checks', label: 'Checks' },
-  ];
+  const chatTab = tab === 'chat';
+  const convo = messages.length > 0 || !!pending;
+  const orbState: OrbState = pending ?? (answered ? 'answered' : 'idle');
+  const violet = 'hsl(var(--dan-violet))';
 
-  return (
-    <PageLayout>
-      <div className="mb-5">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
-            <Sparkle className="w-4 h-4 text-primary-foreground" />
-          </div>
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-foreground italic tracking-tight">Dan AI</h1>
-        <p className="text-sm text-muted-foreground mt-1.5 max-w-lg">
-          Your on-demand consultant — Dan's playbook, every workshop, call and Q&A, applied to your business.
-        </p>
-      </div>
-
+  const box = (
+    <div className="w-full max-w-[680px] mx-auto">
       {isAdmin && (
-        <div className="flex gap-1 mb-5 border-b border-border">
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t.id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-              {t.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5 mb-2 text-xs text-[hsl(var(--dan-muted))]">
+          <span>Answering as:</span>
+          <select value={memberId} onChange={e => setMemberId(e.target.value)}
+            className="bg-transparent text-[hsl(var(--dan-ink))] text-xs focus:outline-none cursor-pointer">
+            <option value="">Myself</option>
+            {members.map(m => <option key={m.id} value={m.id}>{m.full_name ?? m.id}</option>)}
+          </select>
         </div>
       )}
+      <div className="flex items-end gap-2 rounded-[20px] bg-[hsl(var(--dan-paper))] border border-[hsl(var(--dan-violet)/0.25)] shadow-[0_8px_30px_-12px_hsl(var(--dan-violet)/0.35)] p-2 pl-4 transition-all focus-within:border-[hsl(var(--dan-violet))] focus-within:ring-4 focus-within:ring-[hsl(var(--dan-violet)/0.15)]">
+        <textarea ref={inputRef} autoFocus rows={1} value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="What's the actual problem? The more detail, the sharper the answer."
+          className="flex-1 bg-transparent resize-none text-base leading-6 text-[hsl(var(--dan-ink))] placeholder:text-[hsl(var(--dan-muted))] focus:outline-none py-2" />
+        <button onClick={() => send()} disabled={!!pending || !input.trim()} aria-label="Send"
+          className="w-10 h-10 shrink-0 rounded-full bg-[hsl(var(--dan-violet))] text-[hsl(var(--dan-violet-fg))] flex items-center justify-center disabled:opacity-40 transition-opacity">
+          {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
+        </button>
+      </div>
+    </div>
+  );
 
-      {tab === 'knowledge' && isAdmin && <KnowledgeAdmin />}
-      {tab === 'checks' && isAdmin && <ChecksAdmin />}
-
-      {tab === 'chat' && (
-        <div className="flex flex-col lg:flex-row gap-5">
-          <aside className="lg:w-56 shrink-0 space-y-1.5">
-            <button onClick={newThread} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-border text-foreground hover:bg-muted/40">
-              <Plus className="w-4 h-4" /> New chat
+  return (
+    <PageLayout mainClassName="dan-canvas">
+      <div className="relative min-h-[calc(100vh-6rem)] flex flex-col">
+        {/* top bar */}
+        <div className="flex items-center justify-between h-10">
+          {chatTab ? (
+            <button onClick={() => setHistoryOpen(true)} aria-label="History"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] hover:bg-[hsl(var(--dan-ink)/0.06)]">
+              <History className="w-4 h-4" />
             </button>
-            <div className="max-h-48 lg:max-h-[60vh] overflow-y-auto space-y-1">
-              {threads.map(t => (
-                <button key={t.id} onClick={() => openThread(t.id)}
-                  className={`block w-full text-left text-xs px-3 py-2 rounded-lg truncate transition-colors ${t.id === threadId ? 'bg-primary/15 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'}`}>
-                  {t.title}
+          ) : <span />}
+          {isAdmin && (
+            <div className="flex rounded-full bg-[hsl(var(--dan-ink)/0.06)] p-0.5 text-xs">
+              {(['chat', 'knowledge', 'checks'] as Tab[]).map(t => (
+                <button key={t} onClick={() => setTab(t)}
+                  className={`px-3 py-1 rounded-full capitalize transition-colors ${tab === t ? 'bg-[hsl(var(--dan-paper))] text-[hsl(var(--dan-ink))] shadow-sm' : 'text-[hsl(var(--dan-muted))]'}`}>
+                  {t}
                 </button>
               ))}
             </div>
-          </aside>
+          )}
+        </div>
 
-          <div className="flex-1 min-w-0">
-            {isAdmin && (
-              <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-                <span>Draft a reply for…</span>
-                <select value={memberId} onChange={e => setMemberId(e.target.value)}
-                  className="bg-card border border-border rounded-md px-2 py-1 text-foreground text-xs">
-                  <option value="">Myself</option>
-                  {members.map(m => <option key={m.id} value={m.id}>{m.full_name ?? m.id}</option>)}
-                </select>
-              </div>
+        {tab !== 'chat' && isAdmin && (
+          <div className="dark mt-4 rounded-2xl bg-card text-foreground p-4 sm:p-6">
+            {tab === 'knowledge' ? <KnowledgeAdmin /> : <ChecksAdmin />}
+          </div>
+        )}
+
+        {chatTab && (
+          <>
+            <div className={`mx-auto transition-all duration-700 ease-out ${convo ? 'w-16 h-16 mt-0' : 'w-[220px] h-[220px] sm:w-[320px] sm:h-[320px] mt-6 sm:mt-10'}`}>
+              <DanAiOrb state={orbState} intro />
+            </div>
+            {pending && (
+              <p className="text-center text-xs text-[hsl(var(--dan-muted))] mt-1">
+                {pending === 'thinking' ? 'Thinking…' : "Checking with Dan's playbook…"}
+              </p>
             )}
 
-            <div className="space-y-4 mb-4">
-              {messages.length === 0 && !pending && (
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">What people ask most</p>
-                  <div className="flex flex-wrap gap-2">
-                    {examples.map(ex => (
-                      <button key={ex} onClick={() => send(ex)}
-                        className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all">
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
+            {!convo ? (
+              <div className="dan-fade-up flex flex-col items-center text-center mt-4">
+                <h1 className="text-2xl italic font-extrabold tracking-tight">Dan AI</h1>
+                <p className="text-sm text-[hsl(var(--dan-muted))] mt-1 mb-6">Ask me anything about your business.</p>
+                {box}
+                <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-[680px]">
+                  {examples.slice(0, 3).map(ex => (
+                    <button key={ex} onClick={() => { setInput(ex); inputRef.current?.focus(); }}
+                      className="text-xs px-3 py-1.5 rounded-full border border-[hsl(var(--dan-ink)/0.12)] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] transition-colors">
+                      {ex}
+                    </button>
+                  ))}
                 </div>
-              )}
-
-              {messages.map((m, idx) => m.role === 'user' ? (
-                <div key={m.id} className="flex justify-end">
-                  <p className="max-w-[85%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2.5 text-sm whitespace-pre-wrap">{m.content}</p>
-                </div>
-              ) : (
-                <div key={m.id} className="space-y-3">
-                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words font-sans leading-relaxed">{m.parsed?.answer}</pre>
-                  {!!m.parsed?.next_steps.length && (
-                    <div className="border border-primary/25 bg-primary/5 rounded-2xl p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ListChecks className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-semibold uppercase tracking-wider text-primary">Do this next</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 w-full max-w-[680px] mx-auto space-y-6 py-6">
+                  {messages.map((m, idx) => m.role === 'user' ? (
+                    <div key={m.id} className="flex justify-end">
+                      <p className="max-w-[85%] bg-[hsl(var(--dan-violet)/0.1)] rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] whitespace-pre-wrap">{m.content}</p>
+                    </div>
+                  ) : (
+                    <div key={m.id} className="group space-y-3">
+                      <p className="text-[15px] whitespace-pre-wrap break-words leading-7">{m.parsed?.answer}</p>
+                      {!!m.parsed?.next_steps.length && (
+                        <ul className="list-disc pl-5 space-y-1 text-[15px] leading-7">
+                          {m.parsed.next_steps.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      )}
+                      {m.parsed?.resource && (
+                        <p className="text-sm" style={{ color: violet }}>Watch: {m.parsed.resource}</p>
+                      )}
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Link to="/settings" className="text-[11px] text-[hsl(var(--dan-muted))] hover:underline">
+                          Personalised using your Context Room, monthly totals and 90-day goal
+                        </Link>
+                        {isAdmin && (
+                          <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => save(messages[idx - 1]?.content ?? '', m.parsed!.answer)}
+                              className="flex items-center gap-1 text-[11px] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))]">
+                              <BookmarkPlus className="w-3 h-3" /> Save
+                            </button>
+                            <button onClick={() => copy(m.parsed!.answer, m.id)}
+                              className="flex items-center gap-1 text-[11px] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))]">
+                              {copied === m.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copied === m.id ? 'Copied' : 'Copy'}
+                            </button>
+                          </span>
+                        )}
                       </div>
-                      <ol className="space-y-1.5 list-decimal pl-5 text-sm text-foreground">
-                        {m.parsed.next_steps.map((s, i) => <li key={i}>{s}</li>)}
-                      </ol>
                     </div>
-                  )}
-                  {m.parsed?.resource && (
-                    <div className="flex items-start gap-3 border border-border rounded-2xl p-3">
-                      <PlayCircle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <p className="text-sm text-foreground">Watch: {m.parsed.resource} <span className="text-[11px] text-muted-foreground">— in the Vault or on your Roadmap</span></p>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Link to="/settings" className="text-[11px] text-muted-foreground hover:text-foreground">
-                      Personalised using your Context Room, monthly totals and 90-day goal
-                    </Link>
-                    {isAdmin && (
-                      <>
-                        <button onClick={() => save(messages[idx - 1]?.content ?? '', m.parsed!.answer)}
-                          className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-border text-muted-foreground hover:text-foreground">
-                          <BookmarkPlus className="w-3 h-3" /> Save
-                        </button>
-                        <button onClick={() => copy(m.parsed!.answer, m.id)}
-                          className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md text-primary bg-primary/10 border border-primary/20">
-                          {copied === m.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copied === m.id ? 'Copied' : 'Copy'}
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  ))}
+                  <div ref={endRef} />
                 </div>
-              ))}
+                <div className="sticky bottom-0 pb-4 pt-8 bg-gradient-to-t from-[hsl(var(--dan-bg))] via-[hsl(var(--dan-bg))] to-transparent">
+                  {box}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
 
-              {pending && (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {pending === 'thinking' ? 'Thinking…' : "Checking with Dan's playbook…"}
-                </p>
-              )}
-              <div ref={endRef} />
-            </div>
-
-            <div className="flex items-end gap-2 border border-border rounded-2xl bg-input/60 p-2 focus-within:ring-2 focus-within:ring-primary/40">
-              <textarea ref={inputRef} autoFocus rows={2} value={input} onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder="What's the actual problem? The more detail, the sharper the answer."
-                className="flex-1 bg-transparent resize-none text-sm text-foreground placeholder:text-muted-foreground focus:outline-none px-2 py-1.5" />
-              <button onClick={() => send()} disabled={!!pending || !input.trim()} aria-label="Send"
-                className="w-9 h-9 shrink-0 rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50">
-                {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+      <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+        <SheetContent side="left" className="w-72">
+          <SheetHeader><SheetTitle>Past chats</SheetTitle></SheetHeader>
+          <button onClick={newThread} className="mt-4 w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-border hover:bg-muted/40">
+            <Plus className="w-4 h-4" /> New chat
+          </button>
+          <div className="mt-3 space-y-1 overflow-y-auto max-h-[75vh]">
+            {threads.map(t => (
+              <button key={t.id} onClick={() => openThread(t.id)}
+                className={`block w-full text-left text-xs px-3 py-2 rounded-lg truncate ${t.id === threadId ? 'bg-primary/15 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'}`}>
+                {t.title}
               </button>
-            </div>
+            ))}
+            {!threads.length && <p className="text-xs text-muted-foreground px-3">No chats yet.</p>}
           </div>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
     </PageLayout>
   );
 }
