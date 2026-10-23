@@ -12,11 +12,11 @@ export const EXAMPLE_PROFILE = {
   gate_move_up: 'Sign 3 new retainers. Reach $20k monthly revenue.',
 };
 
-// Flat 12-month example line: starts at $0, then holds $15k/mth.
+// Flat 12-month example line: starts at $0, then holds $15k/mth through to the current month.
 export const EXAMPLE_REVENUE = Array.from({ length: 12 }, (_, index) => ({
   revenue: index === 0 ? 0 : 15000,
-  month: ['Oct 25', 'Nov 25', 'Dec 25', 'Jan 26', 'Feb 26', 'Mar 26', 'Apr 26', 'May 26', 'Jun 26', 'Jul 26', 'Aug 26', 'Sep 26'][index],
-  monthKey: `202${5 + Math.floor(index / 14)}-${String(((index + 9) % 12) + 1).padStart(2, '0')}-01`,
+  month: ['Nov 25', 'Dec 25', 'Jan 26', 'Feb 26', 'Mar 26', 'Apr 26', 'May 26', 'Jun 26', 'Jul 26', 'Aug 26', 'Sep 26', 'Oct 26'][index],
+  monthKey: `${2025 + Math.floor((10 + index) / 12)}-${String(((10 + index) % 12) + 1).padStart(2, '0')}-01`,
 }));
 
 export const EXAMPLE_CALLS: Call[] = [
