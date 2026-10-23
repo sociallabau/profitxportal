@@ -4,6 +4,7 @@ import { REVENUE_STEPS, focusBullets, revenuePosition, submissionStreak } from '
 import { brisbaneDateKey } from '@/data/calls';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import ExampleLabel from '@/components/ExampleLabel';
 
 export type RevenuePoint = { month: string; monthKey: string; revenue: number };
 const money = (amount: number) => `$${amount.toLocaleString('en-AU', { maximumFractionDigits: 0 })}`;
@@ -23,8 +24,9 @@ function FocusList({ items, fallback }: { items: string[]; fallback?: string }) 
   );
 }
 
-export default function DashboardProgress({ series, gate, keyTask, moveUp }: {
+export default function DashboardProgress({ series, gate, keyTask, moveUp, example = false }: {
   series: RevenuePoint[]; gate?: string | null; keyTask?: string | null; moveUp?: string | null;
+  example?: boolean;
 }) {
   const navigate = useNavigate();
   const current = series.at(-1);
@@ -37,7 +39,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp }: {
     <section className="mb-8 space-y-5" aria-label="Your business progress">
       <div className="border-b border-border pb-5">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-10">
-          <h2 className="text-sm font-semibold">Prism Progress · Revenue Ladder™</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2 flex-wrap">Prism Progress · Revenue Ladder™ <ExampleLabel show={example} /></h2>
           <span className="text-xs text-muted-foreground">{current ? `${current.month} · ${money(revenue)}/mth` : 'No monthly report yet'}</span>
         </div>
         <div className="relative mx-3" role="progressbar" aria-label="Revenue ladder progress" aria-valuemin={0} aria-valuemax={150000} aria-valuenow={Math.min(revenue, 150000)} aria-valuetext={`${money(revenue)} per month`}>
@@ -58,19 +60,19 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp }: {
         <div className="flex flex-col gap-5">
           <div className="dashboard-focus rounded-lg border border-primary/35 bg-card p-5 flex-1">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-xs font-semibold text-primary flex items-center gap-2"><Crosshair className="w-4 h-4" /> Your Focus</h2>
+              <h2 className="text-xs font-semibold text-primary flex items-center gap-2 flex-wrap"><Crosshair className="w-4 h-4" /> Your Focus <ExampleLabel show={example} /></h2>
               <Flag className="w-4 h-4 text-primary" />
             </div>
-            <p className="text-base font-semibold text-primary mb-4">{gate || 'Your next step'}</p>
-            <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-2">Key next task</p>
+            <p className="text-base font-semibold text-primary mb-4">{gate || 'Your next step'} <ExampleLabel show={example} /></p>
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-2">Key next task <ExampleLabel show={example} /></p>
             <FocusList items={focusBullets(keyTask)} fallback="Complete your monthly report" />
             {moveUp && <div className="mt-4 pt-4 border-t border-primary/20">
-              <p className="text-[10px] uppercase font-semibold text-primary flex items-center gap-1 mb-2"><ArrowUpRight className="w-3 h-3" /> To move up a gate</p>
+              <p className="text-[10px] uppercase font-semibold text-primary flex items-center gap-1 mb-2 flex-wrap"><ArrowUpRight className="w-3 h-3" /> To move up a gate <ExampleLabel show={example} /></p>
               <FocusList items={focusBullets(moveUp)} />
             </div>}
           </div>
           <div className="rounded-lg bg-card border border-border p-5">
-            <h2 className="text-xs font-semibold text-muted-foreground flex items-center justify-between gap-2">Monthly submission streak <Flame className="w-4 h-4 text-primary" /></h2>
+            <h2 className="text-xs font-semibold text-muted-foreground flex items-center gap-2 flex-wrap">Monthly submission streak <ExampleLabel show={example} /> <Flame className="w-4 h-4 text-primary" /></h2>
             <p className="mt-3 flex items-baseline gap-2"><span className="text-3xl font-semibold">{streak}</span><span className="text-xs text-muted-foreground">months · longest {longest}</span></p>
             <div className="grid grid-cols-6 gap-1.5 mt-3">
               {Array.from({ length: 6 }, (_, index) => {
@@ -86,8 +88,8 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp }: {
 
         <div className="rounded-lg border border-border bg-card p-5 min-w-0 flex flex-col">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xs text-muted-foreground font-semibold flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" /> Revenue Progress</h2>
-            <Button variant="link" size="sm" onClick={() => navigate('/financials')}>Financials <ArrowUpRight /></Button>
+            <h2 className="text-xs text-muted-foreground font-semibold flex items-center gap-2 flex-wrap"><TrendingUp className="w-4 h-4 text-primary" /> Revenue Progress <ExampleLabel show={example} /></h2>
+            <Button variant="link" size="sm" disabled={example} onClick={() => navigate('/financials')}>Financials <ArrowUpRight /></Button>
           </div>
           <div className="flex items-baseline gap-3 flex-wrap mt-3">
             <p className="text-3xl font-semibold">{current ? money(revenue) : '—'}</p>

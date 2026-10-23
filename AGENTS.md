@@ -1,3 +1,3 @@
 Keep admin-only copy-ready monthly coaching drafts in the authenticated monthly-review function, not in client-readable review rows, so private analysis and editable drafts never appear in members' data.
-Keep dashboard revenue positioning and consecutive-month submission calculations in a pure tested module; derive personal progress only from the signed-in member's monthly reports.
+Keep dashboard revenue positioning and consecutive-month submission calculations in a pure tested module; derive personal progress only from the signed-in member's monthly reports, except the owner-only screenshot view which uses isolated fictional fixtures and disables report submission.
 Resolve workshop classifications in the shared upcoming-calls hook so live calendar and fallback listings use the same workshop modes.

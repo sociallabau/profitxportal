@@ -12,6 +12,8 @@ import { supabase } from '@/lib/supabase';
 import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
+import ExampleLabel from '@/components/ExampleLabel';
+import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
@@ -44,7 +46,7 @@ function currentCycle() {
 }
 
 // -------- Upcoming calls bar --------
-function CallCard({ call }: { call: Call }) {
+function CallCard({ call, example = false }: { call: Call; example?: boolean }) {
   const d = new Date(call.start);
   const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const timeStr = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -60,9 +62,12 @@ function CallCard({ call }: { call: Call }) {
       <div className="flex-1 min-w-0 flex flex-col">
         <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{call.category === 'Workshop' && call.workshopType ? `${call.workshopType === 'learn' ? 'Learn' : 'Do'} Workshop` : call.category}</span>
         <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-2">{call.title}</h3>
+        <ExampleLabel show={example} />
         <p className="text-xs text-muted-foreground mt-0.5">{dateStr} · {timeStr}</p>
         <a
           href={call.meetUrl}
+          onClick={example ? (event) => event.preventDefault() : undefined}
+          aria-disabled={example}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-auto self-start inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -75,7 +80,7 @@ function CallCard({ call }: { call: Call }) {
 }
 
 // -------- Yearly calendar --------
-function YearlyCalendar() {
+function YearlyCalendar({ example = false }: { example?: boolean }) {
   const { year, monthIdx } = brisbaneNowParts();
   const months = Array.from({ length: 12 }, (_, i) => {
     const q = Math.floor(i / 3) + 1;
@@ -96,7 +101,7 @@ function YearlyCalendar() {
     <div className="bg-card border border-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">The ProfitX Year — {year}</h2>
+          <h2 className="text-sm font-semibold text-foreground">The ProfitX Year — {year} <ExampleLabel show={example} /></h2>
           <p className="text-xs text-muted-foreground">Quarters · Cycles · 1-Day Intensives</p>
         </div>
         <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-semibold">
@@ -140,7 +145,7 @@ function YearlyCalendar() {
   );
 }
 
-function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
+function ThreeWeekCalendar({ calls, example = false }: { calls: Call[]; example?: boolean }) {
   const cycle = currentCycle();
   const PhaseIcon = PHASE_META[cycle.phase].icon;
   const todayKey = brisbaneDateKey();
@@ -173,11 +178,12 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Next 3 Weeks</h2>
+            <h2 className="text-sm font-semibold text-foreground">Next 3 Weeks <ExampleLabel show={example} /></h2>
           </div>
           <div className="flex items-center gap-2 border-l border-border pl-3">
             <PhaseIcon className="w-3.5 h-3.5 text-primary" />
             <span className="text-xs font-semibold">{cycle.phase} Month</span>
+            <ExampleLabel show={example} />
             <span className="text-[10px] text-muted-foreground">{cycle.monthName} · Q{cycle.quarter}</span>
           </div>
         </div>
@@ -213,6 +219,8 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
                     <a
                       key={e.meetUrl + e.start}
                       href={e.meetUrl}
+                      onClick={example ? (event) => event.preventDefault() : undefined}
+                      aria-disabled={example}
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`${e.title} · ${t}`}
@@ -237,15 +245,16 @@ export default function Dashboard() {
   usePageTracking('dashboard');
   const navigate = useNavigate();
   const dataUserId = user?.id;
-  const dashboardProfile = profile;
+  const example = isExampleDashboard(dataUserId);
+  const dashboardProfile = example ? EXAMPLE_PROFILE : profile;
 
   const { calls: allUpcoming } = useUpcomingCalls();
-  const upcomingCalls = allUpcoming.slice(0, 2);
-  const threeWeekCalls = allUpcoming;
+  const upcomingCalls = (example ? EXAMPLE_CALLS : allUpcoming).slice(0, 2);
+  const threeWeekCalls = example ? EXAMPLE_CALLS : allUpcoming;
 
-  const { data: wins = [] } = useQuery({
+  const { data: memberWins = [] } = useQuery({
     queryKey: ['dashboard-wins', dataUserId],
-    enabled: Boolean(dataUserId && profile),
+    enabled: Boolean(dataUserId && profile && !example),
     queryFn: async () => {
       const { data } = await supabase
         .from('weekly_wins')
@@ -258,9 +267,9 @@ export default function Dashboard() {
     },
   });
 
-  const { data: revenueSeries = [] } = useQuery({
+  const { data: memberRevenueSeries = [] } = useQuery({
     queryKey: ['dashboard-revenue', dataUserId],
-    enabled: Boolean(dataUserId && profile),
+    enabled: Boolean(dataUserId && profile && !example),
     queryFn: async () => {
       const { data } = await supabase
         .from('monthly_totals')
@@ -275,36 +284,42 @@ export default function Dashboard() {
     },
   });
 
+  const wins = example ? EXAMPLE_WINS : memberWins;
+  const revenueSeries = example ? EXAMPLE_REVENUE : memberRevenueSeries;
+
   return (
-    <PageLayout>
-      <AnnouncementsModal />
+    <PageLayout mainClassName={example ? 'dashboard-example' : ''}>
+      {!example && <AnnouncementsModal />}
 
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold">
             Welcome back{dashboardProfile?.full_name ? `, ${dashboardProfile.full_name.split(' ')[0]}` : ''}.
+            {' '}<ExampleLabel show={example} />
           </h1>
           <p className="text-sm text-muted-foreground">Here’s where ProfitX is right now.</p>
         </div>
         <Button
+          disabled={example}
           onClick={() => navigate('/submissions/monthly')}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-lg shadow-primary/20"
         >
           <FileText className="w-4 h-4" />
           Submit Monthly Report
+          <ExampleLabel show={example} />
         </Button>
       </div>
 
-      <DashboardProgress series={revenueSeries} gate={dashboardProfile?.gate} keyTask={dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up} />
+      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} keyTask={dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Next Up</h2>
+            <h2 className="text-sm font-semibold text-foreground">Next Up <ExampleLabel show={example} /></h2>
           </div>
-          <Button variant="link" size="sm" onClick={() => navigate('/calls')} className="text-xs text-primary hover:underline">See all calls →</Button>
+          <Button variant="link" size="sm" disabled={example} onClick={() => navigate('/calls')} className="text-xs text-primary hover:underline">See all calls →</Button>
         </div>
         {upcomingCalls.length === 0 ? (
           <div className="bg-card border border-border border-dashed rounded-xl p-6 text-center text-sm text-muted-foreground">
@@ -312,17 +327,17 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {upcomingCalls.map(c => <CallCard key={c.meetUrl + c.start} call={c} />)}
+            {upcomingCalls.map(c => <CallCard example={example} key={c.meetUrl + c.start} call={c} />)}
           </div>
         )}
       </div>
 
       {/* Next 3 weeks calendar */}
-      <ThreeWeekCalendar calls={threeWeekCalls} />
+      <ThreeWeekCalendar calls={threeWeekCalls} example={example} />
 
       {/* Yearly calendar */}
       <div className="mb-6">
-        <YearlyCalendar />
+        <YearlyCalendar example={example} />
       </div>
 
       {/* Recent wins — hype */}
@@ -330,9 +345,9 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Recent Wins</h2>
+            <h2 className="text-sm font-semibold text-foreground">Recent Wins <ExampleLabel show={example} /></h2>
           </div>
-          <Button variant="link" size="sm" onClick={() => navigate('/wins')} className="text-xs text-primary hover:underline">See all →</Button>
+          <Button variant="link" size="sm" disabled={example} onClick={() => navigate('/wins')} className="text-xs text-primary hover:underline">See all →</Button>
         </div>
         {wins.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No wins logged yet. Add your first one on the Wins Wall!</p>
@@ -342,7 +357,7 @@ export default function Dashboard() {
               <div key={w.id} className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0">
                 <span className="text-base mt-0.5">🏆</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground">{w.win_text}</p>
+                  <p className="text-sm text-foreground">{w.win_text} <ExampleLabel show={example} /></p>
                   {w.cash_amount > 0 && <p className="text-xs text-primary font-semibold mt-0.5">+${Number(w.cash_amount).toLocaleString()}</p>}
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">{new Date(w.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
