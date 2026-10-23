@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy } from 'lucide-react';
+import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -103,6 +103,36 @@ export default function ClientDetailPanel({
   });
 
   const queryClient = useQueryClient();
+
+  // Private admin notes — stored in an admin-only table, never member-readable.
+  const [noteDraft, setNoteDraft] = useState('');
+  const { data: notes = [] } = useQuery({
+    queryKey: ['client-notes', client.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('client_notes')
+        .select('id, note, created_at')
+        .eq('client_id', client.id)
+        .order('created_at', { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  const addNote = useMutation({
+    mutationFn: async (note: string) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('client_notes')
+        .insert({ client_id: client.id, author_id: auth.user!.id, note });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNoteDraft('');
+      queryClient.invalidateQueries({ queryKey: ['client-notes', client.id] });
+      toast.success('Note saved');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['client-monthly-reviews', client.id],
