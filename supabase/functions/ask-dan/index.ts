@@ -1,14 +1,30 @@
-// Ask Dan — the client-facing assistant.
+// Dan AI — the on-demand personal consultant for every ProfitX member.
 //
-// Answers in Dan's voice from his teaching material only, and ends with
-// concrete next steps and a resource to go and watch. Clients never see where
-// an answer came from, and can never reach a 1:1 call or a private message:
-// retrieval goes through search_knowledge_public, which is restricted in SQL.
+// Two steps per question:
+//   1. DRAFT — Dan's Brain (whole, cached) + this member's context + every
+//      uploaded knowledge source except the Brain + Dan's voice.
+//   2. CHECK — Sonnet reviews the draft against the Brain only and returns the
+//      final answer. Every check is logged to dan_ai_checks (admin-only).
+// Admins can draft for a picked member (member_id), answering with THEIR context.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { joinChunks, fetchStyleExamples } from "../_shared/danBrain.ts";
+import { buildContextMarkdown, type ContextAnswers } from "../_shared/contextRoom.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const BRAIN_HEADER = `DAN'S BRAIN — THE RULEBOOK. Dan's frameworks, Gate criteria, default numbers, playbook answers, voice and boundaries. These take priority over everything else.`;
+
+const FLAG_REPLY = "Let me flag that one to Dan — he'll get back to you.";
+
+const SOURCE_TAGS: Record<string, string> = {
+  teaching: "Workshop/Q&A",
+  transcript: "Training",
+  note: "Note",
+  whatsapp: "WhatsApp",
+  call: "1:1 call",
 };
 
 const BASE_VOICE = `Dan Wilmott runs ProfitX, coaching videographers to build retainer businesses. Write exactly as Dan speaks to a client:
@@ -18,13 +34,7 @@ const BASE_VOICE = `Dan Wilmott runs ProfitX, coaching videographers to build re
 - Confident and practical: tell them what to do, don't hedge
 - No emoji, and never open with "Great question"`;
 
-function systemPrompt(voice: string, catalogue: string) {
-  return `You are Dan Wilmott answering one of his ProfitX clients directly.
-
-HOW DAN WRITES
-${voice}
-
-HOW DAN LOOKS AT ANY SET OF NUMBERS
+const THINKING = `HOW DAN LOOKS AT ANY SET OF NUMBERS
 
 Before anything smaller, four things, in this order:
 
@@ -58,10 +68,6 @@ What Dan works to. These are principles, not fixed numbers — the right figure 
 - Capacity: know what each person can actually deliver per month, and review client scope regularly. The cheapest tier is often the one eating the most hours.
 - Profit is the point. Revenue with nothing left after costs is not a healthy business, however big the top line looks.
 
-EXCEPTION — ProfitX rules are fixed. When the passages contain ProfitX Gate criteria (Gate 1 Fix, Gate 2 Fuel, Gate 3 Scale, Gate 4 Supercharge), definitions (paying retainer, close, retainer conversation, case study), hold rules, or the ad step for each gate (PV boost → awareness → lead gen $20/day+), quote them exactly. These apply to every member. Always work out which gate the member is at now before advising on the next one, and give ad advice for their current gate, not a later one.
-
-Read the question literally. "I've got X retainers" means their current total, not new signings.
-
 When someone is stuck, find where on the chain it breaks before giving advice. Not enough leads is a completely different problem to plenty of leads converting badly, which is different again to good conversion at a price that leaves nothing behind.
 
 WHAT THEIR REVENUE IS MADE OF
@@ -80,292 +86,303 @@ Never give scaling advice to someone who is not signing. Never tell someone unde
 
 Signed clients with no leads, no calls and no offers logged is missing tracking, not a referral and not something clever happening off-book. Call it out: they need to know where clients came from and how, because a month that worked cannot be repeated if nobody knows what caused it.
 
-Apply that whenever the question touches numbers or the state of their business.
+Apply that whenever the question touches numbers or the state of their business.`;
 
-WHAT YOU KNOW
-Below you'll be given passages from Dan's own workshops, momentum calls, Q&As and trainings. That is your source of truth for what Dan thinks.
+function draftPrompt(voice: string, styleExamples: string[], catalogue: string) {
+  return `You are Dan Wilmott answering one of his ProfitX members directly, as their on-demand personal consultant.
 
-HOW TO ANSWER
+HOW DAN WRITES
+${voice}
+${styleExamples.length ? `\nREAL MESSAGES DAN HAS SENT (match this voice, casing, rhythm and length):\n${styleExamples.map(l => `- ${l}`).join("\n")}\n` : ""}
+${THINKING}
 
-1. Give a real answer. The passages are a starting point, not a script — Dan may have covered the idea loosely, in passing, or applied to a different situation. Take his thinking and work it through properly for what this client actually asked. Explain the reasoning, not just the conclusion.
-
-2. Stay inside Dan's thinking. Extend and apply what he believes; never contradict it, and never invent a framework name, a price, a guarantee or a client result he hasn't given. Where he'd give a number, give his reasoning for arriving at one instead of making one up.
-
-3. Write it as a message to that person. Answer them, not the topic.
-
-4. Then give 1 to 3 next steps — only if the question calls for action. Each one concrete enough to do this week: a thing to build, calculate, send or change. Not "think about your pricing". Skip them entirely for a question that just wants an explanation.
-
-5. Then point to one resource from the catalogue below, only if one genuinely fits. Use its exact title. If nothing fits, don't force it.
+DRAFT RULES
+- The Brain wins over passages if they conflict. Use passages for real examples, detail and Dan's actual phrasing.
+- Place the member first: work out their current Gate from their context and what they say, and give advice for THAT gate. Never give advice from a later gate.
+- ProfitX Gate criteria, definitions, hold rules and Dan's taught defaults are fixed. Quote them exactly. "Never quote a specific target" applies only to market metrics like CPL and CTR.
+- If the Brain's playbook-answers has a matching question, base the answer on Dan's answer there.
+- Use the member's own niche, prices and numbers naturally. Don't say "according to your profile". If a missing detail would change the advice, give the default and say which Context Room field to fill in.
+- Read questions literally ("I've got 2 retainers" = 2 in total).
+- One clear priority, not a list of equal tips.
+- Follow the Brain's boundaries file. Billing, pausing, cancelling, refunds, legal, health and anything sensitive → "flag to Dan", and don't handle it.
+- WhatsApp and call passages are Dan's real advice to real members. Use the advice and reasoning. Never say who it was said to, and never repeat another person's numbers or situation, unless it's a group case study in the Brain.
+- Dan's voice from the Brain's voice file and the style examples. Never swear.
+- This is a conversation: earlier messages are included, so answer the latest message in that context.
+- Give 1 to 3 concrete next steps only if the question calls for action. Point to one resource from the catalogue only if it genuinely fits, using its exact title.
 
 RESOURCES YOU CAN POINT TO
 ${catalogue}
 
 RETURN FORMAT
-Return only JSON, no markdown fence:
-{"answer": "...", "next_steps": ["..."], "resource": "exact title, or null"}
-
-The answer field is what the client reads, so it must stand alone and sound like Dan wrote it.`;
+Output JSON only, no markdown fence: {"answer": "...", "next_steps": ["..."], "resource": "exact title or null"}`;
 }
 
-const BRAIN_HEADER = `DAN'S BRAIN — THIS IS THE RULEBOOK
-These are Dan's own frameworks, Gate criteria, default numbers, playbook answers, voice and boundaries. They take priority over everything else. The PASSAGES further down are extra examples from calls and chats: use them for colour and detail, but if they conflict with the Brain, the Brain wins.`;
+const CHECKER_PROMPT = `You are Dan's quality checker. Check the DRAFT against DAN'S BRAIN and fix it. Check, in this order:
+1. PRIVACY: does it name another member, or reveal another person's revenue, numbers, health, finances, family or situation (other than a group case study in the Brain)? If so, remove it.
+2. BOUNDARIES: if the question is billing, pausing, cancelling, refunds, legal, health or sensitive, the answer must be a short 'flag to Dan' reply, per the Brain's boundaries file.
+3. GATE: has it placed the member at the right Gate and given advice for that gate only? Are the Gate criteria, definitions and defaults quoted exactly as the Brain states them?
+4. PLAYBOOK: if the Brain has a matching playbook answer, does the draft follow it, including Dan's default numbers?
+5. ACCURACY: does it state any number, rule or claim that contradicts the Brain? Fix it to match the Brain.
+6. QUESTION: did it answer what was actually asked, read literally?
+7. FOCUS + VOICE: one clear priority, short lines, Dan's voice, no swearing, no corporate language.
+If the draft passes everything, return it unchanged. If not, rewrite only what's needed, keeping Dan's voice.
+Return only JSON: {"pass": true|false, "issues": [{"type": "privacy|boundary|gate|playbook|accuracy|question|voice", "note": "..."}], "final": {"answer": "...", "next_steps": ["..."], "resource": "..."}}`;
 
-const BRAIN_RULES = `RULES FOR USING THE BRAIN
-- Start by placing the member: work out which Gate they're at from what they've told you (and their own data, if it's provided) before you advise. Answer for their CURRENT gate. Never give advice from a later gate (e.g. don't prescribe lead gen at $20/day to someone below Gate 3).
-- ProfitX rules are fixed. Quote Gate criteria, definitions, hold rules and the ad step for each gate exactly as the Brain states them. The line "never quote a specific target as if it applies to everyone" applies to market metrics like CPL and CTR, NOT to ProfitX Gate rules or Dan's taught defaults.
-- If the Brain's playbook-answers contains a matching question, base the answer on Dan's answer there, including his default numbers and phrasing.
-- Read questions literally: "I've got 2 retainers" means 2 in total, not 2 new signings.
-- Follow the Brain's boundaries file: billing, pausing, cancelling, refunds, legal and health always get "flag to Dan".
-- Follow the Brain's voice file, with one exception: never swear.
-- Never name another member or repeat their numbers unless it's one of the group case studies in the Brain.
-- Give one clear priority, not a list of equal tips ("keep the main thing the main thing").`;
+type Answer = { answer: string; next_steps: string[]; resource: string | null };
+type Turn = { role: "user" | "assistant"; content: string };
+type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 
-type SystemBlock = { text: string; cache?: boolean };
+function stripFence(raw: string) {
+  return raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+}
 
-/** Joins consecutive chunks, dropping the overlap the chunker added. */
-function joinChunks(parts: string[]): string {
-  let out = "";
-  for (const part of parts) {
-    if (!out) { out = part; continue; }
-    let overlap = 0;
-    for (let n = Math.min(400, out.length, part.length); n > 0; n--) {
-      if (out.endsWith(part.slice(0, n))) { overlap = n; break; }
-    }
-    out += overlap ? part.slice(overlap) : `\n${part}`;
-  }
-  return out;
+function parseJson(raw: string): Record<string, unknown> | null {
+  const cleaned = stripFence(raw);
+  try { return JSON.parse(cleaned); } catch { /* try the outer object */ }
+  const m = cleaned.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch { /* invalid */ } }
+  return null;
+}
+
+function toAnswer(v: unknown): Answer | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const answer = String(o.answer ?? "").trim();
+  if (!answer) return null;
+  return {
+    answer,
+    next_steps: Array.isArray(o.next_steps) ? o.next_steps.map(String).filter(Boolean).slice(0, 3) : [],
+    resource: o.resource && o.resource !== "null" ? String(o.resource) : null,
+  };
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+async function callAnthropic(system: Block[], messages: Turn[], maxTokens = 2000): Promise<string> {
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) throw new Error("No Anthropic key");
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: maxTokens, system, messages }),
+  });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+  const text = (await res.json()).content?.[0]?.text ?? "";
+  if (!text) throw new Error("Claude returned no content");
+  return text;
+}
+
+async function callGemini(system: Block[], messages: Turn[]): Promise<string> {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) throw new Error("No AI key configured");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      max_tokens: 2000,
+      messages: [{ role: "system", content: system.map(b => b.text).join("\n\n") }, ...messages],
+    }),
+  });
+  if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text) throw new Error(`Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`);
+  return text;
 }
 
 // deno-lint-ignore no-explicit-any
 async function loadBrain(admin: any): Promise<string> {
   const { data: docs } = await admin
-    .from("knowledge_docs").select("id, title, created_at")
-    .eq("source_type", "brain").order("created_at");
+    .from("knowledge_docs").select("id, title, created_at").eq("source_type", "brain").order("created_at");
   if (!docs?.length) return "";
   const { data: rows } = await admin
     .from("knowledge_chunks").select("doc_id, chunk_index, content")
-    .in("doc_id", docs.map((d: { id: string }) => d.id))
-    .order("chunk_index").limit(10000);
+    .in("doc_id", docs.map((d: { id: string }) => d.id)).order("chunk_index").limit(10000);
   return docs.map((d: { id: string; title: string }) => {
-    const parts = (rows ?? [])
-      .filter((r: { doc_id: string }) => r.doc_id === d.id)
-      .map((r: { content: string }) => r.content);
+    const parts = (rows ?? []).filter((r: { doc_id: string }) => r.doc_id === d.id).map((r: { content: string }) => r.content);
     return `## ${d.title}\n\n${joinChunks(parts)}`;
   }).join("\n\n");
 }
 
-async function callModel(prompt: string, blocks: SystemBlock[]): Promise<string> {
-  const system = blocks.map(b => b.text).join("\n\n");
-  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (anthropicKey) {
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": anthropicKey,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-5",
-          max_tokens: 2000,
-          system: blocks.map(b => ({
-            type: "text",
-            text: b.text,
-            ...(b.cache ? { cache_control: { type: "ephemeral" } } : {}),
-          })),
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
-      const text = (await res.json()).content?.[0]?.text ?? "";
-      if (!text) throw new Error("Claude returned no content");
-      return text;
-    } catch (err) {
-      // Keep working if Claude is unreachable or out of credit, rather
-      // than taking the whole feature down with it.
-      if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
-      console.error("Claude call failed, falling back to the gateway:", err);
+// deno-lint-ignore no-explicit-any
+async function loadMember(admin: any, memberId: string): Promise<{ text: string; name: string | null }> {
+  const [{ data: profile }, { data: room }, { data: totals }, { data: goal }] = await Promise.all([
+    admin.from("profiles").select("full_name, business_overview").eq("id", memberId).maybeSingle(),
+    admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
+    admin.from("monthly_totals")
+      .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts")
+      .eq("user_id", memberId).order("month", { ascending: false }).limit(3),
+    admin.from("goals")
+      .select("starting_mrr, target_mrr, target_date, retainer_tier_1, retainer_tier_2, retainer_tier_3")
+      .eq("user_id", memberId).maybeSingle(),
+  ]);
+  const answers = { ...((room?.answers ?? {}) as ContextAnswers) };
+  delete (answers as Record<string, unknown>).anything_else;
+  const lines: string[] = [];
+  if (profile?.full_name) lines.push(`Name: ${profile.full_name}`);
+  if (profile?.business_overview) lines.push(`Business overview: ${profile.business_overview}`);
+  lines.push("", "Context Room:", buildContextMarkdown(answers, null, null) || "(not filled in yet)");
+  lines.push("", "Last 3 monthly totals:");
+  if (totals?.length) {
+    for (const t of totals) {
+      lines.push(`- ${t.month}: ${Object.entries(t).filter(([k, v]) => k !== "month" && v !== null).map(([k, v]) => `${k} ${v}`).join(", ")}`);
     }
-  }
-
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!lovableKey) throw new Error("No AI key configured");
-
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      max_tokens: 2000,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
-
-  const data = await res.json();
-  const text = data.choices?.[0]?.message?.content ?? "";
-  if (!text) {
-    // A reasoning model with no token budget burns it all on thinking and
-    // returns empty content, so surface the reason rather than "".
-    throw new Error(
-      `Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`,
-    );
-  }
-  return text;
-}
-
-/** Models sometimes wrap JSON in a fence or add a sentence around it. */
-function parseAnswer(raw: string): { answer: string; next_steps: string[]; resource: string | null } {
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-  try {
-    const parsed = JSON.parse(cleaned);
-    return {
-      answer: String(parsed.answer ?? "").trim(),
-      next_steps: Array.isArray(parsed.next_steps)
-        ? parsed.next_steps.map((s: unknown) => String(s)).filter(Boolean).slice(0, 3)
-        : [],
-      resource: parsed.resource ? String(parsed.resource) : null,
-    };
-  } catch {
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        return parseAnswer(match[0]);
-      } catch { /* fall through */ }
-    }
-    // Never lose the answer to a formatting problem.
-    return { answer: cleaned, next_steps: [], resource: null };
-  }
+  } else lines.push("- none submitted yet");
+  lines.push("", "90-day goal:");
+  lines.push(goal ? Object.entries(goal).filter(([, v]) => v !== null).map(([k, v]) => `- ${k}: ${v}`).join("\n") || "- not set" : "- not set");
+  return { text: lines.join("\n"), name: profile?.full_name ?? null };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
   const json = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), {
-      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
-
-    const scoped = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const scoped = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const { data: userData } = await scoped.auth.getUser();
     if (!userData?.user) return json({ error: "Unauthorized" }, 401);
     const userId = userData.user.id;
 
-    const { question, catalogue } = await req.json();
-    if (!question || typeof question !== "string" || !question.trim()) {
-      return json({ error: "Ask a question first" }, 400);
+    const body = await req.json().catch(() => ({}));
+    const question = typeof body.question === "string" ? body.question.trim().slice(0, 4000) : "";
+    if (!question) return json({ error: "Ask a question first" }, 400);
+    const uuidRe = /^[0-9a-f-]{36}$/i;
+    const threadId = typeof body.thread_id === "string" && uuidRe.test(body.thread_id) ? body.thread_id : crypto.randomUUID();
+    const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 6000) : "(none available)";
+
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Admin draft mode: answer as the picked member, with their context.
+    let memberId = userId;
+    let draftMode = false;
+    if (typeof body.member_id === "string" && uuidRe.test(body.member_id) && body.member_id !== userId) {
+      const { data: isAdmin } = await admin.rpc("is_admin", { _user_id: userId });
+      if (!isAdmin) return json({ error: "Admins only" }, 403);
+      memberId = body.member_id;
+      draftMode = true;
     }
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    // Exact phrasing, then a ranked any-of pass, then the most distinctive
-    // word — the same ladder the admin tool uses, so it always finds material.
-    let { data: chunks } = await admin.rpc("search_knowledge_public", {
-      q: question, limit_n: 20,
+    // Conversation history for this thread (last 10 messages).
+    const { data: past } = await admin.from("dan_ai_messages")
+      .select("role, content").eq("user_id", userId).eq("thread_id", threadId)
+      .order("created_at", { ascending: false }).limit(10);
+    const history: Turn[] = (past ?? []).reverse().map((m: Turn) => {
+      if (m.role === "assistant") {
+        const a = toAnswer(parseJson(m.content));
+        return { role: "assistant", content: a ? a.answer : m.content };
+      }
+      return { role: "user", content: m.content };
     });
 
-    if (!chunks || chunks.length === 0) {
-      const anyOf = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ")
-        .split(/\s+/).filter(w => w.length > 2).join(" or ");
-      if (anyOf) {
-        const { data } = await admin.rpc("search_knowledge_public", { q: anyOf, limit_n: 20 });
-        chunks = data;
+    // C. All knowledge except the Brain — same search ladder, limit 30.
+    const search = async (q: string, n = 30) => (await admin.rpc("search_knowledge", { q, limit_n: n })).data ?? [];
+    let chunks = await search(question);
+    if (!chunks.length) {
+      const anyOf = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w: string) => w.length > 2).join(" or ");
+      if (anyOf) chunks = await search(anyOf);
+    }
+    if (!chunks.length) {
+      const longest = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w: string) => w.length > 3).sort((a: string, b: string) => b.length - a.length)[0];
+      if (longest) chunks = await search(longest, 20);
+    }
+    chunks = chunks.filter((c: { source_type: string }) => c.source_type !== "brain");
+
+    const [brain, member, { data: voice }, styleExamples, { data: allProfiles }] = await Promise.all([
+      loadBrain(admin),
+      loadMember(admin, memberId),
+      admin.from("voice_profile").select("content").eq("slug", "default").maybeSingle(),
+      fetchStyleExamples(admin, 30),
+      admin.from("profiles").select("id, full_name"),
+    ]);
+
+    // Other members' names, for scrubbing and the fallback privacy check.
+    const others = ((allProfiles ?? []) as { id: string; full_name: string | null }[])
+      .filter(p => p.id !== memberId && p.full_name && p.full_name.trim().length > 2)
+      .map(p => p.full_name!.trim());
+    const ownNames = new Set((member.name ?? "").toLowerCase().split(/\s+/).filter(Boolean));
+    const scrub = (text: string) => {
+      let out = text;
+      for (const full of others) out = out.replace(new RegExp(`\\b${escapeRe(full)}\\b`, "gi"), "a member");
+      for (const full of others) {
+        const first = full.split(/\s+/)[0];
+        if (first.length < 3 || ownNames.has(first.toLowerCase())) continue;
+        out = out.replace(new RegExp(`\\b${escapeRe(first)}\\b`, "gi"), "a member");
       }
+      return out;
+    };
+
+    const passages = (chunks as { title: string; source_type: string; content: string }[]).map(c => {
+      const tag = SOURCE_TAGS[c.source_type] ?? c.source_type;
+      const sensitive = c.source_type === "whatsapp" || c.source_type === "call";
+      const content = !draftMode && sensitive ? scrub(c.content) : c.content;
+      const title = !draftMode && sensitive ? scrub(c.title) : c.title;
+      return `[${tag}] ${title}\n${content}`;
+    }).join("\n\n---\n\n");
+
+    const brainBlock: Block[] = brain
+      ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain}`, cache_control: { type: "ephemeral" } }]
+      : [];
+    const voiceText = voice?.content ? `${BASE_VOICE}\n\n${voice.content}` : BASE_VOICE;
+    const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt(voiceText, styleExamples, catalogue) }];
+
+    const userTurn = `ABOUT THIS MEMBER\n${member.text}\n\n=====\n\nDAN'S KNOWLEDGE: real advice Dan has given\n\n${passages || "(nothing matched)"}\n\n=====\n\nTHE MEMBER ASKED:\n${question}\n\nAnswer them.`;
+
+    // Step one: the draft.
+    let draftRaw = "";
+    try {
+      draftRaw = await callAnthropic(draftSystem, [...history, { role: "user", content: userTurn }]);
+    } catch (err) {
+      if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
+      console.error("Claude draft failed, falling back to Gemini:", err);
+      draftRaw = await callGemini(draftSystem, [...history, { role: "user", content: userTurn }]);
+    }
+    const draft = toAnswer(parseJson(draftRaw)) ?? { answer: stripFence(draftRaw), next_steps: [], resource: null };
+    if (!draft.answer) return json({ error: "The model returned an empty answer — try again" }, 502);
+
+    // Step two: the check, against the Brain only.
+    let final: Answer;
+    let pass = false;
+    let issues: unknown[] = [];
+    try {
+      const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT }];
+      const convo = history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
+      const checkRaw = await callAnthropic(checkSystem, [{
+        role: "user",
+        content: `ABOUT THIS MEMBER\n${member.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${question}\n\n=====\n\nDRAFT\n${JSON.stringify(draft)}`,
+      }], 2500);
+      const parsed = parseJson(checkRaw);
+      const checked = toAnswer(parsed?.final);
+      if (!parsed || !checked) throw new Error("Checker returned invalid JSON");
+      final = checked;
+      pass = parsed.pass === true;
+      issues = Array.isArray(parsed.issues) ? parsed.issues : [];
+    } catch (err) {
+      console.error("Checker failed, using the code check:", err);
+      const lower = draft.answer.toLowerCase();
+      const leaked = others.some(n => new RegExp(`\\b${escapeRe(n.toLowerCase())}\\b`).test(lower));
+      final = leaked ? { answer: FLAG_REPLY, next_steps: [], resource: null } : draft;
+      pass = false;
+      issues = [{ type: leaked ? "privacy" : "question", note: `Checker failed (${err instanceof Error ? err.message : "unknown"}); code check ${leaked ? "blocked a member name" : "found no member names"}.` }];
     }
 
-    if (!chunks || chunks.length === 0) {
-      const longest = question.toLowerCase().replace(/[^a-z0-9\s]/g, " ")
-        .split(/\s+/).filter(w => w.length > 3).sort((a, b) => b.length - a.length)[0];
-      if (longest) {
-        const { data } = await admin.rpc("search_knowledge_public", { q: longest, limit_n: 14 });
-        chunks = data;
-      }
-    }
+    await Promise.all([
+      admin.from("dan_ai_checks").insert({ user_id: userId, question, draft, final, pass, issues }),
+      admin.from("dan_ai_messages").insert([
+        { user_id: userId, thread_id: threadId, role: "user", content: question },
+        { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify(final) },
+      ]),
+      admin.from("client_questions").insert({
+        user_id: userId, question, answer: final.answer, next_steps: final.next_steps, resource: final.resource,
+      }),
+    ]);
 
-    // Gate questions always get the gate criteria chunks on top, so the
-    // criteria table is in front of the model even when search missed it.
-    if (/\bgates?\b|next level|level up/i.test(question)) {
-      const { data: gateChunks } = await admin.rpc("search_knowledge_public", {
-        q: "Gate 1 Fix or Gate 2 Fuel", limit_n: 10,
-      });
-      if (gateChunks?.length) {
-        const seen = new Set(
-          (chunks ?? []).map((c: { title: string; content: string }) => `${c.title}|${c.content}`),
-        );
-        chunks = [
-          ...(chunks ?? []),
-          ...gateChunks.filter((c: { title: string; content: string }) => !seen.has(`${c.title}|${c.content}`)),
-        ];
-      }
-    }
-
-    // The Brain is sent whole in the system prompt, so never repeat it here.
-    chunks = (chunks ?? []).filter((c: { source_type?: string }) => c.source_type !== "brain");
-
-    const brain = await loadBrain(admin);
-
-    if (chunks.length === 0 && !brain) {
-      return json({
-        answer: "I haven't covered that one yet — drop it in the Q&A chat and Dan will get to it.",
-        next_steps: [],
-        resource: null,
-      });
-    }
-
-    const { data: voice } = await admin
-      .from("voice_profile").select("content").eq("slug", "default").maybeSingle();
-
-    const context = (chunks as { title: string; content: string }[])
-      .map(c => `[From: ${c.title}]\n${c.content}`)
-      .join("\n\n---\n\n");
-
-    const system = systemPrompt(
-      voice?.content ? `${BASE_VOICE}\n\n${voice.content}` : BASE_VOICE,
-      typeof catalogue === "string" && catalogue.trim() ? catalogue.slice(0, 6000) : "(none available)",
-    );
-
-    const blocks: SystemBlock[] = [];
-    if (brain) {
-      blocks.push({ text: `${BRAIN_HEADER}\n\n${brain}`, cache: true });
-      blocks.push({ text: BRAIN_RULES });
-    }
-    blocks.push({ text: system });
-
-    const raw = await callModel(
-      `PASSAGES FROM DAN'S TEACHING:\n\n${context || "(none found)"}\n\n=====\n\nTHE CLIENT ASKED:\n${question}\n\nAnswer them.`,
-      blocks,
-    );
-
-    const result = parseAnswer(raw);
-    if (!result.answer) {
-      return json({ error: "The model returned an empty answer — try again" }, 502);
-    }
-
-    // Logged so Dan can see what his clients keep asking.
-    await admin.from("client_questions").insert({
-      user_id: userId,
-      question: question.trim(),
-      answer: result.answer,
-      next_steps: result.next_steps,
-      resource: result.resource,
-    });
-
-    return json(result);
+    return json({ ...final, thread_id: threadId });
   } catch (err) {
     console.error("ask-dan error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);

@@ -15,7 +15,7 @@ export const BRAIN_RULES = `RULES FOR USING THE BRAIN
 export type SystemBlock = { text: string; cache?: boolean };
 
 /** Joins consecutive chunks, dropping the overlap the chunker added. */
-function joinChunks(parts: string[]): string {
+export function joinChunks(parts: string[]): string {
   let out = "";
   for (const part of parts) {
     if (!out) { out = part; continue; }
