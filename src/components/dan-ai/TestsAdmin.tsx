@@ -23,12 +23,12 @@ export default function TestsAdmin() {
 
   const loadRuns = async () => {
     const { data } = await supabase.from('dan_ai_test_runs').select('id, run_at, round, summary').order('run_at', { ascending: false }).limit(30);
-    setRuns((data as Run[]) ?? []);
+    setRuns((data as unknown as Run[]) ?? []);
     if (!runId && data?.[0]) setRunId(data[0].id);
   };
   const loadResults = async (id: string) => {
     const { data } = await supabase.from('dan_ai_test_results').select('id, test_id, answer, debug, criteria, code_checks, pass').eq('run_id', id);
-    setResults((data as Result[]) ?? []);
+    setResults((data as unknown as Result[]) ?? []);
   };
   useEffect(() => {
     supabase.from('dan_ai_tests').select('id, name, persona_key, question, category, position').eq('active', true).order('position')
