@@ -1,5 +1,34 @@
 export const REVENUE_STEPS = [0, 10000, 20000, 30000, 40000, 50000, 84000, 100000, 150000];
 
+const ASIDE = String.fromCharCode(1);
+
+/** Split a run-on focus note into short, scannable dot points. */
+export function focusBullets(text?: string | null): string[] {
+  if (!text) return [];
+  const flattened = text.replace(/\s+/g, ' ').trim();
+  if (!flattened) return [];
+  // Long parenthetical asides read better as their own dot point.
+  const marked = flattened.replace(/\s*\(([^()]{30,})\)/g, ` ${ASIDE}$1${ASIDE} `);
+  const bullets: string[] = [];
+
+  marked.split(ASIDE).forEach((piece, index) => {
+    const forced = index % 2 === 1;
+    for (const raw of piece.split(/\s+[-–—]\s+|\s+\/\s+|(?<=[.!?])\s+/)) {
+      const chunk = raw.replace(/^[-–—.,:;\s]+|[,;:\s]+$/g, '').trim();
+      if (chunk.length < 2) continue;
+      const last = bullets.at(-1);
+      // Lowercase openings ("to get engagement") are continuations, not new points.
+      if (last && !forced && (/^[a-z]/.test(chunk) || chunk.length < 12)) {
+        bullets[bullets.length - 1] = `${last.replace(/[.!?]+$/, '')}, ${chunk}`;
+        continue;
+      }
+      bullets.push(chunk.charAt(0).toUpperCase() + chunk.slice(1));
+    }
+  });
+
+  return bullets.map((bullet) => bullet.replace(/[.!?]+$/, ''));
+}
+
 /** Equal-width ladder levels with interpolation within each level. */
 export function revenuePosition(revenue: number) {
   const amount = Math.max(0, revenue);

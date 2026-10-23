@@ -1,6 +1,6 @@
 import { Flag, Crosshair, ArrowUpRight, Flame, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { REVENUE_STEPS, revenuePosition, submissionStreak } from '@/lib/dashboardProgress';
+import { REVENUE_STEPS, focusBullets, revenuePosition, submissionStreak } from '@/lib/dashboardProgress';
 import { brisbaneDateKey } from '@/data/calls';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,20 @@ import { useNavigate } from 'react-router-dom';
 export type RevenuePoint = { month: string; monthKey: string; revenue: number };
 const money = (amount: number) => `$${amount.toLocaleString('en-AU', { maximumFractionDigits: 0 })}`;
 const stepLabel = (amount: number) => amount === 150000 ? 'Black Book' : amount ? `$${amount / 1000}k` : '$0';
+
+function FocusList({ items, fallback }: { items: string[]; fallback?: string }) {
+  const rows = items.length ? items : fallback ? [fallback] : [];
+  return (
+    <ul className="space-y-2">
+      {rows.map((row) => (
+        <li key={row} className="flex gap-2.5 text-sm leading-relaxed">
+          <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+          <span>{row}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function DashboardProgress({ series, gate, keyTask, moveUp }: {
   series: RevenuePoint[]; gate?: string | null; keyTask?: string | null; moveUp?: string | null;
@@ -47,12 +61,12 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp }: {
               <h2 className="text-xs font-semibold text-primary flex items-center gap-2"><Crosshair className="w-4 h-4" /> Your Focus</h2>
               <Flag className="w-4 h-4 text-primary" />
             </div>
-            <p className="text-base font-semibold text-primary mb-3">{gate || 'Your next step'}</p>
-            <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-1">Key next task</p>
-            <p className="text-sm leading-relaxed">{keyTask || 'Complete your monthly report'}</p>
+            <p className="text-base font-semibold text-primary mb-4">{gate || 'Your next step'}</p>
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-2">Key next task</p>
+            <FocusList items={focusBullets(keyTask)} fallback="Complete your monthly report" />
             {moveUp && <div className="mt-4 pt-4 border-t border-primary/20">
               <p className="text-[10px] uppercase font-semibold text-primary flex items-center gap-1 mb-2"><ArrowUpRight className="w-3 h-3" /> To move up a gate</p>
-              <p className="text-sm leading-relaxed">{moveUp}</p>
+              <FocusList items={focusBullets(moveUp)} />
             </div>}
           </div>
           <div className="rounded-lg bg-card border border-border p-5">
