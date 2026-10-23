@@ -292,7 +292,7 @@ async function answerPipeline(p: PipelineInput) {
       }
     }
     // Sequence rule: follow-up problem + allowed to scale → scaling must be conditional on speed to lead.
-    if (/no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(question) && /\bscal/i.test(a.answer) && !/15\s*[–-]\s*30/.test(a.answer)) {
+    if (/no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question) && /\bscal/i.test(a.answer) && !/15\s*[–-]\s*30/.test(a.answer)) {
       out.push(`put follow-up first and make scaling conditional: "you can scale, but only once you're calling every lead within 15–30 mins"`);
     }
     return { out, names };
