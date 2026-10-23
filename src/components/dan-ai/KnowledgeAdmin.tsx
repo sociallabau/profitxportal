@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import PageLayout from '@/components/PageLayout';
-import { useRequireAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { functionErrorMessage } from '@/lib/functionError';
@@ -38,7 +37,7 @@ interface Source {
   snippet: string;
 }
 
-type Tab = 'ask' | 'saved' | 'knowledge' | 'voice';
+type Tab = 'saved' | 'knowledge' | 'voice';
 
 const SOURCE_LABELS: Record<string, string> = {
   teaching: 'Momentum / Q&A / Workshop',
@@ -70,15 +69,12 @@ function chunkText(text: string, size = 1400, overlap = 200): string[] {
   return chunks;
 }
 
-export default function DanAI() {
-  const { user, loading: authLoading } = useRequireAuth();
-  const [tab, setTab] = useState<Tab>('ask');
+export { SOURCE_LABELS };
 
-  const [question, setQuestion] = useState('');
-  const [asking, setAsking] = useState(false);
-  const [answer, setAnswer] = useState('');
-  const [sources, setSources] = useState<Source[]>([]);
-  const [approximate, setApproximate] = useState(false);
+export default function KnowledgeAdmin() {
+  const { user, loading: authLoading } = useAuth();
+  const [tab, setTab] = useState<Tab>('knowledge');
+
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
@@ -229,46 +225,6 @@ export default function DanAI() {
     }
   };
 
-  const handleAsk = async () => {
-    if (!question.trim()) return;
-    setAsking(true);
-    setAnswer('');
-    setSources([]);
-    setApproximate(false);
-
-    const { data, error } = await supabase.functions.invoke('dan-ai', {
-      body: { question: question.trim() },
-    });
-
-    setAsking(false);
-    if (error) {
-      toast.error('Could not get an answer');
-      console.error(error);
-      return;
-    }
-    if (data?.error) {
-      toast.error(data.error);
-      return;
-    }
-    setAnswer(data.answer ?? '');
-    setSources(data.sources ?? []);
-    setApproximate(Boolean(data.approximate));
-  };
-
-  const handleSaveAnswer = async () => {
-    if (!answer.trim() || !question.trim()) return;
-    const { error } = await supabase.from('saved_answers').insert({
-      question: question.trim(),
-      answer: answer.trim(),
-    });
-    if (error) {
-      toast.error('Could not save');
-      return;
-    }
-    toast.success('Saved — this wording gets reused next time');
-    loadSaved();
-  };
-
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
@@ -342,29 +298,13 @@ export default function DanAI() {
   const inputCls = "w-full px-3.5 py-2.5 bg-input/60 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all";
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'ask', label: 'Ask' },
     { id: 'saved', label: `Saved answers (${savedAnswers.length})` },
     { id: 'knowledge', label: `Knowledge (${docs.length})` },
     { id: 'voice', label: 'Voice' },
   ];
 
   return (
-    <PageLayout>
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
-            <Sparkles className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">Admin</span>
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-foreground italic tracking-tight">Dan AI</h1>
-        <p className="text-sm text-muted-foreground mt-1.5 max-w-lg">
-          Ask a client question and get the answer in Dan's words, built from his trainings, calls and messages.
-          {totalWords > 0 && ` Currently drawing on ${totalWords.toLocaleString()} words.`}
-        </p>
-      </div>
-
+    <div>
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
         {tabs.map(t => (
@@ -381,104 +321,6 @@ export default function DanAI() {
           </button>
         ))}
       </div>
-
-      {tab === 'ask' && (
-        <div className="space-y-5">
-          <div>
-            <textarea
-              className={`${inputCls} min-h-24 resize-y`}
-              placeholder="Paste the client's question here — e.g. how much should I charge for a monthly retainer?"
-              value={question}
-              onChange={e => setQuestion(e.target.value)}
-              onKeyDown={e => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleAsk();
-              }}
-            />
-            <div className="flex items-center gap-3 mt-3">
-              <button
-                onClick={handleAsk}
-                disabled={asking || !question.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all disabled:opacity-50"
-              >
-                {asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {asking ? 'Thinking…' : 'Get the answer'}
-              </button>
-              <span className="text-[11px] text-muted-foreground">⌘ + Enter</span>
-            </div>
-          </div>
-
-          {answer && (
-            <div className="border border-border rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-muted/40 border-b border-border">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-semibold text-foreground">Dan's reply</span>
-                  {approximate && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 whitespace-nowrap">
-                      Closest match — check the sources
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleSaveAnswer}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
-                    title="Reuse this wording next time"
-                  >
-                    <BookmarkPlus className="w-3 h-3" />
-                    Save
-                  </button>
-                  <button
-                    onClick={() => copyText(answer, 'answer')}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all"
-                  >
-                    {copiedKey === 'answer' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copiedKey === 'answer' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-              <pre className="px-4 py-4 text-sm text-foreground whitespace-pre-wrap break-words font-sans leading-relaxed">
-                {answer}
-              </pre>
-            </div>
-          )}
-
-          {sources.length > 0 && (
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                Where this came from
-              </h3>
-              <p className="text-[11px] text-muted-foreground mb-2">
-                Dan's own calls and trainings, most relevant first. Check these before sending if the answer matters.
-              </p>
-              <div className="space-y-2">
-                {sources.map((s, i) => (
-                  <div key={i} className="border border-border rounded-xl px-3 py-2.5">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
-                        {SOURCE_LABELS[s.source_type] ?? s.source_type}
-                      </span>
-                      <span className="text-xs font-medium text-foreground truncate">{s.title}</span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2">{s.snippet}…</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {docs.length === 0 && (
-            <div className="text-center py-10 border border-dashed border-border rounded-2xl">
-              <p className="text-sm text-muted-foreground">Nothing in the knowledge base yet.</p>
-              <button
-                onClick={() => setTab('knowledge')}
-                className="mt-2 text-sm font-semibold text-primary hover:underline"
-              >
-                Add your transcripts
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       {tab === 'saved' && (
         <div className="space-y-3">
@@ -717,6 +559,6 @@ export default function DanAI() {
           </div>
         </div>
       )}
-    </PageLayout>
+    </div>
   );
 }

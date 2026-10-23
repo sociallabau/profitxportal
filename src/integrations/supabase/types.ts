@@ -469,6 +469,66 @@ export type Database = {
           },
         ]
       }
+      dan_ai_checks: {
+        Row: {
+          created_at: string
+          draft: Json | null
+          final: Json | null
+          id: string
+          issues: Json
+          pass: boolean
+          question: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft?: Json | null
+          final?: Json | null
+          id?: string
+          issues?: Json
+          pass?: boolean
+          question: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft?: Json | null
+          final?: Json | null
+          id?: string
+          issues?: Json
+          pass?: boolean
+          question?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dan_ai_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dm_templates: {
         Row: {
           body: string

@@ -29,9 +29,8 @@ const HotList = lazy(() => import("./pages/HotList"));
 const LaunchHQ = lazy(() => import("./pages/LaunchHQ"));
 const Vault = lazy(() => import("./pages/Vault"));
 const Calls = lazy(() => import("./pages/Calls"));
-const AskDan = lazy(() => import("./pages/AskDan"));
 const MyFinances = lazy(() => import("./pages/admin/MyFinances"));
-const DanAI = lazy(() => import("./pages/admin/DanAI"));
+const DanAI = lazy(() => import("./pages/DanAI"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -87,7 +86,7 @@ const App = () => (
           <Route path="/cash-menu" element={<ProtectedRoute><CashMenu /></ProtectedRoute>} />
           <Route path="/wins" element={<ProtectedRoute><WinsWall /></ProtectedRoute>} />
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
-          <Route path="/ask-dan" element={<AdminRoute><AskDan /></AdminRoute>} />
+          <Route path="/ask-dan" element={<Navigate to="/dan-ai" replace />} />
           <Route path="/calls" element={<ProtectedRoute><Calls /></ProtectedRoute>} />
           <Route path="/module/:moduleId" element={<ProtectedRoute><ModulePage /></ProtectedRoute>} />
           <Route path="/submissions/clients" element={<ProtectedRoute><NewClients /></ProtectedRoute>} />
@@ -97,7 +96,7 @@ const App = () => (
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
-          <Route path="/dan-ai" element={<AdminRoute><DanAI /></AdminRoute>} />
+          <Route path="/dan-ai" element={<ProtectedRoute><DanAI /></ProtectedRoute>} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>
