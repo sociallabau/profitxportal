@@ -162,7 +162,7 @@ export default function DanAI() {
         <textarea ref={inputRef} autoFocus rows={1} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="What's the actual problem? The more detail, the sharper the answer."
-          className="flex-1 bg-transparent resize-none text-base leading-6 text-[hsl(var(--dan-ink))] placeholder:text-[hsl(var(--dan-muted))] focus:outline-none py-2" />
+          className="flex-1 bg-transparent border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 resize-none text-base leading-6 text-[hsl(var(--dan-ink))] placeholder:text-[hsl(var(--dan-muted))] focus:outline-none py-2" />
         <button onClick={() => send()} disabled={!!pending || !input.trim()} aria-label="Send"
           className="w-10 h-10 shrink-0 rounded-full bg-[hsl(var(--dan-violet))] text-[hsl(var(--dan-violet-fg))] flex items-center justify-center disabled:opacity-40 transition-opacity">
           {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-5 h-5" />}

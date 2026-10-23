@@ -66,7 +66,7 @@ export default function DanAiOrb({ state = 'idle', intro = false, className = ''
       const ease = 1 - Math.pow(1 - introP, 3);
 
       // glow
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.6);
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.5);
       g.addColorStop(0, 'rgba(133,54,245,0.22)'); g.addColorStop(1, 'rgba(133,54,245,0)');
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
 
