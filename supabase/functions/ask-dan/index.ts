@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
       const checkRaw = await callAnthropic(checkSystem, [{
         role: "user",
         content: `ABOUT THIS MEMBER\n${member.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${question}\n\n=====\n\nDRAFT\n${JSON.stringify(draft)}`,
-      }], 2500);
+      }], 4000);
       const parsed = parseJson(checkRaw);
       const checked = toAnswer(parsed?.final);
       if (!parsed || !checked) throw new Error("Checker returned invalid JSON");
