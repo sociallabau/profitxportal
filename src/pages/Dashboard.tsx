@@ -288,7 +288,7 @@ export default function Dashboard() {
   const revenueSeries = example ? EXAMPLE_REVENUE : memberRevenueSeries;
 
   return (
-    <PageLayout mainClassName={example ? 'dashboard-example' : ''}>
+    <PageLayout>
       {!example && <AnnouncementsModal />}
 
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">

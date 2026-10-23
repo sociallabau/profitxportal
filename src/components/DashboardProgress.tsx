@@ -36,7 +36,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, examp
   const { streak, longest } = submissionStreak(series.map(row => row.monthKey), brisbaneDateKey());
   const position = revenuePosition(revenue);
   return (
-    <section className="mb-8 space-y-5" aria-label="Your business progress">
+    <section className={example ? 'dashboard-example mb-8 space-y-5' : 'mb-8 space-y-5'} aria-label="Your business progress">
       <div className="border-b border-border pb-5">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-10">
           <h2 className="text-sm font-semibold flex items-center gap-2 flex-wrap">Prism Progress · Revenue Ladder™ <ExampleLabel show={example} /></h2>
