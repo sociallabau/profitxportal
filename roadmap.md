@@ -1,3 +1,5 @@
 - [x] Arrange dashboard progress, focus, monthly streak and revenue chart above upcoming calls and calendars.
 - [x] Mark the next workshop as Learn in live and fallback listings.
 - [x] Test tracking calculations and verify the dashboard.
+- [ ] Restore the owner's own dashboard and simplify typography.
+- [ ] Combine the month type and focus with the three-week calendar header and verify.
