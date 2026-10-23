@@ -1,5 +1,32 @@
 export const REVENUE_STEPS = [0, 10000, 20000, 30000, 40000, 50000, 84000, 100000, 150000];
 
+const BULLET_JOINERS = /^(to|and|or|then|that|which|so|plus|basically|additionally)\b/i;
+
+/** Split a run-on focus note into short, scannable dot points. */
+export function focusBullets(text?: string | null): string[] {
+  if (!text) return [];
+  const flattened = text.replace(/\s+/g, ' ').trim();
+  if (!flattened) return [];
+  // Long parenthetical asides read better as their own dot point.
+  const spaced = flattened.replace(/\s*\(([^()]{30,})\)/g, ' | $1');
+  const chunks = spaced
+    .split(/\s*\|\s*|\s+[-–—]\s+|\s+\/\s+|(?<=[.!?])\s+/)
+    .map((chunk) => chunk.replace(/^[-–—\s]+|[,;:\s]+$/g, '').trim())
+    .filter((chunk) => chunk.length > 1);
+
+  const bullets: string[] = [];
+  for (const chunk of chunks) {
+    const last = bullets.at(-1);
+    if (last && (chunk.length < 12 || BULLET_JOINERS.test(chunk))) {
+      bullets[bullets.length - 1] = `${last}, ${chunk}`;
+      continue;
+    }
+    bullets.push(chunk.charAt(0).toUpperCase() + chunk.slice(1));
+  }
+  return bullets;
+}
+
+
 /** Equal-width ladder levels with interpolation within each level. */
 export function revenuePosition(revenue: number) {
   const amount = Math.max(0, revenue);
