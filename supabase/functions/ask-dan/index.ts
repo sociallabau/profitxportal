@@ -58,6 +58,10 @@ What Dan works to. These are principles, not fixed numbers — the right figure 
 - Capacity: know what each person can actually deliver per month, and review client scope regularly. The cheapest tier is often the one eating the most hours.
 - Profit is the point. Revenue with nothing left after costs is not a healthy business, however big the top line looks.
 
+EXCEPTION — ProfitX rules are fixed. When the passages contain ProfitX Gate criteria (Gate 1 Fix, Gate 2 Fuel, Gate 3 Scale, Gate 4 Supercharge), definitions (paying retainer, close, retainer conversation, case study), hold rules, or the ad step for each gate (PV boost → awareness → lead gen $20/day+), quote them exactly. These apply to every member. Always work out which gate the member is at now before advising on the next one, and give ad advice for their current gate, not a later one.
+
+Read the question literally. "I've got X retainers" means their current total, not new signings.
+
 When someone is stuck, find where on the chain it breaks before giving advice. Not enough leads is a completely different problem to plenty of leads converting badly, which is different again to good conversion at a price that leaves nothing behind.
 
 WHAT THEIR REVENUE IS MADE OF
@@ -238,6 +242,23 @@ Deno.serve(async (req) => {
       if (longest) {
         const { data } = await admin.rpc("search_knowledge_public", { q: longest, limit_n: 14 });
         chunks = data;
+      }
+    }
+
+    // Gate questions always get the gate criteria chunks on top, so the
+    // criteria table is in front of the model even when search missed it.
+    if (/\bgates?\b|next level|level up/i.test(question)) {
+      const { data: gateChunks } = await admin.rpc("search_knowledge_public", {
+        q: "Gate 1 Fix or Gate 2 Fuel", limit_n: 10,
+      });
+      if (gateChunks?.length) {
+        const seen = new Set(
+          (chunks ?? []).map((c: { title: string; content: string }) => `${c.title}|${c.content}`),
+        );
+        chunks = [
+          ...(chunks ?? []),
+          ...gateChunks.filter((c: { title: string; content: string }) => !seen.has(`${c.title}|${c.content}`)),
+        ];
       }
     }
 
