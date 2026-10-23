@@ -14,7 +14,19 @@ import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
 import ChecksAdmin from '@/components/dan-ai/ChecksAdmin';
 
 interface Answer { answer: string; next_steps: string[]; resource: string | null }
-interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer }
+interface Debug {
+  about_member: string; member_id: string;
+  monthly_totals: { count: number; months: string[] };
+  context_room: { found: boolean; fields_filled: number };
+  passage_titles: string[];
+}
+interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer; debug?: Debug }
+
+// "Vault · Workshop · Pay To Play™ (Jul 22)" -> "Pay To Play™ (Jul 22)"; drops roadmap descriptions.
+function resourceTitle(r: string) {
+  const last = r.split(' · ').pop() ?? r;
+  return last.split(' — ')[0].trim();
+}
 interface Thread { id: string; title: string; at: string }
 
 const FALLBACK_EXAMPLES = [
@@ -117,7 +129,7 @@ export default function DanAI() {
     }
     const parsed: Answer = { answer: data.answer ?? '', next_steps: data.next_steps ?? [], resource: data.resource ?? null };
     setThreadId(data.thread_id);
-    setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed }]);
+    setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, debug: isAdmin ? data.debug : undefined }]);
     loadThreads();
     setAnswered(true); setTimeout(() => setAnswered(false), 1300);
     inputRef.current?.focus();
@@ -241,7 +253,23 @@ export default function DanAI() {
                         </ul>
                       )}
                       {m.parsed?.resource && (
-                        <p className="text-sm" style={{ color: violet }}>Watch: {m.parsed.resource}</p>
+                        <p className="text-sm" style={{ color: violet }}>Watch: {resourceTitle(m.parsed.resource)}</p>
+                      )}
+                      {isAdmin && m.debug && (
+                        <details className="text-[11px] text-[hsl(var(--dan-muted))] rounded-lg border border-[hsl(var(--dan-ink)/0.1)] px-3 py-2">
+                          <summary className="cursor-pointer select-none">Context used</summary>
+                          <div className="mt-2 space-y-2">
+                            <p><b>Member ID:</b> {m.debug.member_id}</p>
+                            <p><b>Monthly totals:</b> {m.debug.monthly_totals.count} found{m.debug.monthly_totals.months.length ? ` (${m.debug.monthly_totals.months.join(', ')})` : ''}</p>
+                            <p><b>Context Room:</b> {m.debug.context_room.found ? `found, ${m.debug.context_room.fields_filled} fields filled` : 'not found'}</p>
+                            <div><b>Passages ({m.debug.passage_titles.length}):</b>
+                              <ul className="list-disc pl-4">{m.debug.passage_titles.map((t, i) => <li key={i}>{t}</li>)}</ul>
+                            </div>
+                            <div><b>About this member:</b>
+                              <pre className="whitespace-pre-wrap font-sans mt-1">{m.debug.about_member}</pre>
+                            </div>
+                          </div>
+                        </details>
                       )}
                       <div className="flex items-center gap-3 flex-wrap">
                         <Link to="/settings" className="text-[11px] text-[hsl(var(--dan-muted))] hover:underline">
