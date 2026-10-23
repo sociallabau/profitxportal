@@ -87,9 +87,10 @@ describe('renewalRate', () => {
     const start = new Date('2026-09-01T00:00:00Z');
     const end = new Date('2026-10-01T00:00:00Z');
     const r = renewalRate(members, start, end);
-    // Sep anniversaries: a (10 Sep), b (2 Sep — left 15 Sep, after anniversary → renewed), c (5 Sep)
-    expect(r.due).toBe(3);
-    expect(r.renewed).toBe(3);
+    // Sep anniversaries: a (10 Sep), b (2 Sep — left 15 Sep, after anniversary → renewed).
+    // c joined 5 Sep, so their first renewal is October, not September.
+    expect(r.due).toBe(2);
+    expect(r.renewed).toBe(2);
   });
 
   it('marks a member as not renewed when archived before the anniversary', () => {
