@@ -122,7 +122,7 @@ async function fetchStyleExamples(supabase: any): Promise<string[]> {
 }
 
 
-async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
+async function callAnthropic(apiKey: string, prompt: string, blocks: SystemBlock[]): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -133,7 +133,7 @@ async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
     body: JSON.stringify({
       model: "claude-sonnet-5",
       max_tokens: 1500,
-      system: SYSTEM_PROMPT,
+      system: blocks.map(b => ({ type: "text", text: b.text, ...(b.cache ? { cache_control: { type: "ephemeral" } } : {}) })),
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -142,7 +142,7 @@ async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
   return data.content?.[0]?.text ?? "";
 }
 
-async function callLovable(apiKey: string, prompt: string): Promise<string> {
+async function callLovable(apiKey: string, prompt: string, blocks: SystemBlock[]): Promise<string> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -152,7 +152,7 @@ async function callLovable(apiKey: string, prompt: string): Promise<string> {
       // return empty content.
       max_tokens: 1500,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: blocks.map(b => b.text).join("\n\n") },
         { role: "user", content: prompt },
       ],
     }),
@@ -168,6 +168,8 @@ async function callLovable(apiKey: string, prompt: string): Promise<string> {
   }
   return text;
 }
+
+import { BRAIN_HEADER, BRAIN_RULES, loadBrain, type SystemBlock } from "../_shared/danBrain.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -255,7 +257,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    if ((!chunks || chunks.length === 0) && (!saved || saved.length === 0)) {
+    // The Brain goes whole into the system prompt, so never repeat it here.
+    chunks = (chunks ?? []).filter((c: { source_type?: string }) => c.source_type !== "brain");
+    const brain = await loadBrain(supabase);
+    const blocks: SystemBlock[] = brain
+      ? [{ text: `${BRAIN_HEADER}\n\n${brain}`, cache: true }, { text: BRAIN_RULES }, { text: SYSTEM_PROMPT }]
+      : [{ text: SYSTEM_PROMPT }];
+
+    if (chunks.length === 0 && (!saved || saved.length === 0) && !brain) {
       return json({
         answer:
           "No material in the knowledge base matches that at all. Either the knowledge base is still empty, or the question uses wording that appears nowhere in Dan's calls and trainings — try rephrasing it the way a client would actually ask.",
@@ -300,7 +309,7 @@ Deno.serve(async (req) => {
 
     if (anthropicKey) {
       try {
-        answer = await callAnthropic(anthropicKey, prompt);
+        answer = await callAnthropic(anthropicKey, prompt, blocks);
         model = "claude-sonnet-5";
       } catch (err) {
         // Fall back rather than taking the tool down with Claude.
@@ -310,7 +319,7 @@ Deno.serve(async (req) => {
     }
 
     if (!answer && lovableKey) {
-      answer = await callLovable(lovableKey, prompt);
+      answer = await callLovable(lovableKey, prompt, blocks);
       model = "gemini-2.5-pro";
     }
 
