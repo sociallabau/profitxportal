@@ -227,7 +227,7 @@ export default function ClientDetailPanel({
                 {audits.length > 0 ? (
                   <div className="rounded-xl border border-primary/40 bg-primary/10 p-4">
                     <p className="text-xs uppercase tracking-widest text-muted-foreground">Latest Roadmap Audit · {new Date(audits[0].created_at).toLocaleDateString()} ({audits.length} total)</p>
-                    <p className="font-bold text-primary mt-1 capitalize">{audits[0].issue === 'balanced' ? 'No red flags' : `${audits[0].issue} issue`}</p>
+                    <p className="font-bold text-primary mt-1">{audits[0].issue === 'balanced' ? 'No red flags' : audits[0].issue === 'supply' ? 'Lead Problem' : 'Capacity Problem'}</p>
                     <p className="text-sm text-muted-foreground">Focus: {audits[0].focus.join(', ') || '—'}</p>
                   </div>
                 ) : (
