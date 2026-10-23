@@ -25,7 +25,7 @@ import {
   generateConclusion,
   BAND,
 } from '@/lib/clientHealth';
-import { computeDrift, DRIFT_BAND, type DriftBand } from '@/lib/driftRisk';
+import { computeDrift, DRIFT_BAND, gateNumber, type DriftBand } from '@/lib/driftRisk';
 
 export default function ClientHealth() {
   const { user } = useRequireAuth();

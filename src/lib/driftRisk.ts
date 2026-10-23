@@ -52,8 +52,14 @@ export const GATE_REVENUE_TARGET: Record<string, number> = {
   '3': 30000,
 };
 
+/** profiles.gate stores labels like "Gate 3 (Scale)" — pull the number out. */
+export function gateNumber(gate?: string | null): '1' | '2' | '3' {
+  const match = String(gate ?? '').match(/[123]/);
+  return (match?.[0] as '1' | '2' | '3') ?? '1';
+}
+
 function gateTarget(gate?: string | null): number {
-  return GATE_REVENUE_TARGET[String(gate ?? '1')] ?? GATE_REVENUE_TARGET['1'];
+  return GATE_REVENUE_TARGET[gateNumber(gate)];
 }
 
 /** True when the newest 2–3 revenues are all flat or declining. */
