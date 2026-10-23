@@ -12,9 +12,11 @@ export const EXAMPLE_PROFILE = {
   gate_move_up: 'Sign 3 new retainers. Reach $20k monthly revenue.',
 };
 
-// Flat 12-month example line: starts at $0, then holds $15k/mth through to the current month.
-export const EXAMPLE_REVENUE = Array.from({ length: 12 }, (_, index) => ({
-  revenue: index === 0 ? 0 : 15000,
+// Rising 12-month example line: starts at $0, climbs a little each month, hits $15k last month.
+const EXAMPLE_REVENUE_VALUES = [0, 500, 1200, 2100, 3200, 4500, 6000, 7600, 9200, 10900, 12800, 15000];
+
+export const EXAMPLE_REVENUE = EXAMPLE_REVENUE_VALUES.map((revenue, index) => ({
+  revenue,
   month: ['Nov 25', 'Dec 25', 'Jan 26', 'Feb 26', 'Mar 26', 'Apr 26', 'May 26', 'Jun 26', 'Jul 26', 'Aug 26', 'Sep 26', 'Oct 26'][index],
   monthKey: `${2025 + Math.floor((10 + index) / 12)}-${String(((10 + index) % 12) + 1).padStart(2, '0')}-01`,
 }));
