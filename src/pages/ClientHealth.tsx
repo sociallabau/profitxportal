@@ -162,17 +162,9 @@ export default function ClientHealth() {
       // Ready to step up from "under $20k" → "over $20k" once they cross $20k/mth.
       const readyForOver20k = tier === 'in_flow_starter' && monthlyRevenue >= 20000;
 
-      const latestCompletion = clientCompletions
-        .map(cp => cp.updated_at)
-        .filter(Boolean)
-        .sort()
-        .at(-1) ?? null;
-
       const drift = computeDrift({
-        gate: clientGates[c.id] ?? null,
         revenueSeries: revenueTrends.revenue?.[c.id] ?? [],
         daysSinceSubmission: c.days_since_submission != null ? Number(c.days_since_submission) : null,
-        daysSinceCompletion: daysSince(latestCompletion),
         confidenceSeries: revenueTrends.confidence?.[c.id] ?? [],
       });
 
