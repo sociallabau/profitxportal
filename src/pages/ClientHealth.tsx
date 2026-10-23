@@ -566,6 +566,19 @@ export default function ClientHealth() {
                                 </span>
                           )}
                         </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span
+                            title={client.drift?.signals.join(' · ')}
+                            className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${d.bg} ${d.text}`}
+                          >
+                            {d.label}
+                          </span>
+                          {client.drift && client.drift.signals.length > 0 && (
+                            <p className="mt-0.5 text-[10px] text-muted-foreground max-w-[180px] truncate">
+                              {client.drift.signals.join(' · ')}
+                            </p>
+                          )}
+                        </td>
                         <td className={`py-3 px-3 whitespace-nowrap ${days !== null && Number(days) > 14 ? 'text-orange-400' : 'text-muted-foreground'}`}>
                           {days !== null ? `${days}d ago` : '—'}
                         </td>
@@ -584,6 +597,8 @@ export default function ClientHealth() {
               )}
             </div>
           </div>
+          )}
+          </>
         );
       })()}
 
