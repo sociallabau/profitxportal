@@ -281,6 +281,13 @@ async function answerPipeline(p: PipelineInput) {
     if (banned.length) out.push(`rewrite the lines containing banned phrases/swearing: ${banned.join(", ")}`);
     if (looksTruncated(a.answer)) out.push("the answer is cut off — finish it cleanly");
     if (wordCount(a.answer) > 220) out.push("cut to under 170 words");
+    // Ads/scaling/pricing questions must use the member's cost per client when we have it.
+    const cpc = block.derived?.cost_per_client;
+    if (cpc != null && ["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(a.answer.replace(/\$(15|20)\b/g, ""))) {
+      out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client vs their lowest retainer${block.derived?.lowest_retainer_price ? ` $${block.derived.lowest_retainer_price}` : ""}) and say whether it's under half`);
+    } else if (cpc != null && ["ads"].includes(String(plan.topic)) && !a.answer.includes(String(Math.round(cpc)))) {
+      out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client) and say whether it's under half their first month's fee`);
+    }
     return { out, names };
   };
   let probs = problems(final);
