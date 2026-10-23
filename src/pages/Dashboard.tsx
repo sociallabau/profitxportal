@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
+import { dashboardUserId } from '@/lib/dashboardDemo';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
@@ -223,6 +224,20 @@ export default function Dashboard() {
   const { data: profile } = useProfile();
   usePageTracking('dashboard');
   const navigate = useNavigate();
+  const dataUserId = dashboardUserId(user?.id, profile?.is_admin);
+  const isHarryDemo = Boolean(user?.id && dataUserId !== user.id);
+  const { data: demoProfile } = useQuery({
+    queryKey: ['dashboard-demo-profile', dataUserId],
+    enabled: isHarryDemo,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles')
+        .select('full_name, gate, gate_key_task, gate_move_up')
+        .eq('id', dataUserId ?? '').single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const dashboardProfile = isHarryDemo ? demoProfile : profile;
 
   const cycle = currentCycle();
   const PhaseIcon = PHASE_META[cycle.phase].icon;
@@ -231,13 +246,13 @@ export default function Dashboard() {
   const threeWeekCalls = allUpcoming;
 
   const { data: wins = [] } = useQuery({
-    queryKey: ['dashboard-wins', user?.id],
-    enabled: !!user,
+    queryKey: ['dashboard-wins', dataUserId],
+    enabled: Boolean(dataUserId && profile),
     queryFn: async () => {
       const { data } = await supabase
         .from('weekly_wins')
         .select('id, win_text, cash_amount, created_at')
-        .eq('user_id', user?.id ?? '')
+        .eq('user_id', dataUserId ?? '')
         .not('win_text', 'eq', '')
         .order('created_at', { ascending: false })
         .limit(4);
@@ -246,13 +261,13 @@ export default function Dashboard() {
   });
 
   const { data: revenueSeries = [] } = useQuery({
-    queryKey: ['dashboard-revenue', user?.id],
-    enabled: !!user,
+    queryKey: ['dashboard-revenue', dataUserId],
+    enabled: Boolean(dataUserId && profile),
     queryFn: async () => {
       const { data } = await supabase
         .from('monthly_totals')
         .select('month, mrr, mrr_manual, oneoff_revenue, total_revenue')
-        .eq('user_id', user?.id ?? '')
+        .eq('user_id', dataUserId ?? '')
         .order('month', { ascending: true });
       return (data ?? []).map(r => ({
         month: new Date(`${r.month.slice(0, 7)}-15T12:00:00`).toLocaleDateString('en-AU', { month: 'short', year: '2-digit' }),
@@ -269,11 +284,12 @@ export default function Dashboard() {
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">
-            Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}.
+            Welcome back{dashboardProfile?.full_name ? `, ${dashboardProfile.full_name.split(' ')[0]}` : ''}.
           </h1>
-          <p className="text-sm text-muted-foreground">Here's where ProfitX is right now.</p>
+          <p className="text-sm text-muted-foreground">{isHarryDemo ? "Harry’s dashboard · Read-only demo" : "Here's where ProfitX is right now."}</p>
         </div>
         <Button
+          disabled={isHarryDemo}
           onClick={() => navigate('/submissions/monthly')}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-lg shadow-primary/20"
         >
@@ -282,7 +298,7 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      <DashboardProgress series={revenueSeries} gate={profile?.gate} keyTask={profile?.gate_key_task} moveUp={profile?.gate_move_up} />
+      <DashboardProgress series={revenueSeries} gate={dashboardProfile?.gate} keyTask={dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">
