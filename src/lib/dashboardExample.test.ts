@@ -8,9 +8,10 @@ describe('dashboard screenshot examples', () => {
     expect(isExampleDashboard()).toBe(false);
   });
 
-  it('example revenue is a flat 12-month line from $0 to $15k', () => {
+  it('example revenue climbs each month from $0 to $15k', () => {
     expect(EXAMPLE_REVENUE).toHaveLength(12);
     expect(EXAMPLE_REVENUE[0].revenue).toBe(0);
-    expect(EXAMPLE_REVENUE.slice(1).every(point => point.revenue === 15000)).toBe(true);
+    expect(EXAMPLE_REVENUE.at(-1)?.revenue).toBe(15000);
+    expect(EXAMPLE_REVENUE.every((point, index) => index === 0 || point.revenue > EXAMPLE_REVENUE[index - 1].revenue)).toBe(true);
   });
 });
