@@ -3,3 +3,4 @@
 - [x] Test tracking calculations and verify the dashboard.
 - [x] Restore the owner's own dashboard and simplify typography.
 - [x] Combine the month type and focus with the three-week calendar header and verify.
+- [x] Simplify the focus card into dot points and verify.
