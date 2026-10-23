@@ -1,7 +1,7 @@
 import { OWNER_USER_ID } from '@/lib/owner';
 
-export const HARRY_DEMO_USER_ID = '1948d8b5-0ff7-419c-8440-6dd61a28eb54';
+export const DEMO_USER_ID = 'a0d1ccd1-b27b-479e-8abe-1027e13972c3';
 
 export function dashboardUserId(userId?: string, isAdmin?: boolean | null) {
-  return userId === OWNER_USER_ID && isAdmin === true ? HARRY_DEMO_USER_ID : userId;
+  return userId === OWNER_USER_ID && isAdmin === true ? DEMO_USER_ID : userId;
 }

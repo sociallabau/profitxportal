@@ -225,10 +225,10 @@ export default function Dashboard() {
   usePageTracking('dashboard');
   const navigate = useNavigate();
   const dataUserId = dashboardUserId(user?.id, profile?.is_admin);
-  const isHarryDemo = Boolean(user?.id && dataUserId !== user.id);
+  const isMemberDemo = Boolean(user?.id && dataUserId !== user.id);
   const { data: demoProfile } = useQuery({
     queryKey: ['dashboard-demo-profile', dataUserId],
-    enabled: isHarryDemo,
+    enabled: isMemberDemo,
     queryFn: async () => {
       const { data, error } = await supabase.from('profiles')
         .select('full_name, gate, gate_key_task, gate_move_up')
@@ -237,7 +237,7 @@ export default function Dashboard() {
       return data;
     },
   });
-  const dashboardProfile = isHarryDemo ? demoProfile : profile;
+  const dashboardProfile = isMemberDemo ? demoProfile : profile;
 
   const cycle = currentCycle();
   const PhaseIcon = PHASE_META[cycle.phase].icon;
@@ -286,10 +286,10 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">
             Welcome back{dashboardProfile?.full_name ? `, ${dashboardProfile.full_name.split(' ')[0]}` : ''}.
           </h1>
-          <p className="text-sm text-muted-foreground">{isHarryDemo ? "Harry’s dashboard · Read-only demo" : "Here's where ProfitX is right now."}</p>
+          <p className="text-sm text-muted-foreground">{isMemberDemo ? `${dashboardProfile?.full_name?.split(' ')[0] ?? 'Member'}’s dashboard · Read-only demo` : "Here's where ProfitX is right now."}</p>
         </div>
         <Button
-          disabled={isHarryDemo}
+          disabled={isMemberDemo}
           onClick={() => navigate('/submissions/monthly')}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-lg shadow-primary/20"
         >
