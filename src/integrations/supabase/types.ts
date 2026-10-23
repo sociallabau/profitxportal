@@ -256,6 +256,48 @@ export type Database = {
         }
         Relationships: []
       }
+      client_notes: {
+        Row: {
+          author_id: string
+          client_id: string
+          created_at: string
+          id: string
+          note: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          note: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_questions: {
         Row: {
           answer: string | null

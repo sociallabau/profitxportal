@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy } from 'lucide-react';
+import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -103,6 +103,36 @@ export default function ClientDetailPanel({
   });
 
   const queryClient = useQueryClient();
+
+  // Private admin notes — stored in an admin-only table, never member-readable.
+  const [noteDraft, setNoteDraft] = useState('');
+  const { data: notes = [] } = useQuery({
+    queryKey: ['client-notes', client.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('client_notes')
+        .select('id, note, created_at')
+        .eq('client_id', client.id)
+        .order('created_at', { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  const addNote = useMutation({
+    mutationFn: async (note: string) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('client_notes')
+        .insert({ client_id: client.id, author_id: auth.user!.id, note });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNoteDraft('');
+      queryClient.invalidateQueries({ queryKey: ['client-notes', client.id] });
+      toast.success('Note saved');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['client-monthly-reviews', client.id],
@@ -426,6 +456,46 @@ export default function ClientDetailPanel({
                     )}
                   </div>
                 )}
+
+                {/* Private notes — admin-only, the client never sees these */}
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <StickyNote className="w-3.5 h-3.5" /> Private notes
+                  </p>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      value={noteDraft}
+                      onChange={e => setNoteDraft(e.target.value)}
+                      placeholder="Add a note only you can see…"
+                      className="flex-1 px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && noteDraft.trim()) addNote.mutate(noteDraft.trim());
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={!noteDraft.trim() || addNote.isPending}
+                      onClick={() => addNote.mutate(noteDraft.trim())}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                  {notes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No notes yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {notes.map(n => (
+                        <li key={n.id} className="bg-muted/30 border border-border rounded-lg p-2.5">
+                          <p className="text-sm text-foreground whitespace-pre-wrap">{n.note}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {new Date(n.created_at).toLocaleDateString('default', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
                 {/* Dan's breakdown — this client never sees it */}
                 <div className="bg-card border border-border rounded-xl p-4">

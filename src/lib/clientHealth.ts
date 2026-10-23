@@ -1,4 +1,5 @@
 import type { ViewRow } from '@/lib/db';
+import type { DriftResult } from '@/lib/driftRisk';
 
 /**
  * Everything Client Health knows about judging a client: the tier labels, the
@@ -24,6 +25,10 @@ export type ClientWithHealth = ClientOverview & {
   readyForInFlow: boolean;
   readyForOver20k: boolean;
   monthlyRevenue: number;
+  /** Outcome-based drift detection, computed in the page. */
+  drift?: DriftResult;
+  /** profiles.gate — '1' | '2' | '3' | null. */
+  gate?: string | null;
 };
 
 export const TIER_OPTIONS = [
