@@ -374,3 +374,18 @@ select:focus {
   }
   .page-enter { animation: none; }
 }
+
+/* Dan AI page canvas (light ProfitX paper scoped to /dan-ai) */
+.dan-canvas {
+  --dan-bg: 39 30% 87%;
+  --dan-paper: 40 45% 97%;
+  --dan-ink: 0 0% 12%;
+  --dan-muted: 30 6% 40%;
+  --dan-violet: 265 91% 59%;
+  --dan-violet-fg: 0 0% 100%;
+  background: hsl(var(--dan-bg));
+  color: hsl(var(--dan-ink));
+}
+@keyframes dan-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.dan-fade-up { animation: dan-fade-up 0.5s ease-out 1s both; }
+@media (prefers-reduced-motion: reduce) { .dan-fade-up { animation: none; } }
