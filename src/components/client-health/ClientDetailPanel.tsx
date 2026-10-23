@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ContextRoom from '@/components/ContextRoom';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
@@ -224,6 +226,14 @@ export default function ClientDetailPanel({
               </div>
 
               <div className="p-6 space-y-5">
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="context-room" className="border border-border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm hover:no-underline">Context Room</AccordionTrigger>
+                    <AccordionContent>
+                      <ContextRoom key={client.id} userId={client.id} adminView />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
                 {audits.length > 0 ? (
                   <div className="rounded-xl border border-primary/40 bg-primary/10 p-4">
                     <p className="text-xs uppercase tracking-widest text-muted-foreground">Latest Roadmap Audit · {new Date(audits[0].created_at).toLocaleDateString()} ({audits.length} total)</p>

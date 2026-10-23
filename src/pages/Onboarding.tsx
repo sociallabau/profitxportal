@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useGoal } from '@/hooks/useGoal';
 import { Loader2, Check, ArrowRight, Sparkles, Target, FileText, Compass } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Step = 0 | 1 | 2 | 3;
 
@@ -93,8 +94,16 @@ export default function Onboarding() {
       .from('profiles')
       .update({ full_name: fullName.trim(), business_overview: businessOverview.trim() || null })
       .eq('id', user.id);
+    if (e) { setSaving(false); setError(e.message); return; }
+    const { error: contextError } = await supabase.rpc('save_context_section', {
+      _user_id: user.id,
+      _section: 'customer',
+      _answers: { customer_problem: businessOverview.trim() },
+      _admin_edit: false,
+    });
     setSaving(false);
-    if (e) { setError(e.message); return; }
+    if (contextError) { setError(contextError.message); return; }
+    qc.invalidateQueries({ queryKey: ['context-room', user.id] });
     qc.invalidateQueries({ queryKey: ['profile'] });
     next();
   };
@@ -157,7 +166,8 @@ export default function Onboarding() {
     qc.invalidateQueries({ queryKey: ['profile'] });
     qc.invalidateQueries({ queryKey: ['monthly-history'] });
     qc.invalidateQueries({ queryKey: ['monthly-totals-history'] });
-    navigate('/dashboard', { replace: true });
+    toast.success('Finish your Context Room so Dan AI knows your business.');
+    navigate('/settings', { replace: true });
   };
 
   return (
