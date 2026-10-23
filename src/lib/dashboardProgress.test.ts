@@ -44,10 +44,8 @@ describe('focus dot points', () => {
     ]);
   });
   it('explains what counts only on numbered case study targets', () => {
-    expect(focusBullets('Then 2 more case studies and 2ish case study posts')).toEqual([
-      `2 more case studies ${CASE_NOTE}`,
-      `2ish case study posts ${CASE_NOTE}`,
-    ]);
+    expect(focusBullets('Then 2 more case studies')).toEqual([`2 more case studies ${CASE_NOTE}`]);
+    expect(focusBullets('2ish case study posts')).toEqual([`2ish case study posts ${CASE_NOTE}`]);
     expect(focusBullets('You have enough retainers and case studies to move up')).toEqual([
       'You have enough retainers and case studies to move up',
     ]);
