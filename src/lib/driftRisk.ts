@@ -64,26 +64,13 @@ export function computeDrift(input: DriftInput, now: Date = new Date()): DriftRe
   void now; // callers pre-compute day counts; kept for a stable signature
   const signals: string[] = [];
 
-  // 1. Stalled gate
-  const latestRevenue = input.revenueSeries.find(v => v > 0) ?? 0;
-  const gateMet = latestRevenue >= gateTarget(input.gate);
-  const completionStale =
-    input.daysSinceCompletion === null || input.daysSinceCompletion >= STALLED_GATE_DAYS;
-  if (completionStale && !gateMet) {
-    signals.push(
-      input.daysSinceCompletion === null
-        ? 'No module progress yet'
-        : `No module progress ${input.daysSinceCompletion} days`,
-    );
-  }
-
-  // 2. Flat or declining core metric
+  // 1. Flat or declining core metric
   if (isFlatOrDeclining(input.revenueSeries)) {
     const months = Math.min(input.revenueSeries.filter(v => v > 0).length, 3);
     signals.push(`Revenue flat ${months} month${months === 1 ? '' : 's'}`);
   }
 
-  // 3. Submission gap
+  // 2. Submission gap
   if (input.daysSinceSubmission === null) {
     signals.push('Never submitted a monthly report');
   } else if (input.daysSinceSubmission > SUBMISSION_GAP_DAYS) {
