@@ -297,6 +297,8 @@ async function answerPipeline(p: PipelineInput) {
     }
     pass = false;
   }
+  // JSON parsed fine, so an unpunctuated ending is style, not a cut-off: close it.
+  if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final = { ...final, answer: final.answer.trim() + "." };
   const matched = matchResource(final.resource, catalogueLines);
   if (final.resource && !matched) issues.push({ type: "guardrail", note: `Resource "${final.resource}" not in catalogue — removed` });
   final = { ...final, resource: matched };
