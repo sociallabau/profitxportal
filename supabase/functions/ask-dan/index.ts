@@ -167,8 +167,9 @@ async function callAnthropic(system: Block[], messages: Turn[], maxTokens = 2000
     body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: maxTokens, system, messages }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
-  const text = (await res.json()).content?.[0]?.text ?? "";
-  if (!text) throw new Error("Claude returned no content");
+  const data = await res.json();
+  const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("");
+  if (!text) throw new Error(`Claude returned no content (stop_reason: ${data.stop_reason ?? "unknown"})`);
   return text;
 }
 
