@@ -12,14 +12,19 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import DanAiOrb, { type OrbState } from '@/components/DanAiOrb';
 import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
 import ChecksAdmin from '@/components/dan-ai/ChecksAdmin';
+import TestsAdmin from '@/components/dan-ai/TestsAdmin';
 
-interface Answer { answer: string; next_steps: string[]; resource: string | null }
+interface Answer { answer: string; next_steps: string[]; resource: string | null; context_used?: boolean }
 interface Debug {
-  about_member: string; member_id: string;
+  mode?: string; data_freshness?: string; brain_loaded?: boolean;
+  derived?: Record<string, unknown> | null; plan?: unknown;
+  passages?: { title: string; source_type: string; score: number }[];
+  checker_issues?: { type: string; note: string }[]; guardrails?: { type: string; note: string }[];
+  about_member: string; member_id: string | null;
   brain?: { docs: number; words: number }; goal?: string;
   monthly_totals: { count: number; months: string[] };
-  context_room: { found: boolean; fields_filled: number };
-  passage_titles: string[];
+  context_room: { found?: boolean; fields_filled: number; missing?: string[] };
+  passage_titles?: string[];
 }
 interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer; debug?: Debug }
 
@@ -47,7 +52,7 @@ function parseAnswer(content: string): Answer {
   return { answer: content, next_steps: [], resource: null };
 }
 
-type Tab = 'chat' | 'knowledge' | 'checks';
+type Tab = 'chat' | 'knowledge' | 'checks' | 'tests';
 
 export default function DanAI() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -166,7 +171,7 @@ export default function DanAI() {
           <span>Context from:</span>
           <select value={memberId} onChange={e => setMemberId(e.target.value)}
             className="bg-transparent text-[hsl(var(--dan-ink))] text-xs focus:outline-none cursor-pointer">
-            <option value="">Myself</option>
+            <option value="">No member (general answer)</option>
             {members.map(m => <option key={m.id} value={m.id}>{m.full_name ?? m.id}</option>)}
           </select>
         </div>
@@ -197,7 +202,7 @@ export default function DanAI() {
           ) : <span />}
           {isAdmin && (
             <div className="flex rounded-full bg-[hsl(var(--dan-ink)/0.06)] p-0.5 text-xs">
-              {(['chat', 'knowledge', 'checks'] as Tab[]).map(t => (
+              {(['chat', 'knowledge', 'checks', 'tests'] as Tab[]).map(t => (
                 <button key={t} onClick={() => setTab(t)}
                   className={`px-3 py-1 rounded-full capitalize transition-colors ${tab === t ? 'bg-[hsl(var(--dan-paper))] text-[hsl(var(--dan-ink))] shadow-sm' : 'text-[hsl(var(--dan-muted))]'}`}>
                   {t}
@@ -209,7 +214,7 @@ export default function DanAI() {
 
         {tab !== 'chat' && isAdmin && (
           <div className="dark mt-4 rounded-2xl bg-card text-foreground p-4 sm:p-6">
-            {tab === 'knowledge' ? <KnowledgeAdmin /> : <ChecksAdmin />}
+            {tab === 'knowledge' ? <KnowledgeAdmin /> : tab === 'checks' ? <ChecksAdmin /> : <TestsAdmin />}
           </div>
         )}
 
