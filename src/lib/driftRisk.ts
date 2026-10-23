@@ -5,13 +5,14 @@
  * attendance says nothing. Drift is judged only on whether the numbers that
  * should be moving for a member's phase have stalled:
  *
- *   1. Stalled gate    — no checklist completion in 60+ days and they have not
- *                        met their current gate's revenue criteria.
- *   2. Flat core metric — revenue flat (±5%) or down across the last 2–3
+ *   1. Flat core metric — revenue flat (±5%) or down across the last 2–3
  *                        monthly submissions.
- *   3. Submission gap  — no monthly report in 45+ days.
- *   4. Sentiment pulse — self-rated "how's it going" (business_confidence)
+ *   2. Submission gap  — no monthly report in 45+ days.
+ *   3. Sentiment pulse — self-rated "how's it going" (business_confidence)
  *                        of 4 or less, or a drop of 2+ vs their previous score.
+ *
+ * Module/checklist progress is deliberately NOT a signal — the program is not
+ * based around module completion.
  *
  * Pure functions, no JSX and no hooks, so the rules can be tested and changed
  * without touching the page.
@@ -26,40 +27,24 @@ export type DriftResult = {
 };
 
 export type DriftInput = {
-  /** profiles.gate — '1', '2', '3' or null. */
-  gate?: string | null;
   /** Revenue per submission, newest first. */
   revenueSeries: number[];
   /** Days since their last monthly_totals row, null if never submitted. */
   daysSinceSubmission: number | null;
-  /** Days since their last checklist_progress completion, null if none. */
-  daysSinceCompletion: number | null;
   /** business_confidence per submission, newest first (nulls allowed). */
   confidenceSeries: (number | null)[];
 };
 
-export const STALLED_GATE_DAYS = 60;
 export const SUBMISSION_GAP_DAYS = 45;
 export const LOW_CONFIDENCE_SCORE = 4;
 export const CONFIDENCE_DROP = 2;
 /** Revenue within ±5% counts as flat. */
 export const FLAT_TOLERANCE = 0.05;
 
-/** Revenue a member should reach before their gate counts as "met". */
-export const GATE_REVENUE_TARGET: Record<string, number> = {
-  '1': 10000,
-  '2': 20000,
-  '3': 30000,
-};
-
 /** profiles.gate stores labels like "Gate 3 (Scale)" — pull the number out. */
 export function gateNumber(gate?: string | null): '1' | '2' | '3' {
   const match = String(gate ?? '').match(/[123]/);
   return (match?.[0] as '1' | '2' | '3') ?? '1';
-}
-
-function gateTarget(gate?: string | null): number {
-  return GATE_REVENUE_TARGET[gateNumber(gate)];
 }
 
 /** True when the newest 2–3 revenues are all flat or declining. */
