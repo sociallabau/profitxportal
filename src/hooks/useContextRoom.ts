@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { ContextAnswers } from '@/lib/contextRoom';
+import { carryOverContext } from '@/lib/contextCarryover';
 
 export function useContextRoom(userId: string, enabled = true) {
   const qc = useQueryClient();
@@ -9,11 +10,11 @@ export function useContextRoom(userId: string, enabled = true) {
     queryFn: async () => {
       const { data, error } = await supabase.from('context_rooms').select('*').eq('user_id', userId).maybeSingle();
       if (error) throw error;
-      if (data) return data;
       const { data: profile, error: profileError } = await supabase.from('profiles').select('business_overview').eq('id', userId).maybeSingle();
       if (profileError) throw profileError;
+      if (data) return { ...data, answers: carryOverContext(data.answers as ContextAnswers, profile?.business_overview) };
       // Ignore a concurrent creator rather than replacing their answers.
-      const { error: insertError } = await supabase.from('context_rooms').upsert({ user_id: userId, answers: profile?.business_overview ? { customer_problem: profile.business_overview } : {} }, { onConflict: 'user_id', ignoreDuplicates: true });
+      const { error: insertError } = await supabase.from('context_rooms').upsert({ user_id: userId, answers: carryOverContext({}, profile?.business_overview) }, { onConflict: 'user_id', ignoreDuplicates: true });
       if (insertError) throw insertError;
       const { data: created, error: readError } = await supabase.from('context_rooms').select('*').eq('user_id', userId).single();
       if (readError) throw readError;

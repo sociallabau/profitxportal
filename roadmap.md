@@ -10,3 +10,5 @@
 - [x] Add private member Context Rooms with seven collapsible sections and per-section saving.
 - [x] Add admin inspection/editing, onboarding capture and AI-safe Markdown exports.
 - [x] Verify saving, privacy rules, and the dropdown layout.
+- [x] Carry prior member settings/context into Context Rooms without overwriting newer answers.
+- [x] Keep basic details visible and deeper questions collapsed; verify saving and layout.
