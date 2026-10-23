@@ -1,12 +1,22 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   LineChart, Line, ResponsiveContainer, Tooltip, XAxis,
 } from 'recharts';
-import { TrendingUp, Receipt, DollarSign, CheckCircle2, AlertTriangle, ArrowRight, Lock } from 'lucide-react';
+import { TrendingUp, Receipt, DollarSign, CheckCircle2, AlertTriangle, ArrowRight, Lock, Users, UserMinus, Repeat, Crosshair } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import {
+  monthlyChurnTrend,
+  activeChurnedCounts,
+  memberLtv,
+  cac,
+  ltvCacBand,
+  renewalRate,
+  type MemberRow,
+} from '@/lib/retention';
 
 const MARGIN_TARGETS: Record<string, { grossMin: number; grossMax: number; netMin: number; netMax: number; label: string }> = {
   'on-ramp': { grossMin: 65, grossMax: 80, netMin: 35, netMax: 50, label: 'On-Ramp' },
@@ -62,6 +72,61 @@ export default function MyFinances() {
       return data ?? [];
     },
   });
+
+  // ── Retention & unit economics (ProfitX itself, admin only) ──
+  const queryClient = useQueryClient();
+  const { data: members = [] } = useQuery({
+    queryKey: ['retention-members'],
+    enabled: !!user,
+    queryFn: async (): Promise<MemberRow[]> => {
+      const { data } = await supabase.from('profiles').select('id, created_at, archived_at');
+      return data ?? [];
+    },
+  });
+
+  const { data: settings = {} } = useQuery({
+    queryKey: ['admin-settings'],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from('admin_settings').select('key, value');
+      const map: Record<string, string> = {};
+      for (const row of data ?? []) map[row.key] = row.value;
+      return map;
+    },
+  });
+
+  const saveSetting = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      const { error } = await supabase
+        .from('admin_settings')
+        .upsert({ key, value, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-settings'] }),
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const arpu = Number(settings.avg_member_price || 0);
+  const acquisitionSpend = Number(settings.acquisition_spend || 0);
+
+  const trend = monthlyChurnTrend(members, 6);
+  const counts = activeChurnedCounts(members);
+  const latestPoint = trend[trend.length - 1];
+  // LTV uses the average churn over months that actually had churn, so one
+  // quiet month doesn't make lifetime look infinite.
+  const churnRates = trend.map(p => p.churnRate).filter((r): r is number => r !== null);
+  const avgChurnRate = churnRates.length ? churnRates.reduce((a, b) => a + b, 0) / churnRates.length : null;
+  const ltv = memberLtv(arpu, avgChurnRate);
+  const cacValue = cac(acquisitionSpend, latestPoint?.newMembers ?? 0);
+  const ltvCac = ltv !== null && cacValue !== null ? ltv / cacValue : null;
+  const ltvCacBandResult = ltvCacBand(ltvCac);
+  const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
+  const renewal = renewalRate(members, monthStart, new Date());
+
+  const churnChartData = trend.map(p => ({
+    month: p.label,
+    churn: p.churnRate !== null ? Math.round(p.churnRate * 1000) / 10 : null,
+  }));
 
   const tier = profile?.tier || 'on-ramp';
   const targets = MARGIN_TARGETS[tier] || MARGIN_TARGETS['on-ramp'];
