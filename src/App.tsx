@@ -96,7 +96,7 @@ const App = () => (
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
-          <Route path="/dan-ai" element={<ProtectedRoute><DanAI /></ProtectedRoute>} />
+          <Route path="/dan-ai" element={<AdminRoute><DanAI /></AdminRoute>} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>
