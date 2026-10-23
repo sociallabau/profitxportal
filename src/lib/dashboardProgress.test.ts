@@ -24,7 +24,7 @@ describe('monthly submission streak', () => {
 });
 
 describe('focus dot points', () => {
-  it('splits gate criteria written with slashes into one point each', () => {
+  it('gives every gate criterion its own short point', () => {
     expect(focusBullets('Gate 1 is: 3 retainers / 4 convos a month / 4 posts a month / 2 case studies (BTS of shoots counts as a case study)')).toEqual([
       'Gate 1 is: 3 retainers',
       '4 convos a month',
@@ -33,19 +33,21 @@ describe('focus dot points', () => {
       'BTS of shoots counts as a case study',
     ]);
   });
-  it('splits run-on sentences and long asides, keeping lowercase fragments joined', () => {
-    expect(focusBullets('Post twice a week to 8 this month, best ones into awareness. Then 2 more case studies (work into your bts, or get some clients on cam if you can)')).toEqual([
-      'Post twice a week to 8 this month, best ones into awareness',
-      'Then 2 more case studies',
-      'Work into your bts, or get some clients on cam if you can',
+  it('drops hedged lead-ins so points read as instructions', () => {
+    expect(focusBullets('Just need a paying retainer signed in October - additionally posts 7→8, case studies (bts or testimonials) 2→4. Basically one extra bts or client based post.')).toEqual([
+      'Need a paying retainer signed in October',
+      'Posts 7→8',
+      'Case studies (bts or testimonials) 2→4',
+      'One extra bts or client based post',
     ]);
-    expect(focusBullets('Post some BTS content and profile visit boost them - to get engagement')).toEqual([
-      'Post some BTS content and profile visit boost them, to get engagement',
+  });
+  it('keeps compound subjects and tails together', () => {
+    expect(focusBullets('Your convos, case studies/content and posts are all met bro')).toEqual([
+      'Your convos, case studies/content and posts are all met bro',
     ]);
-    expect(focusBullets('Own growth hub (speed to lead, follow-ups, what converts). Everything else for Gate 4 is met or close (~5 inbound of 4).')).toEqual([
-      'Own growth hub',
-      'Speed to lead, follow-ups, what converts',
-      'Everything else for Gate 4 is met or close (~5 inbound of 4)',
+    expect(focusBullets('Convos 2→4, posts 2→4, $50 PV boosting for engagement and convos')).toEqual([
+      'Convos 2→4, posts 2→4',
+      '$50 PV boosting for engagement and convos',
     ]);
   });
   it('returns nothing for empty notes', () => {
