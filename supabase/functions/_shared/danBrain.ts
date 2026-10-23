@@ -46,3 +46,26 @@ export async function loadBrain(admin: any): Promise<string> {
   }).join("\n\n");
 }
 
+
+// Real Dan lines from the WhatsApp exports, used as live style examples.
+// deno-lint-ignore no-explicit-any
+export async function fetchStyleExamples(supabase: any, max = 30): Promise<string[]> {
+  const { data } = await supabase
+    .from("knowledge_chunks")
+    .select("content, knowledge_docs!inner(source_type)")
+    .eq("knowledge_docs.source_type", "whatsapp")
+    .limit(40);
+  const lines: string[] = [];
+  for (const row of (data ?? []) as { content: string }[]) {
+    for (const raw of row.content.split("\n")) {
+      const m = raw.match(/\]\s*You:\s*(.+)$/);
+      if (!m) continue;
+      const line = m[1].trim();
+      if (line.length < 8 || line.length > 220) continue;
+      if (/^https?:/i.test(line) || /omitted|deleted/i.test(line)) continue;
+      lines.push(line);
+    }
+  }
+  const step = Math.max(1, Math.floor(lines.length / max));
+  return lines.filter((_, i) => i % step === 0).slice(0, max);
+}
