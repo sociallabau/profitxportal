@@ -287,10 +287,45 @@ function ProfitXRoadmapGrid({
       </div>
 
       {stages.map((stage, sIdx) => {
-        const renderTile = (code: string, name: string) => {
+          const renderTile = (code: string, name: string) => {
           const isComplete = !!completionMap[code];
           const isLocked = !stage.unlocked;
           const hasContent = hasPage(code);
+
+          if (isComplete && hasContent) {
+            return (
+              <button
+                key={code}
+                onClick={() => onOpen(code)}
+                className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.02] hover:shadow-lg ${stage.cardClass}`}
+              >
+                <div className="flex flex-row items-center gap-2 sm:gap-3">
+                  <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                    {code}
+                  </span>
+                  <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                </div>
+              </button>
+            );
+          }
+
+          if (ONBOARDING_COVERED_CODES.has(code)) {
+            return (
+              <div
+                key={code}
+                className={`relative rounded-xl border p-3 text-left ${stage.cardClass}`}
+              >
+                <div className="flex flex-row items-center gap-2 sm:gap-3">
+                  <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
+                    {code}
+                  </span>
+                  <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80">Covered in Onboarding</span>
+                </div>
+              </div>
+            );
+          }
 
           if (isLocked) {
             return (
@@ -311,18 +346,24 @@ function ProfitXRoadmapGrid({
 
           if (!hasContent) {
             return (
-              <div
+              <a
                 key={code}
-                className={`relative rounded-xl border p-3 text-left opacity-70 ${stage.cardClass}`}
+                href={DAN_WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`relative rounded-xl border p-3 text-left transition-transform hover:scale-[1.02] hover:shadow-lg block ${stage.cardClass}`}
               >
                 <div className="flex flex-row items-center gap-2 sm:gap-3">
                   <span className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold text-white ${stage.codeBg}`}>
                     {code}
                   </span>
                   <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80 shrink-0">Coming Soon</span>
+                  <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/15 text-white/80">
+                    <ExternalLink className="w-2.5 h-2.5" />
+                    Book a call with Dan to cover
+                  </span>
                 </div>
-              </div>
+              </a>
             );
           }
 
@@ -337,7 +378,6 @@ function ProfitXRoadmapGrid({
                   {code}
                 </span>
                 <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
-                {isComplete && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
               </div>
             </button>
           );
