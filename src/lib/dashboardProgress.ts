@@ -1,5 +1,6 @@
 export const REVENUE_STEPS = [0, 10000, 20000, 30000, 40000, 50000, 84000, 100000, 150000];
 
+const ASIDE = '';
 
 /** Split a run-on focus note into short, scannable dot points. */
 export function focusBullets(text?: string | null): string[] {
@@ -7,25 +8,26 @@ export function focusBullets(text?: string | null): string[] {
   const flattened = text.replace(/\s+/g, ' ').trim();
   if (!flattened) return [];
   // Long parenthetical asides read better as their own dot point.
-  const spaced = flattened.replace(/\s*\(([^()]{30,})\)/g, ' | $1');
-  const chunks = spaced
-    .split(/\s*\|\s*|\s+[-–—]\s+|\s+\/\s+|(?<=[.!?])\s+/)
-    .map((chunk) => chunk.replace(/^[-–—\s]+|[,;:\s]+$/g, '').trim())
-    .filter((chunk) => chunk.length > 1);
-
+  const marked = flattened.replace(/\s*\(([^()]{30,})\)/g, ` ${ASIDE}$1${ASIDE} `);
   const bullets: string[] = [];
-  for (const chunk of chunks) {
-    const last = bullets.at(-1);
-    // Lowercase openings ("to get engagement") are continuations, not new points.
-    if (last && (/^[a-z]/.test(chunk) || chunk.length < 12)) {
-      bullets[bullets.length - 1] = `${last.replace(/[.!?]+$/, '')}, ${chunk}`;
-      continue;
+
+  marked.split(ASIDE).forEach((piece, index) => {
+    const forced = index % 2 === 1;
+    for (const raw of piece.split(/\s+[-–—]\s+|\s+\/\s+|(?<=[.!?])\s+/)) {
+      const chunk = raw.replace(/^[-–—.,:;\s]+|[,;:\s]+$/g, '').trim();
+      if (chunk.length < 2) continue;
+      const last = bullets.at(-1);
+      // Lowercase openings ("to get engagement") are continuations, not new points.
+      if (last && !forced && (/^[a-z]/.test(chunk) || chunk.length < 12)) {
+        bullets[bullets.length - 1] = `${last.replace(/[.!?]+$/, '')}, ${chunk}`;
+        continue;
+      }
+      bullets.push(chunk.charAt(0).toUpperCase() + chunk.slice(1));
     }
-    bullets.push(chunk.charAt(0).toUpperCase() + chunk.slice(1));
-  }
+  });
+
   return bullets.map((bullet) => bullet.replace(/[.!?]+$/, ''));
 }
-
 
 /** Equal-width ladder levels with interpolation within each level. */
 export function revenuePosition(revenue: number) {
