@@ -28,6 +28,8 @@ export const ANSWER_RULES = `HOW TO ANSWER
 9. When they list several plans, address EVERY one of them (count them; none skipped, even if it doesn't apply yet — say why and what to do instead). Give each one a single line with Dan's specific rule, plus what to do instead. Every "not yet" comes with the right step for their current gate.
 10. ONE clear priority. Not "two things to check", not a list of equal tips.
 11. Only Dan's teaching. Don't add generic marketing advice that isn't in the Brain or the passages.
+12. Packages and prices are set by each member for their own business. Never prescribe a specific Dan pack or price as a rule. Use the member's own prices and offer from ABOUT THIS MEMBER. Only mention Dan's typical price bands as a loose example if the member has no prices of their own, and say it's an example, not a rule.
+13. If DERIVED says revenue is all one-off ($0 recurring), frame it as "your money's all one-off right now", not "$0 MRR".
 
 BOUNDARIES (narrow)
 - "Flag to Dan" ONLY for: their ProfitX billing/invoices, pausing, cancelling, refunds, changing their ProfitX plan, legal, health, mental health or personal crisis. Use the Brain's boundaries wording: short, warm, no ticket language, no coaching, no terms or offers.

@@ -190,11 +190,15 @@ async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy
   const age = new Map<string, number>((docs ?? []).map((d: { id: string; created_at: string }) => [d.id, (Date.now() - Date.parse(d.created_at)) / 86400000]));
   const typeBoost: Record<string, number> = { teaching: 4, transcript: 4, note: 2, whatsapp: 2, call: 0 };
   const lowerTerms = [...new Set([...terms, ...keywordTerms(question)].map(t => t.toLowerCase()))];
+  const askerFull = opts.askerName?.trim().toLowerCase() || null;
+  const askerFirst = askerFull?.split(/\s+/)[0] ?? null;
+  const isOwn = (c: Chunk) => !!askerFirst && (c.source_type === "call" || c.source_type === "whatsapp")
+    && new RegExp(`\\b${askerFirst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(c.title);
   const scored: Scored[] = cands.map(c => {
     const lc = c.content.toLowerCase();
     const hits = lowerTerms.filter(t => lc.includes(t)).length;
     const days = age.get(c.doc_id) ?? 365;
-    return { ...c, score: hits * 3 + (typeBoost[c.source_type] ?? 1) + Math.max(0, 1 - days / 365) };
+    return { ...c, score: hits * 3 + (typeBoost[c.source_type] ?? 1) + Math.max(0, 1 - days / 365) + (isOwn(c) ? 10 : 0) };
   }).sort((a, b) => b.score - a.score);
 
   const words = (t: string) => new Set(t.toLowerCase().split(/\W+/).filter(w => w.length > 3));

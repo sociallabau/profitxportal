@@ -25,6 +25,7 @@ export type Derived = {
   latest_month: string | null; days_since_latest: number | null;
   data_freshness: "fresh" | "stale" | "none";
   mrr_latest: number | null; mrr_trend: string | null;
+  oneoff_revenue_latest: number | null; total_revenue_latest: number | null; all_oneoff: boolean;
   new_clients_latest: number | null; ad_spend_latest: number | null;
   cost_per_client: number | null; lowest_retainer_price: number | null;
   cac_vs_first_month: number | null; cac_verdict: string;
@@ -38,6 +39,14 @@ const KEY_FIELDS: [string, string][] = [
   ["main_lead_source", "main lead source"], ["biggest_blocker", "biggest blocker"],
 ];
 
+const norm = (v: unknown) => String(Array.isArray(v) ? v.join(", ") : v ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+/** Keys whose topic the business overview clearly covers (so they're not "missing"). */
+const OVERVIEW_COVERS: Record<string, RegExp> = {
+  offers_detail: /\$\s?\d|\d+\s?k\b|per month|\/m(o|th)?\b|retainer|package|tier/i,
+  niche: /\b(niche|for|work with|serve|clients? (are|in)|industry|businesses|brands|cafes?|gyms?|real estate|trades?|clinics?)\b/i,
+  team: /\b(team|editor|solo|myself|staff|hire|contractor|employee)\b/i,
+  main_lead_source: /\b(leads?|referrals?|outreach|instagram|ads|word of mouth|dms?)\b/i,
+};
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const monthLabel = (iso: string) =>
   new Date(iso + (iso.length <= 10 ? "T00:00:00Z" : "")).toLocaleString("en-AU", { month: "short", year: "numeric", timeZone: "UTC" });
@@ -73,12 +82,16 @@ export function derive(m: MemberInput, today = new Date()): Derived {
   const goalStatus = !td ? "none" : td >= todayIso ? "current" : "expired";
   const fields = contextSections.flatMap(s => s.fields).filter(f => f.key !== "anything_else");
   const filled = fields.filter(f => isFilled(m.answers[f.key])).length;
-  const missing = KEY_FIELDS.filter(([k]) => !isFilled(m.answers[k])).map(([, l]) => l);
+  const ov = m.business_overview?.trim() || "";
+  const missing = KEY_FIELDS.filter(([k]) => !isFilled(m.answers[k]) && !(ov && OVERVIEW_COVERS[k]?.test(ov))).map(([, l]) => l);
+  const oneoff = latest?.oneoff_revenue ?? null, totalRev = latest?.total_revenue ?? null;
+  const allOneoff = (mrrLatest ?? 0) === 0 && ((totalRev ?? 0) > 0 || (oneoff ?? 0) > 0);
   if (!m.gate) missing.push("current gate");
   return {
     latest_month: latest?.month ?? null, days_since_latest: days,
     data_freshness: !latest ? "none" : (days ?? 0) > 45 ? "stale" : "fresh",
-    mrr_latest: mrrLatest, mrr_trend: trend, new_clients_latest: nc, ad_spend_latest: ad,
+    mrr_latest: mrrLatest, mrr_trend: trend,
+    oneoff_revenue_latest: oneoff, total_revenue_latest: totalRev, all_oneoff: allOneoff, new_clients_latest: nc, ad_spend_latest: ad,
     cost_per_client: cpc, lowest_retainer_price: low,
     cac_vs_first_month: ratio != null ? Math.round(ratio * 100) : null, cac_verdict: verdict,
     revenue_reliable: revenueReliable, calls_tracked: callsTracked, goal_status: goalStatus,
@@ -89,7 +102,9 @@ export function derive(m: MemberInput, today = new Date()): Derived {
 /** Builds the ABOUT THIS MEMBER block. Excludes support.anything_else. */
 export function buildMemberBlock(m: MemberInput, today = new Date()): { text: string; derived: Derived; hasContext: boolean; summary: string } {
   const d = derive(m, today);
-  const fields = contextSections.flatMap(s => s.fields).filter(f => f.key !== "anything_else" && isFilled(m.answers[f.key]));
+  const ovNorm = m.business_overview ? norm(m.business_overview) : "";
+  const fields = contextSections.flatMap(s => s.fields).filter(f => f.key !== "anything_else" && isFilled(m.answers[f.key])
+    && !(ovNorm && norm(m.answers[f.key]) === ovNorm));
   const hasContext = !!(m.name || m.business_overview || fields.length || m.totals.length || m.goal || m.gate);
   if (!hasContext) return { text: "ABOUT THIS MEMBER: nothing filled in yet.", derived: d, hasContext, summary: "nothing filled in yet" };
 
@@ -113,6 +128,7 @@ export function buildMemberBlock(m: MemberInput, today = new Date()): { text: st
       const mrr = mrrOf(t);
       if (mrr != null) parts.push(`MRR ${money(mrr)}`);
       if (t.total_revenue != null) parts.push(`total revenue ${money(t.total_revenue)}`);
+      if (t.oneoff_revenue != null) parts.push(`one-off revenue ${money(t.oneoff_revenue)}`);
       if (t.new_clients != null) parts.push(`new clients ${t.new_clients}`);
       if (t.ad_spend != null) parts.push(`ad spend ${money(t.ad_spend)}`);
       if (t.leads_generated != null) parts.push(`leads ${t.leads_generated}`);
@@ -128,7 +144,8 @@ export function buildMemberBlock(m: MemberInput, today = new Date()): { text: st
   L.push("DERIVED (computed, trust these):");
   if (d.data_freshness === "none") L.push("- Data: no monthly totals submitted");
   else L.push(`- Data: based on ${monthLabel(d.latest_month!)} numbers (${d.days_since_latest} days old — ${d.data_freshness.toUpperCase()})${d.data_freshness === "stale" ? `. Say "based on your ${monthLabel(d.latest_month!).split(" ")[0]} numbers" and nudge them to submit their latest totals.` : ""}`);
-  if (d.mrr_latest != null) L.push(`- MRR: ${money(d.mrr_latest)}${d.mrr_trend ? `, ${d.mrr_trend}` : ""}`);
+  if (d.all_oneoff) L.push(`- Revenue: ${money(d.total_revenue_latest ?? d.oneoff_revenue_latest ?? 0)}, all one-off — $0 recurring. Say "your money's all one-off right now", not "$0 MRR".`);
+  else if (d.mrr_latest != null) L.push(`- MRR: ${money(d.mrr_latest)}${d.mrr_trend ? `, ${d.mrr_trend}` : ""}`);
   if (d.cost_per_client != null) {
     L.push(`- Cost per new client: ~${money(d.cost_per_client)}${d.lowest_retainer_price ? ` vs lowest retainer ${money(d.lowest_retainer_price)} = ${d.cac_vs_first_month}% → ${d.cac_verdict}` : " (no retainer price on file)"}`);
   } else L.push("- Cost per new client: unknown (needs ad spend and new clients)");
