@@ -190,7 +190,7 @@ export default function Roadmap() {
         </p>
       </div>
 
-      <RoadmapAudit onOpenModule={(code) => navigate(`/module/${code}`)} />
+      <RoadmapAudit includeScale={isFullScale} onOpenModule={(code) => navigate(`/module/${code}`)} />
 
       <ProfitXRoadmapGrid
         stages={profitxStages}

@@ -11,21 +11,22 @@ const DOTS: { r: Rating; cls: string; label: string }[] = [
   { r: 'green', cls: 'bg-success', label: 'Nailed it' },
 ];
 
-export default function RoadmapAudit({ onOpenModule }: { onOpenModule: (code: string) => void }) {
+export default function RoadmapAudit({ onOpenModule, includeScale }: { onOpenModule: (code: string) => void; includeScale: boolean }) {
+  const QUESTIONS = includeScale ? AUDIT_QUESTIONS : AUDIT_QUESTIONS.filter(q => q.stage === 'launchpad');
   const [open, setOpen] = useState(false);
   const [answers, setAnswers] = useState<Record<string, Rating>>({});
   const [step, setStep] = useState(0);
-  const done = step >= AUDIT_QUESTIONS.length;
+  const done = step >= QUESTIONS.length;
   const result = classifyAudit(answers);
 
   const reset = () => { setAnswers({}); setStep(0); };
 
   const answer = async (r: Rating) => {
-    const q = AUDIT_QUESTIONS[step];
+    const q = QUESTIONS[step];
     const next = { ...answers, [q.code]: r };
     setAnswers(next);
     setStep(step + 1);
-    if (step + 1 === AUDIT_QUESTIONS.length) {
+    if (step + 1 === QUESTIONS.length) {
       const res = classifyAudit(next);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -36,7 +37,7 @@ export default function RoadmapAudit({ onOpenModule }: { onOpenModule: (code: st
     }
   };
 
-  const q = AUDIT_QUESTIONS[step];
+  const q = QUESTIONS[step];
 
   return (
     <>
@@ -55,9 +56,9 @@ export default function RoadmapAudit({ onOpenModule }: { onOpenModule: (code: st
               <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span className="font-bold tracking-widest text-primary">{q.stage === 'launchpad' ? '$0–20K LAUNCHPAD' : '$30–84K SCALE'} · {q.pillar.toUpperCase()}</span>
-                  <span>{step + 1} / {AUDIT_QUESTIONS.length}</span>
+                  <span>{step + 1} / {QUESTIONS.length}</span>
                 </div>
-                <div className="h-1 rounded bg-muted"><div className="h-1 rounded bg-primary transition-all" style={{ width: `${(step / AUDIT_QUESTIONS.length) * 100}%` }} /></div>
+                <div className="h-1 rounded bg-muted"><div className="h-1 rounded bg-primary transition-all" style={{ width: `${(step / QUESTIONS.length) * 100}%` }} /></div>
               </div>
               <div className="text-center space-y-3 py-4">
                 <span className="inline-block rounded bg-primary/20 px-2 py-0.5 text-sm font-bold text-primary">{q.code}</span>
@@ -93,7 +94,7 @@ export default function RoadmapAudit({ onOpenModule }: { onOpenModule: (code: st
                   <p className="font-semibold mb-2">Focus on these first:</p>
                   <div className="space-y-2">
                     {result.focus.map(code => {
-                      const q = AUDIT_QUESTIONS.find(x => x.code === code)!;
+                      const q = QUESTIONS.find(x => x.code === code)!;
                       return (
                         <button key={code} onClick={() => { setOpen(false); onOpenModule(code); }}
                           className="w-full flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-left hover:border-primary">
