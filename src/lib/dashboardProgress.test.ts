@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { revenuePosition, submissionStreak } from './dashboardProgress';
+import { workshopTypeFor } from '@/data/calls';
+
+it('marks the next October 28 workshop as Learn, including calendar-feed titles', () => {
+  expect(workshopTypeFor('ProfitX Workshop - Christmas Comes Early™', '2026-10-28T07:00:00')).toBe('learn');
+});
 
 describe('revenue ladder', () => {
   it('places revenue at its level and interpolates between levels', () => {
