@@ -15,7 +15,7 @@ describe('computeDrift', () => {
   });
 
   it('flags a stalled gate: no completion in 60+ days and gate target not met', () => {
-    const r = computeDrift({ ...base, revenueSeries: [4000, 3000], daysSinceCompletion: 74 });
+    const r = computeDrift({ ...base, revenueSeries: [4000, 3900], daysSinceCompletion: 74 });
     expect(r.signals).toContain('No module progress 74 days');
     expect(r.signals).toContain('Revenue flat 2 months');
     expect(r.band).toBe('red');
