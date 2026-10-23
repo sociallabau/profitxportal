@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Trophy, Calendar, ExternalLink, Sparkles, Hammer, Rocket, Compass, Video, TrendingUp, FileText, Flag, ArrowUpRight, Crosshair } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import DashboardProgress from '@/components/DashboardProgress';
+import { Button } from '@/components/ui/button';
 import PageLayout from '@/components/PageLayout';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
 import { useRequireAuth } from '@/hooks/useAuth';
@@ -42,46 +43,6 @@ function currentCycle() {
   return { year, monthIdx, monthName, quarter, monthInQuarter, phase, nextPhase, nextMonthName };
 }
 
-// -------- Gate card --------
-function GateCard({ gate, keyTask, moveUp }: { gate: string; keyTask: string | null; moveUp: string | null }) {
-  return (
-    <div className="relative mb-6 rounded-2xl p-[1.5px] bg-gradient-to-br from-primary via-primary/60 to-primary/20 shadow-[0_0_40px_-8px_hsl(var(--primary)/0.55)]">
-      <div className="relative rounded-2xl bg-card overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-primary/5 pointer-events-none" />
-        <div className="relative p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center shadow-[0_0_16px_-2px_hsl(var(--primary)/0.6)]">
-              <Flag className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your current gate</p>
-              <h2 className="text-xl font-bold text-primary drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]">{gate}</h2>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {keyTask && (
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 mb-2">
-                  <Crosshair className="w-3 h-3" /> Key next task
-                </p>
-                <p className="text-sm text-foreground leading-relaxed">{keyTask}</p>
-              </div>
-            )}
-            {moveUp && (
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 mb-2">
-                  <ArrowUpRight className="w-3 h-3" /> To move up a gate
-                </p>
-                <p className="text-sm text-foreground leading-relaxed">{moveUp}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // -------- Upcoming calls bar --------
 function CallCard({ call }: { call: Call }) {
   const d = new Date(call.start);
@@ -97,7 +58,7 @@ function CallCard({ call }: { call: Call }) {
         )}
       </div>
       <div className="flex-1 min-w-0 flex flex-col">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{call.category}</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{call.category === 'Workshop' && call.workshopType ? `${call.workshopType === 'learn' ? 'Learn' : 'Do'} Workshop` : call.category}</span>
         <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-2">{call.title}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">{dateStr} · {timeStr}</p>
         <a
@@ -197,8 +158,8 @@ function ThreeWeekCalendar({ calls }: { calls: Call[] }) {
   const catColor = (c: Call) => {
     if (c.category === 'Workshop') {
       return c.workshopType === 'learn'
-        ? 'bg-sky-400/80 text-sky-950'
-        : 'bg-orange-400/80 text-orange-950';
+        ? 'workshop-learn'
+        : 'workshop-do';
     }
     if (c.category === 'Q&A') return 'bg-blue-400/80 text-blue-950';
     return 'bg-primary/80 text-primary-foreground';
@@ -276,7 +237,7 @@ export default function Dashboard() {
       const { data } = await supabase
         .from('weekly_wins')
         .select('id, win_text, cash_amount, created_at')
-        .eq('user_id', user!.id)
+        .eq('user_id', user?.id ?? '')
         .not('win_text', 'eq', '')
         .order('created_at', { ascending: false })
         .limit(4);
@@ -290,12 +251,13 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from('monthly_totals')
-        .select('month, mrr, total_revenue')
-        .eq('user_id', user!.id)
+        .select('month, mrr, mrr_manual, oneoff_revenue, total_revenue')
+        .eq('user_id', user?.id ?? '')
         .order('month', { ascending: true });
       return (data ?? []).map(r => ({
-        month: new Date(r.month).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
-        revenue: Number(r.total_revenue) || Number(r.mrr) || 0,
+        month: new Date(`${r.month.slice(0, 7)}-15T12:00:00`).toLocaleDateString('en-AU', { month: 'short', year: '2-digit' }),
+        monthKey: r.month,
+        revenue: Number(r.total_revenue) || (Number(r.mrr_manual ?? r.mrr) || 0) + (Number(r.oneoff_revenue) || 0),
       }));
     },
   });
@@ -311,19 +273,16 @@ export default function Dashboard() {
           </h1>
           <p className="text-sm text-muted-foreground">Here's where ProfitX is right now.</p>
         </div>
-        <button
+        <Button
           onClick={() => navigate('/submissions/monthly')}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-lg shadow-primary/20"
         >
           <FileText className="w-4 h-4" />
           Submit Monthly Report
-        </button>
+        </Button>
       </div>
 
-      {/* Gate card */}
-      {profile?.gate && (
-        <GateCard gate={profile.gate} keyTask={profile.gate_key_task} moveUp={profile.gate_move_up} />
-      )}
+      <DashboardProgress series={revenueSeries} gate={profile?.gate} keyTask={profile?.gate_key_task} moveUp={profile?.gate_move_up} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">
@@ -332,7 +291,7 @@ export default function Dashboard() {
             <Calendar className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold text-foreground">Next Up</h2>
           </div>
-          <button onClick={() => navigate('/calls')} className="text-xs text-primary hover:underline">See all calls →</button>
+          <Button variant="link" size="sm" onClick={() => navigate('/calls')} className="text-xs text-primary hover:underline">See all calls →</Button>
         </div>
         {upcomingCalls.length === 0 ? (
           <div className="bg-card border border-border border-dashed rounded-xl p-6 text-center text-sm text-muted-foreground">
@@ -392,39 +351,6 @@ export default function Dashboard() {
         <YearlyCalendar />
       </div>
 
-      {/* Revenue growth */}
-      <div className="bg-card border border-border rounded-xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Revenue Growth</h2>
-          </div>
-          <button onClick={() => navigate('/financials')} className="text-xs text-primary hover:underline">View financials →</button>
-        </div>
-        {revenueSeries.length === 0 ? (
-          <div className="text-center py-10 text-sm text-muted-foreground">
-            No monthly check-ins yet. Submit your first monthly report to start tracking growth.
-          </div>
-        ) : (
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueSeries} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
-                <Tooltip
-                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number | string) => [`$${Number(v).toLocaleString()}`, 'Revenue']}
-                />
-                <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-
-
       {/* Recent wins — hype */}
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
@@ -432,7 +358,7 @@ export default function Dashboard() {
             <Trophy className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold text-foreground">Recent Wins</h2>
           </div>
-          <button onClick={() => navigate('/wins')} className="text-xs text-primary hover:underline">See all →</button>
+          <Button variant="link" size="sm" onClick={() => navigate('/wins')} className="text-xs text-primary hover:underline">See all →</Button>
         </div>
         {wins.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No wins logged yet. Add your first one on the Wins Wall!</p>
