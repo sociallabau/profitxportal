@@ -4,3 +4,4 @@
 - [x] Restore the owner's own dashboard and simplify typography.
 - [x] Combine the month type and focus with the three-week calendar header and verify.
 - [x] Simplify the focus card into dot points and verify.
+- [x] Shorten each focus point to a direct instruction and verify.
