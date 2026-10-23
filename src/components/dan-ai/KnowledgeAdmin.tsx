@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { functionErrorMessage } from '@/lib/functionError';
+import BrainSummary from './BrainSummary';
 import {
   Sparkles, Copy, Check, Trash2, Upload, BookmarkPlus, Loader2, FileText, MessageSquare,
   RefreshCw, Clapperboard, Wand2, Mic, HelpCircle,
