@@ -150,7 +150,7 @@ export default function DanAI() {
     <div className="w-full max-w-[680px] mx-auto">
       {isAdmin && (
         <div className="flex items-center gap-1.5 mb-2 text-xs text-[hsl(var(--dan-muted))]">
-          <span>Answering as:</span>
+          <span>Context from:</span>
           <select value={memberId} onChange={e => setMemberId(e.target.value)}
             className="bg-transparent text-[hsl(var(--dan-ink))] text-xs focus:outline-none cursor-pointer">
             <option value="">Myself</option>
