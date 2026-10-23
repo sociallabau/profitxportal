@@ -2,13 +2,14 @@ import AppSidebar from "./AppSidebar";
 
 interface PageLayoutProps {
   children: React.ReactNode;
+  mainClassName?: string;
 }
 
-export default function PageLayout({ children }: PageLayoutProps) {
+export default function PageLayout({ children, mainClassName = '' }: PageLayoutProps) {
   return (
     <div className="flex min-h-screen w-full overflow-x-hidden">
       <AppSidebar />
-      <main className="flex-1 min-w-0 overflow-x-hidden">
+      <main className={`flex-1 min-w-0 overflow-x-hidden ${mainClassName}`}>
         <div className="page-enter max-w-6xl mx-auto px-4 sm:px-6 py-8 pt-16 lg:pt-8">
           {children}
         </div>
