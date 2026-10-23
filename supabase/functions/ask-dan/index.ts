@@ -94,7 +94,11 @@ const TIGHT_RULES = `TIGHT RULES (apply to every answer)
 3. ONE LINE PER PLAN, WITH DAN'S RULE: when they list several plans, give each one the specific rule from the Brain or playbook-answers, not a generic "wait until later". Examples: ad spend always sits ON TOP of the fee through the client's ad account, never inside the price; never switch off awareness/lead gen to save cash; the editor cue is ~$15–20k/mo; the ad step for their gate (Gate 1 = $50 PV boost behind best posts).
 4. TELL THEM WHAT TO DO, NOT JUST WHAT NOT TO DO: every "not yet" needs the right step for their current gate.
 5. BOUNDARIES ARE NARROW: "flag to Dan" is ONLY for their ProfitX billing, pausing, cancelling, refunds, legal, health and personal crises. Decisions about THEIR OWN business spending (ads vs editor, hiring, pricing) are normal coaching. Answer them using the Brain.
-6. VOICE: open with a direct stance in Dan's words ("Not quite yet bro", "Nah", "Yeha"). Short lines, under about 180 words. No consultant phrases ("pump the brakes", "mid-strategy", "let's slow down", "moves the needle"). No swearing.`;
+6. VOICE: open with a direct stance in Dan's words ("Not quite yet bro", "Nah", "Yeha"). Short lines, under about 180 words. No consultant phrases ("pump the brakes", "mid-strategy", "let's slow down", "moves the needle"). No swearing.
+7. EXACT NUMBERS: Quote Dan's exact numbers from the Brain, never paraphrase them. Speed to lead = call within 15–30 mins. Don't touch a new campaign for 7 days. Scale only when a client costs under half their first month's fee. Creatives: add more to the same campaign.
+8. NO GENERIC TIPS: Don't add generic marketing tips that aren't in the Brain or the passages.
+9. USE THEIR CONTEXT: If ABOUT THIS MEMBER has anything relevant to the question (their offer, what's working, their known blocker, their gate), the answer MUST use at least one specific detail from it. The checker should fail any answer that ignores relevant member context.
+10. LENGTH: Keep it under about 150 words. One priority, no 'two things to check' lists.`;
 
 function draftPrompt(voice: string, styleExamples: string[], catalogue: string) {
   return `You are Dan Wilmott answering one of his ProfitX members directly, as their on-demand personal consultant.
@@ -137,7 +141,7 @@ const CHECKER_PROMPT = `You are Dan's quality checker. Check the DRAFT against D
 7. FOCUS + VOICE: one clear priority, short lines, Dan's voice, no swearing, no corporate language.
 Also enforce these:
 ${TIGHT_RULES}
-7. Don't make the draft more cautious or more formal. Only change it to fix a rule breach, a privacy issue or a wrong fact. If you rewrite, keep it in Dan's voice and at the same length or shorter.
+11. Don't make the draft more cautious or more formal. Only change it to fix a rule breach, a privacy issue or a wrong fact. If you rewrite, keep it in Dan's voice and at the same length or shorter.
 If the draft passes everything, return it unchanged. If not, rewrite only what's needed, keeping Dan's voice.
 Return only JSON: {"pass": true|false, "issues": [{"type": "privacy|boundary|gate|playbook|accuracy|question|voice", "note": "..."}], "final": {"answer": "...", "next_steps": ["..."], "resource": "..."}}`;
 
@@ -185,7 +189,9 @@ function toAnswer(v: unknown): Answer | null {
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-async function callAnthropic(system: Block[], messages: Turn[], maxTokens = 2000): Promise<string> {
+const SHORTER = "Your last reply was cut off. Give the same answer again, much shorter, and return the complete JSON.";
+
+async function callAnthropic(system: Block[], messages: Turn[], maxTokens = 4000, retried = false): Promise<string> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("No Anthropic key");
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -196,11 +202,14 @@ async function callAnthropic(system: Block[], messages: Turn[], maxTokens = 2000
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("");
+  if (data.stop_reason === "max_tokens" && !retried) {
+    return callAnthropic(system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: SHORTER }], maxTokens, true);
+  }
   if (!text) throw new Error(`Claude returned no content (stop_reason: ${data.stop_reason ?? "unknown"})`);
   return text;
 }
 
-async function callGemini(system: Block[], messages: Turn[]): Promise<string> {
+async function callGemini(system: Block[], messages: Turn[], retried = false): Promise<string> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("No AI key configured");
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -208,13 +217,16 @@ async function callGemini(system: Block[], messages: Turn[]): Promise<string> {
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
-      max_tokens: 2000,
+      max_tokens: 4000,
       messages: [{ role: "system", content: system.map(b => b.text).join("\n\n") }, ...messages],
     }),
   });
   if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content ?? "";
+  if (data.choices?.[0]?.finish_reason === "length" && !retried) {
+    return callGemini(system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: SHORTER }], true);
+  }
   if (!text) throw new Error(`Gateway returned no content (finish_reason: ${data.choices?.[0]?.finish_reason ?? "unknown"})`);
   return text;
 }
@@ -383,7 +395,7 @@ Deno.serve(async (req) => {
       const checkRaw = await callAnthropic(checkSystem, [{
         role: "user",
         content: `ABOUT THIS MEMBER\n${member.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${question}\n\n=====\n\nDRAFT\n${JSON.stringify(draft)}`,
-      }], 2500);
+      }], 4000);
       const parsed = parseJson(checkRaw);
       const checked = toAnswer(parsed?.final);
       if (!parsed || !checked) throw new Error("Checker returned invalid JSON");
