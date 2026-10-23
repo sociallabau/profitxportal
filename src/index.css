@@ -184,6 +184,9 @@
   --focus-glow: 0 0 28px -12px hsl(var(--primary) / 0.4);
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
 }
 .dashboard-example .example-label { color: hsl(var(--example-label)); }
 .dashboard-example button .example-label { color: inherit; }
