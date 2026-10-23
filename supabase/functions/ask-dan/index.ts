@@ -246,7 +246,7 @@ async function loadBrain(admin: any): Promise<string> {
 }
 
 // deno-lint-ignore no-explicit-any
-async function loadMember(admin: any, memberId: string): Promise<{ text: string; name: string | null }> {
+async function loadMember(admin: any, memberId: string): Promise<{ text: string; name: string | null; stats: { totals_count: number; totals_months: string[]; room_found: boolean; room_fields_filled: number } }> {
   const [{ data: profile }, { data: room }, { data: totals }, { data: goal }] = await Promise.all([
     admin.from("profiles").select("full_name, business_overview").eq("id", memberId).maybeSingle(),
     admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
@@ -271,7 +271,11 @@ async function loadMember(admin: any, memberId: string): Promise<{ text: string;
   } else lines.push("- none submitted yet");
   lines.push("", "90-day goal:");
   lines.push(goal ? Object.entries(goal).filter(([, v]) => v !== null).map(([k, v]) => `- ${k}: ${v}`).join("\n") || "- not set" : "- not set");
-  return { text: lines.join("\n"), name: profile?.full_name ?? null };
+  const filled = Object.values(answers).filter(v => v !== null && v !== undefined && String(v).trim() !== "").length;
+  return {
+    text: lines.join("\n"), name: profile?.full_name ?? null,
+    stats: { totals_count: totals?.length ?? 0, totals_months: (totals ?? []).map((t: { month: string }) => t.month), room_found: !!room, room_fields_filled: filled },
+  };
 }
 
 Deno.serve(async (req) => {
@@ -301,8 +305,8 @@ Deno.serve(async (req) => {
     // Admin draft mode: answer as the picked member, with their context.
     let memberId = userId;
     let draftMode = false;
+    const { data: isAdmin } = await admin.rpc("is_admin", { _user_id: userId });
     if (typeof body.member_id === "string" && uuidRe.test(body.member_id) && body.member_id !== userId) {
-      const { data: isAdmin } = await admin.rpc("is_admin", { _user_id: userId });
       if (!isAdmin) return json({ error: "Admins only" }, 403);
       memberId = body.member_id;
       draftMode = true;
@@ -422,7 +426,14 @@ Deno.serve(async (req) => {
       }),
     ]);
 
-    return json({ ...final, thread_id: threadId });
+    const debug = isAdmin === true ? {
+      about_member: member.text || "none loaded",
+      member_id: memberId,
+      monthly_totals: { count: member.stats.totals_count, months: member.stats.totals_months },
+      context_room: { found: member.stats.room_found, fields_filled: member.stats.room_fields_filled },
+      passage_titles: (chunks as { title: string; source_type: string }[]).map(c => `[${SOURCE_TAGS[c.source_type] ?? c.source_type}] ${c.title}`),
+    } : undefined;
+    return json({ ...final, thread_id: threadId, ...(debug ? { debug } : {}) });
   } catch (err) {
     console.error("ask-dan error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);
