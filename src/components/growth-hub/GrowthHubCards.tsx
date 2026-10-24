@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Check, Lock, MessageCircle, Play, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { moduleName } from '@/data/modules';
-import { canUseDanAi } from '@/lib/danAccess';
+import { useCanUseDanAi } from '@/lib/danAccess';
 import {
   GATE_GOALS, goalStatus, helpPrompt, trainingLink,
   type GateNumber, type TaskStatus, type TaskWithStatus,
@@ -54,6 +54,7 @@ function useTicking(userId?: string) {
 /** The one thing to do next. Dan AI's brief when there is one, the task either way. */
 export function NextMove({ task, brief, isAdmin, userId, compact = false }: { task: TaskWithStatus | null; brief: string | null; isAdmin: boolean; userId?: string; compact?: boolean }) {
   const hasPage = useModulePages();
+  const canAsk = useCanUseDanAi(isAdmin);
   const training = task ? trainingLink(task, hasPage) : null;
   const ticking = useTicking(userId);
   return (
@@ -73,7 +74,7 @@ export function NextMove({ task, brief, isAdmin, userId, compact = false }: { ta
             {training?.href && (training.external
               ? <a href={training.href} target="_blank" rel="noreferrer" className={`${pill} bg-white text-primary`}><Play className="w-3.5 h-3.5 fill-current" />{training.status ? training.label : `Watch ${training.label}`}</a>
               : <Link to={training.href} className={`${pill} bg-white text-primary`}><Play className="w-3.5 h-3.5 fill-current" />Watch {training.label}</Link>)}
-            {canUseDanAi(isAdmin) && (
+            {canAsk && (
               <Link to={askHref(task)} className={`${pill} bg-white/15 border border-white/40`}><Sparkles className="w-3.5 h-3.5" />Help me do this</Link>
             )}
             {userId && canTickTask(task) && (
@@ -92,6 +93,7 @@ function TaskRow({ task, isAdmin, ticking, canTick }: {
   task: TaskWithStatus; isAdmin: boolean; ticking: ReturnType<typeof useTicking>; canTick: boolean;
 }) {
   const s = STATUS[task.status];
+  const canAsk = useCanUseDanAi(isAdmin);
   const kickoff = task.kind === 'kickoff';
   const ticked = task.status === 'submitted' || task.status === 'approved';
   const tickable = canTick && canTickTask(task);
@@ -116,7 +118,7 @@ function TaskRow({ task, isAdmin, ticking, canTick }: {
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
           <TrainingChip task={task} />
           <span className="text-[11.5px] font-bold rounded-full px-2.5 py-1 bg-foreground/[0.06] text-muted-foreground">{KIND[task.kind]}</span>
-          {canUseDanAi(isAdmin) && task.status !== 'approved' && (
+          {canAsk && task.status !== 'approved' && (
             <Link to={askHref(task)} className="text-[11.5px] font-bold text-primary hover:underline inline-flex items-center gap-1"><Sparkles className="w-3 h-3" />Help me do this</Link>
           )}
           <span className={`sm:hidden mono-label text-[10px] font-bold rounded-full px-2.5 py-1 ${s.cls}`}>{s.label}</span>

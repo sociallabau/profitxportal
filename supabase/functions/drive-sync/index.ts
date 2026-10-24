@@ -15,7 +15,7 @@ import { isCronCall } from "../_shared/cron.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret, x-dan-ai-test-key",
 };
 
 const GOOGLE_DOC = "application/vnd.google-apps.document";
@@ -295,8 +295,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
     const isCron = await isCronCall(admin, req);
+    // Claude's verification loop can ask for specific files, authenticated by the DAN_AI_TEST_KEY secret.
+    const testKey = Deno.env.get("DAN_AI_TEST_KEY");
+    const isTest = !!testKey && req.headers.get("x-dan-ai-test-key") === testKey;
+    const body = await req.json().catch(() => ({}));
 
-    if (!isCron) {
+    if (!isCron && !isTest) {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
       const scoped = createClient(
@@ -322,6 +326,40 @@ Deno.serve(async (req) => {
     const token = await getDriveToken(sa);
 
     const maxDocs = Number(Deno.env.get("DRIVE_SYNC_MAX_DOCS") ?? 5);
+
+    // Targeted mode: ingest (or queue for transcription) these exact files, e.g. the docs behind Vault entries.
+    const fileIds: string[] = Array.isArray(body.file_ids) ? body.file_ids.filter((x: unknown) => typeof x === "string" && /^[\w-]{10,100}$/.test(x)).slice(0, 10) : [];
+    if (fileIds.length) {
+      const report: Record<string, string> = {};
+      for (const id of fileIds) {
+        try {
+          const meta = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,mimeType,size,modifiedTime&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${token}` } });
+          if (!meta.ok) { report[id] = `no access (${meta.status}): share it with ${sa.client_email}`; continue; }
+          const file = await meta.json() as DriveFile;
+          const { data: existing } = await admin.from("knowledge_docs").select("id").eq("source_id", id).maybeSingle();
+          if (existing) { report[id] = `already in knowledge: ${file.name}`; continue; }
+          if (file.mimeType === GOOGLE_DOC || file.mimeType === "text/plain") {
+            const { text, kind } = file.mimeType === GOOGLE_DOC ? await fetchDocText(token, id) : { text: await fetchPlainFile(token, id), kind: "plain" as const };
+            const chunks = chunkText(text);
+            if (!chunks.length) { report[id] = `empty: ${file.name}`; continue; }
+            const { data: doc, error } = await admin.from("knowledge_docs").insert({
+              title: file.name, source_type: isTeaching(file.name) ? "teaching" : kind === "notes" ? "note" : kind === "plain" ? "transcript" : "call",
+              source_id: id, source_url: `https://docs.google.com/document/d/${id}`, word_count: text.split(/\s+/).length,
+            }).select("id").single();
+            if (error || !doc) throw error ?? new Error("insert failed");
+            for (let i = 0; i < chunks.length; i += 100) {
+              const { error: e } = await admin.from("knowledge_chunks").insert(chunks.slice(i, i + 100).map((content, j) => ({ doc_id: doc.id, chunk_index: i + j, content })));
+              if (e) throw e;
+            }
+            report[id] = `ingested: ${file.name} (${chunks.length} chunks)`;
+          } else if (file.mimeType.startsWith("video/") || file.mimeType.startsWith("audio/")) {
+            const { error } = await admin.from("transcription_jobs").upsert({ drive_file_id: id, title: file.name, mime_type: file.mimeType, size_bytes: file.size ? Number(file.size) : null, status: "pending", updated_at: new Date().toISOString() }, { onConflict: "drive_file_id", ignoreDuplicates: true });
+            report[id] = error ? `queue failed: ${error.message}` : `queued for transcription: ${file.name}`;
+          } else report[id] = `unsupported type ${file.mimeType}: ${file.name}`;
+        } catch (err) { report[id] = `error: ${err instanceof Error ? err.message : String(err)}`; }
+      }
+      return json({ report });
+    }
     let ingested = 0;
     let remaining = 0;
     let queued = 0;

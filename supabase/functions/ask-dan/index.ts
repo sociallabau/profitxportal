@@ -597,7 +597,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.7";
+const VERSION = "2026-10-24.8";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -712,6 +712,56 @@ async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) 
     const { data } = await admin.from("transcription_jobs").select("title, status, error, provider, created_at, submitted_at, completed_at, transcript_chars, drive_file_id").order("created_at", { ascending: false }).limit(25);
     const { data: mem } = await admin.from("member_memory").select("user_id, refreshed_at, dirty_at, instagram_handle, instagram_fetched_at, summary").limit(100);
     return { jobs: data ?? [], memory_rows: ((mem ?? []) as { user_id: string; refreshed_at: string | null; dirty_at: string; instagram_handle: string | null; summary: string }[]).map(m => ({ ...m, summary: m.summary?.slice(0, 80) })) };
+  }
+
+  if (action === "vault_check") {
+    // Per Vault entry: which of its Drive files are in the knowledge base, and any doc whose title names it or its date.
+    const items: { line: string; ids: string[]; name: string; date: string | null }[] = Array.isArray(body.items) ? body.items.slice(0, 60) : [];
+    const { data: docs } = await admin.from("knowledge_docs").select("id, title, source_id, source_type, word_count");
+    const rows = (docs ?? []) as { id: string; title: string; source_id: string | null; source_type: string; word_count: number | null }[];
+    const norm = (x: string) => x.toLowerCase().replace(/[™®]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    return {
+      items: items.map(it => {
+        const byId = rows.filter(r => r.source_id && it.ids.includes(r.source_id));
+        const byName = it.name.length >= 5 ? rows.filter(r => norm(r.title).includes(norm(it.name))) : [];
+        const byDate = it.date ? rows.filter(r => r.title.includes(it.date!)) : [];
+        const found = [...new Map([...byId, ...byName, ...byDate].map(r => [r.id, r])).values()];
+        return { line: it.line, found: found.map(r => `${r.source_type}: ${r.title} (${r.word_count ?? "?"} words)`) };
+      }),
+    };
+  }
+
+  if (action === "ingest_text") {
+    // Text Claude pulled from a workbook or doc the Drive sync can't reach, chunked like drive-sync does.
+    const title = String(body.title ?? "").slice(0, 300), sourceId = String(body.source_id ?? "").slice(0, 200), content = String(body.content ?? "");
+    const type = ["teaching", "note", "transcript", "call"].includes(body.source_type) ? body.source_type : "teaching";
+    if (!title || !sourceId || content.trim().length < 200) return { error: "title, source_id and content (200+ chars) required" };
+    const { data: existing } = await admin.from("knowledge_docs").select("id").eq("source_id", sourceId).maybeSingle();
+    if (existing && !body.replace) return { skipped: "already in knowledge", id: existing.id };
+    if (existing) await admin.from("knowledge_docs").delete().eq("id", existing.id);
+    const clean = content.replace(/\r\n/g, "\n").trim();
+    const chunks: string[] = [];
+    for (let start = 0; start < clean.length;) {
+      let end = Math.min(start + 1400, clean.length);
+      if (end < clean.length) { const br = clean.lastIndexOf("\n\n", end); if (br > start + 700) end = br; }
+      const piece = clean.slice(start, end).trim();
+      if (piece) chunks.push(piece);
+      if (end >= clean.length) break;
+      start = Math.max(end - 200, start + 1);
+    }
+    const { data: doc, error } = await admin.from("knowledge_docs").insert({ title, source_type: type, source_id: sourceId, source_url: body.source_url ?? null, word_count: clean.split(/\s+/).length }).select("id").single();
+    if (error || !doc) return { error: error?.message ?? "insert failed" };
+    for (let i = 0; i < chunks.length; i += 100) {
+      const { error: e } = await admin.from("knowledge_chunks").insert(chunks.slice(i, i + 100).map((c, j) => ({ doc_id: doc.id, chunk_index: i + j, content: c })));
+      if (e) return { error: e.message };
+    }
+    return { ingested: title, chunks: chunks.length };
+  }
+
+  if (action === "set_live") {
+    // Opens Dan AI to members (or closes it) once the verification loop passes.
+    const { error } = await admin.from("admin_settings").upsert({ key: "dan_ai_members_live", value: body.live === true ? "true" : "false", updated_at: new Date().toISOString() }, { onConflict: "key" });
+    return error ? { error: error.message } : { live: body.live === true };
   }
 
   if (action === "list_tests") {

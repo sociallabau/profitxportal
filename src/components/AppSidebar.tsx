@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
 import { OWNER_USER_ID } from '@/lib/owner';
-import { DAN_AI_MEMBERS_LIVE } from '@/lib/danAccess';
+import { useDanAiLive } from '@/lib/danAccess';
 
 export const CIRCLE_URLS = {
   modules: 'https://app.circle.so/sign_in',
@@ -19,7 +19,6 @@ export const CIRCLE_URLS = {
 const mainNavItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
   { label: 'Growth Hub', path: '/growth-hub', icon: Swords },
-  ...(DAN_AI_MEMBERS_LIVE ? [{ label: 'Dan AI', path: '/dan-ai', icon: Sparkle }] : []),
   { label: 'Hot List', path: '/hot-list', icon: Flame },
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
@@ -33,7 +32,6 @@ const mainNavItems = [
 const adminItems = [
   { label: 'Client Health', path: '/client-health', icon: HeartPulse },
   { label: 'Client Journey', path: '/client-journey', icon: Compass },
-  ...(DAN_AI_MEMBERS_LIVE ? [] : [{ label: 'Dan AI', path: '/dan-ai', icon: Sparkle }]),
   { label: 'Growth Hub Editor', path: '/admin/growth-hub', icon: ListChecks },
 ];
 
@@ -45,6 +43,10 @@ function NavContent({ onClose }: { onClose?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: profile } = useProfile();
+  const danLive = useDanAiLive();
+  const danAi = { label: 'Dan AI', path: '/dan-ai', icon: Sparkle };
+  const navItems = danLive ? [...mainNavItems.slice(0, 2), danAi, ...mainNavItems.slice(2)] : mainNavItems;
+  const adminNav = danLive ? adminItems : [...adminItems.slice(0, 2), danAi, ...adminItems.slice(2)];
 
   const active = (path: string) => location.pathname === path;
 
@@ -84,7 +86,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
           Dashboard
         </Link>
 
-        {mainNavItems.slice(1).map((item) => (
+        {navItems.slice(1).map((item) => (
           <Link
             key={item.path}
             to={item.path}
@@ -104,7 +106,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
         {profile?.is_admin && (
           <div className="pt-3 mt-2 border-t border-border">
             <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Admin</p>
-            {adminItems.map((item) => (
+            {adminNav.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}

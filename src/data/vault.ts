@@ -301,3 +301,8 @@ export const VAULT_ITEMS: VaultItem[] = [
 export function driveFileId(url?: string): string | null {
   return url?.match(/drive\.google\.com\/file\/d\/([\w-]+)/)?.[1] ?? null;
 }
+
+/** The Drive id of a Drive file or Google Doc link (recording, notes, transcript or workbook). */
+export function driveId(url?: string): string | null {
+  return url?.match(/(?:drive\.google\.com\/file\/d|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d)\/([\w-]+)/)?.[1] ?? null;
+}

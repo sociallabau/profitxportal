@@ -1,4 +1,4 @@
-import { VAULT_ITEMS, driveFileId } from './vault';
+import { VAULT_ITEMS, driveId } from './vault';
 
 /**
  * What Dan can point a member at: the recorded sessions in the Vault and the
@@ -147,12 +147,13 @@ export function resourceCatalogue(): string {
   return [...vault, ...roadmap].join('\n');
 }
 
-/** Drive file id -> catalogue line, so Dan AI can tie a Drive transcript back to its recording. */
+/**
+ * Drive id -> catalogue line for every file behind a Vault entry (recording,
+ * notes/transcript doc, workbook), so Dan AI can tie any of them back to the session.
+ */
 export function vaultSources(): Record<string, string> {
-  return Object.fromEntries(VAULT_ITEMS.flatMap(r => {
-    const id = driveFileId(r.url);
-    return id ? [[id, vaultLine(r)]] : [];
-  }));
+  return Object.fromEntries(VAULT_ITEMS.flatMap(r =>
+    [r.url, r.transcriptUrl, r.workbookUrl].map(driveId).filter((id): id is string => !!id).map(id => [id, vaultLine(r)])));
 }
 
 /** Where a resource line Dan AI picked should take the member. */

@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import OwnerRoute from './components/OwnerRoute';
-import { DAN_AI_MEMBERS_LIVE } from '@/lib/danAccess';
+import { useDanAiLive } from '@/lib/danAccess';
 import Auth from "./pages/Auth";
 
 // Routes load on demand, so the first paint does not carry the whole app.
@@ -101,7 +101,7 @@ const App = () => (
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
-          <Route path="/dan-ai" element={DAN_AI_MEMBERS_LIVE ? <ProtectedRoute><DanAI /></ProtectedRoute> : <AdminRoute><DanAI /></AdminRoute>} />
+          <Route path="/dan-ai" element={<DanAiRoute />} />
           <Route path="/admin/growth-hub" element={<AdminRoute><GrowthHubEditor /></AdminRoute>} />
           <Route path="/admin/playbooks" element={<Navigate to="/admin/growth-hub" replace />} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
@@ -112,5 +112,11 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+
+
+/** Members reach Dan AI once it's switched on; admins always can. */
+function DanAiRoute() {
+  return useDanAiLive() ? <ProtectedRoute><DanAI /></ProtectedRoute> : <AdminRoute><DanAI /></AdminRoute>;
+}
 
 export default App;
