@@ -416,19 +416,26 @@ function buildDebug(mode: string, memberId: string | null, member: MemberInput |
 }
 
 function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short = false) {
-  const text = [a.answer, ...a.next_steps].join("\n");
-  const wc = wordCount(a.answer);
+  const text = fullText(a);
+  const wc = wordCount(text);
   const names = findNames(text, tokens);
   const banned = findBanned(text);
-  const [min, max] = short ? [15, 60] : [40, 220];
-  return [
+  const checks = [
     { check: "no swear words or banned phrases", pass: banned.length === 0, why: banned.join(", ") || "clean" },
     { check: "no real member names", pass: names.length === 0, why: names.join(", ") || "none" },
-    { check: `answer ${min}–${max} words`, pass: wc >= min && wc <= max, why: `${wc} words` },
-    { check: "ends cleanly", pass: !looksTruncated(a.answer), why: a.answer.trim().slice(-30) },
+    short
+      ? { check: "boundary/privacy reply 15–60 words", pass: wc >= 15 && wc <= 60, why: `${wc} words` }
+      : { check: "total under ~110 words", pass: wc <= 120, why: `${wc} words` },
+    ...(short ? [] : [
+      { check: "stance line max ~15 words", pass: wordCount(a.answer) <= 18, why: `${wordCount(a.answer)} words` },
+      { check: "2–4 dot points", pass: a.points.length >= 2 && a.points.length <= 4, why: `${a.points.length} points` },
+      { check: "every point has one reason", pass: a.points.every(pt => pt.why.trim().length > 0), why: a.points.every(pt => pt.why.trim()) ? "all have why" : "missing why" },
+    ]),
+    { check: "ends cleanly", pass: !looksTruncated(a.points.length ? (a.note ?? a.points[a.points.length - 1].why || a.points[a.points.length - 1].do) : a.answer), why: a.answer.trim().slice(-30) },
     { check: "valid JSON", pass: true, why: "parsed" },
     { check: "resource null or exact catalogue title", pass: a.resource === null || catalogueLines.includes(a.resource), why: a.resource ?? "null" },
   ];
+  return checks;
 }
 
 // ---------- handler ----------
@@ -557,7 +564,7 @@ Deno.serve(async (req) => {
         { user_id: userId, thread_id: threadId, role: "user", content: question },
         { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...r.final, context_used: r.block.hasContext }) },
       ]),
-      admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.next_steps, resource: r.final.resource }),
+      admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.points.map(pt => pt.why ? `${pt.do} — ${pt.why}` : pt.do), resource: r.final.resource }),
     ]);
 
     return {
