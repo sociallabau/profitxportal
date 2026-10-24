@@ -20,7 +20,8 @@ const SOURCE_TAGS: Record<string, string> = {
 };
 const GROUP_CALL = /momentum|q&a|q & a|workshop|hot seat|powerup|power up|pay to play|edit flow/i;
 
-type Answer = { answer: string; next_steps: string[]; resource: string | null };
+type Point = { do: string; why: string };
+type Answer = { answer: string; points: Point[]; note: string | null; resource: string | null };
 type Turn = { role: "user" | "assistant"; content: string };
 type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 type Plan = { topic?: string; is_boundary?: boolean; asks_about_other_member?: boolean; search_terms?: string[]; member_facts_needed?: string[]; gate_relevant?: boolean };
@@ -47,12 +48,27 @@ function toAnswer(v: unknown): Answer | null {
   const o = v as Record<string, unknown>;
   const answer = String(o.answer ?? "").trim();
   if (!answer) return null;
+  let points: Point[] = [];
+  if (Array.isArray(o.points)) {
+    points = o.points.map(p => {
+      if (p && typeof p === "object") {
+        const po = p as Record<string, unknown>;
+        return { do: String(po.do ?? "").trim(), why: String(po.why ?? "").trim() };
+      }
+      return { do: String(p ?? "").trim(), why: "" };
+    }).filter(p => p.do).slice(0, 4);
+  } else if (Array.isArray(o.next_steps)) {
+    // Legacy shape from older chats: plain action strings become points without a reason.
+    points = o.next_steps.map(String).filter(Boolean).slice(0, 4).map(s => ({ do: s, why: "" }));
+  }
   return {
     answer,
-    next_steps: Array.isArray(o.next_steps) ? o.next_steps.map(String).filter(Boolean).slice(0, 3) : [],
+    points,
+    note: o.note && o.note !== "null" ? String(o.note) : null,
     resource: o.resource && o.resource !== "null" ? String(o.resource) : null,
   };
 }
+const fullText = (a: Answer) => [a.answer, ...a.points.map(p => `${p.do} ${p.why}`), a.note ?? ""].join("\n");
 
 // ---------- model calls ----------
 async function callAnthropic(model: string, system: Block[], messages: Turn[], retried = false, metrics?: Timing, stage = "other", signal?: AbortSignal): Promise<string> {
