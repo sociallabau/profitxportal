@@ -42,7 +42,22 @@ export const wordCount = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
 export function looksTruncated(text: string): boolean {
   const t = text.trim();
-  return !/[.!?)"'’”…]$/.test(t);
+  return !/[.!?:)"'’”…]$/.test(t);
+}
+
+/** Match a dollar amount, not a coincidental substring or differently formatted number. */
+export function hasCostPerClient(text: string, cost: number): boolean {
+  return [...text.matchAll(/\$\s*(\d[\d,]*(?:\.\d+)?)/g)]
+    .some(match => Number(match[1].replace(/,/g, "")) === Math.round(cost));
+}
+
+/** Repair known numbers inside an existing point so length trimming cannot drop a new note. */
+export function repairCostPerClient<T extends { points: { do: string; why: string }[] }>(answer: T, cost: number, price: number | null | undefined): T {
+  if (!Number.isFinite(cost) || !answer.points.length) return answer;
+  const fact = `~$${Math.round(cost).toLocaleString("en-US")} a client${typeof price === "number" && price > 0 ? ` vs your $${price.toLocaleString("en-US")} retainer, ${cost < price / 2 ? "under half" : "not under half"} your first month's fee` : ""}`;
+  const index = answer.points.findIndex(point => /cost|client|fee|budget|scal/i.test(`${point.do} ${point.why}`));
+  const target = index < 0 ? 0 : index;
+  return { ...answer, points: answer.points.map((point, i) => i === target ? { ...point, why: `${point.why.replace(/[.!]$/, "")}; ${fact}.` } : point) };
 }
 
 /** Resource must match a catalogue line exactly (full line or just its title part). */
