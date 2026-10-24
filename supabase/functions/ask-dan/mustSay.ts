@@ -1,12 +1,17 @@
 /**
  * Dan's rules a question always has to carry, picked in code from the question
  * and the member's numbers. The draft and the checker both get them as MUST SAY,
- * so wording gets tightened around them instead of them being cut for length.
+ * and each has a test so code can tell when a final answer still leaves one out.
  */
 
-export type MustSayInput = { question: string; gate: number | null; revenue: number | null; hasContext: boolean; hasMember: boolean };
+export type MustSayInput = {
+  question: string; gate: number | null; revenue: number | null; hasContext: boolean; hasMember: boolean;
+  costPerClient?: number | null; lowestPrice?: number | null;
+};
+export type Rule = { say: string; short: string; test: RegExp };
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+const WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
 
 /** "Gate 2 · Fuel" or "Gate II" -> 2. */
 export function gateFromLabel(label: string | null | undefined): number | null {
@@ -16,22 +21,47 @@ export function gateFromLabel(label: string | null | undefined): number | null {
   return /\d/.test(v) ? Number(v) : ({ i: 1, ii: 2, iii: 3, iv: 4 } as Record<string, number>)[v] ?? null;
 }
 
-export function mustSay({ question, gate, revenue, hasContext, hasMember }: MustSayInput): string[] {
-  const q = question.toLowerCase();
-  const out: string[] = [];
+/** "I've got 2 retainers" -> 2, when the question states it plainly and none are free. */
+export function statedRetainers(question: string): number | null {
+  if (/\bfree\b/i.test(question)) return null;
+  const m = question.match(/\b(\d|one|two|three|four|five)\s+(?:paying\s+)?(?:retainers?|retainer clients)\b/i);
+  return m ? (WORDS[m[1].toLowerCase()] ?? Number(m[1])) : null;
+}
+
+export function mustSay(i: MustSayInput): Rule[] {
+  const q = i.question.toLowerCase();
+  const out: Rule[] = [];
   const freeWork = /\bfree\b|for nothing|unpaid|trial (month|client)|case stud|testimonial/.test(q);
-  const workload = /hire|hiring|editor|outsourc|va\b|assistant|overwhelm|burn(ed|t)? ?out|too busy|no time|drowning|workload|boundar|scope|extra|weekend|capacity/.test(q);
+  const workload = /hire|hiring|editor|outsourc|\bva\b|assistant|overwhelm|burn(ed|t)? ?out|too busy|no time|drowning|workload|boundar|scope|extra|weekend|capacity/.test(q);
   const adsMoney = /\bads?\b|ad spend|budget|boost|awareness|lead gen|campaign|save (money|cash)|cut (back|costs)|switch off|turn off|pause/.test(q);
   const path = /\bgate\b|next step|what (should|do) i (focus|do)|where (am i|do i start)|path|roadmap|what'?s next|level up|move up/.test(q);
-  const revenueNote = revenue != null && revenue > 0 ? `, against their ~${money(revenue)}/mo now` : "";
+  const scale = /\bscal|increase (the )?budget|spend more|double/.test(q);
+  const revenueNote = i.revenue != null && i.revenue > 0 ? `, against their ~${money(i.revenue)}/mo now` : "";
+  const retainers = statedRetainers(i.question);
 
-  if (workload || freeWork) out.push(`Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`);
-  if (freeWork) {
-    out.push("Case studies go on THEIR OWN account, not the client's.");
-    out.push("Ad spend sits on top of the fee, through the client's own ad account.");
+  if (path && i.gate == null && retainers != null && retainers < 3) {
+    out.push({ say: `They have ${retainers} paying retainers, so say plainly they're not at Gate 1 yet (Gate 1 = 3 paying retainers held 2 months).`, short: "you're not at Gate 1 yet (that's 3 paying retainers held 2 months)", test: /not (at |in )?gate (1|i)\b|not (at |in )?gate (1|i) yet|below gate (1|i)\b/i });
   }
-  if (freeWork || adsMoney || workload) out.push("Never switch off awareness/lead gen to save cash; keep awareness running.");
-  if (path && (gate == null || gate <= 1)) out.push("Below or at Gate 1: put a ~$50 profile-visit boost behind their best posts; awareness ads come at Gate 2.");
-  if (hasMember && !hasContext) out.push("Their Context Room is empty: give Dan's defaults and end with one line asking them to fill in their Context Room.");
+  if (workload || freeWork) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
+  if (freeWork) {
+    out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
+    out.push({ say: "Ad spend sits on top of the fee, through the client's own ad account.", short: "ad spend sits on top of the fee, through the client's own ad account", test: /on top of (the |your )?(fee|retainer|price)/i });
+  }
+  if (freeWork || (adsMoney && /save|cut|cash|switch off|turn off|skip|stop/.test(q))) {
+    out.push({ say: "Never switch off awareness/lead gen to save cash; keep awareness running.", short: "never switch off awareness", test: /(never|don'?t|do not)\s+(switch|turn|shut)\s+(off|it off)|(switch|turn)ing off|keep (your )?(awareness|it|boosting)\s+(running|on|going)/i });
+  }
+  if (path && (i.gate == null || i.gate <= 1) && (adsMoney || path)) {
+    out.push({ say: "Below or at Gate 1: put a ~$50 profile-visit boost behind their best posts; awareness ads come at Gate 2.", short: "for now it's a ~$50 profile-visit boost behind your best posts; awareness comes at Gate 2", test: /\$\s?50\b[^.]*\b(boost|profile)|\b(boost|profile)[^.]*\$\s?50\b/i });
+  }
+  const cpc = i.costPerClient, price = i.lowestPrice;
+  if (adsMoney && typeof cpc === "number" && Number.isFinite(cpc) && typeof price === "number" && price > 0) {
+    const under = cpc < price / 2;
+    out.push({ say: `Say their ~${money(cpc)} a client is ${under ? "UNDER" : "NOT under"} half their ${money(price)} first month's fee, in those words.`, short: `~${money(cpc)} a client is ${under ? "under" : "not under"} half your ${money(price)} first month`, test: under ? /under half/i : /not under half|over half|more than half/i });
+    if (scale || under) out.push({ say: "Scaling only works if every lead and follow-up is tracked in their Growth Hub.", short: "track every lead and follow-up in your Growth Hub", test: /growth hub|\bhub\b/i });
+  }
+  if (i.hasMember && !i.hasContext) out.push({ say: "Their Context Room is empty: give Dan's defaults and end with one line asking them to fill in their Context Room.", short: "fill in your Context Room so I can make this specific", test: /context room/i });
   return out;
 }
+
+/** The rules a final answer still leaves out. */
+export const missingRules = (rules: Rule[], text: string) => rules.filter(r => !r.test.test(text));

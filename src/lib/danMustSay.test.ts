@@ -1,27 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { gateFromLabel, mustSay } from '../../supabase/functions/ask-dan/mustSay';
+import { gateFromLabel, missingRules, mustSay, statedRetainers } from '../../supabase/functions/ask-dan/mustSay';
 
 const base = { gate: 1, revenue: 3000, hasContext: true, hasMember: true };
+const says = (r: ReturnType<typeof mustSay>) => r.map(x => x.say).join(' ');
 
 describe('mustSay', () => {
-  it('reads gate labels', () => {
+  it('reads gate labels and stated retainers', () => {
     expect(gateFromLabel('Gate 2 · Fuel')).toBe(2);
     expect(gateFromLabel('Gate III')).toBe(3);
     expect(gateFromLabel(null)).toBeNull();
+    expect(statedRetainers("I've got 2 retainers at $1,500")).toBe(2);
+    expect(statedRetainers('3 retainers, one I do free')).toBeNull();
   });
-  it('carries the free-client rules and their revenue', () => {
-    const r = mustSay({ ...base, question: 'Should I do a free month for a cafe to get a case study?' }).join(' ');
-    expect(r).toContain('$15–20k');
-    expect(r).toContain('$3,000');
-    expect(r).toContain('OWN account');
-    expect(r).toContain('on top of the fee');
-    expect(r).toContain('awareness');
+  it('GATE_PATH: not at Gate 1 yet and the $50 boost', () => {
+    const r = mustSay({ ...base, gate: null, question: "I've got 2 retainers at $1,500. How do I get to Gate 2 and what should I spend on ads?" });
+    expect(says(r)).toContain('not at Gate 1 yet');
+    expect(says(r)).toContain('$50');
+    expect(missingRules(r, "You're not at Gate 1 yet. Put a ~$50 profile-visit boost behind your best posts.")).toEqual([]);
   });
-  it('adds the $50 boost for a Gate 1 path question, not for Gate 3', () => {
-    expect(mustSay({ ...base, question: "What's my next step to move up?" }).join(' ')).toContain('$50');
-    expect(mustSay({ ...base, gate: 3, question: "What's my next step to move up?" }).join(' ')).not.toContain('$50');
+  it('FREE_CLIENT_TRAP: all the free-client rules', () => {
+    const r = mustSay({ ...base, question: "I've got 3 retainers, one free as a case study. I want to skip boosting and bundle ad spend into a package." });
+    expect(says(r)).toContain('$15–20k');
+    expect(says(r)).toContain('OWN account');
+    expect(says(r)).toContain('on top of the fee');
+    expect(says(r)).toContain('switch off awareness');
+    expect(missingRules(r, 'Post case studies on your own account. Ad spend sits on top of the fee. Never switch off awareness. Editor at ~$15–20k.')).toEqual([]);
+  });
+  it('ADS_5_DAYS_SCALE: under half and the Growth Hub', () => {
+    const r = mustSay({ ...base, gate: 3, costPerClient: 363, lowestPrice: 2000, question: 'Ads have run 5 days, can I scale?' });
+    expect(missingRules(r, '~$363 a client vs $2,000.').map(x => x.short)).toHaveLength(2);
+    expect(missingRules(r, '~$363 a client is under half your $2,000. Track every lead in your Growth Hub.')).toEqual([]);
   });
   it('asks for the Context Room when it is empty', () => {
-    expect(mustSay({ ...base, hasContext: false, question: 'What should I charge?' }).join(' ')).toContain('Context Room');
+    expect(says(mustSay({ ...base, hasContext: false, question: 'What should I charge?' }))).toContain('Context Room');
   });
 });

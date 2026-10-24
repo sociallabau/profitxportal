@@ -15,7 +15,7 @@ import { bestRecording } from "./recordings.ts";
 import { loadBuildHelp } from "./buildHelp.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
-import { gateFromLabel, mustSay } from "./mustSay.ts";
+import { gateFromLabel, missingRules, mustSay } from "./mustSay.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
@@ -359,8 +359,9 @@ async function answerPipeline(p: PipelineInput) {
     gate: member?.extras?.gate_number ?? gateFromLabel(member?.gate),
     revenue: block.derived?.total_revenue_latest ?? block.derived?.mrr_latest ?? null,
     hasContext: block.hasContext, hasMember: !!member,
+    costPerClient: block.derived?.cost_per_client ?? null, lowestPrice: block.derived?.lowest_retainer_price ?? null,
   });
-  const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m}`).join("\n")}\n\n=====\n\n` : "";
+  const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}\n\n=====\n\n` : "";
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
   const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${recording ? `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}\nUse this exact line as the resource unless another line fits the question clearly better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
@@ -468,7 +469,7 @@ async function answerPipeline(p: PipelineInput) {
         let pts = [...final.points];
         let note = final.note;
         const over = () => wordCount(fullText({ ...final, points: pts, note })) > maximum;
-        const dataNudge = !!note && /context room|latest totals|submit|90-day goal/i.test(note);
+        const dataNudge = !!note && /context room|latest totals|submit|90-day goal|non-negotiables:/i.test(note);
         while (note && !dataNudge && over()) note = null;
         const carriesCost = (pt: Point) => typeof cpc === "number" && Number.isFinite(cpc) && hasCostPerClient(`${pt.do} ${pt.why}`, cpc);
         while (pts.length > 2 && over()) {
@@ -481,6 +482,12 @@ async function answerPipeline(p: PipelineInput) {
     return final;
   };
   final = trim(final);
+  // Any MUST SAY rule still missing gets one rewrite that merges it in, within the word limit.
+  const stillMissing = () => missingRules(must, fullText(final));
+  if (checked && stillMissing().length) {
+    const fix = await runCheck(final, `add these missing rules of Dan's, merged into the existing points (max 4 points, stay under ~110 words, shorten other wording to make room): ${stillMissing().map(r => r.say).join(" ")}`);
+    if (fix && missingRules(must, fullText(fix.final)).length < stillMissing().length) { final = trim(fix.final); issues.push(...fix.issues); }
+  }
   if (checked && !shortReply && member && !block.hasContext && !/context room/i.test(fullText(final))) {
     final = { ...final, note: "Fill in your Context Room so I can make this specific to you." };
   }
@@ -501,6 +508,15 @@ async function answerPipeline(p: PipelineInput) {
       final = repairCostPerClient(final, cpc, block.derived?.lowest_retainer_price);
     }
     final = trim(final);
+    probs = problems(final);
+  }
+  // Last resort: say the missing rules in Dan's words in the note, then trim points (not the note) to fit.
+  const leftOut = checked ? stillMissing() : [];
+  if (leftOut.length && final.answer !== FLAG_REPLY) {
+    const line = leftOut.map(r => r.short).join("; ");
+    const keep = final.note && /context room|latest totals|submit|90-day goal/i.test(final.note) ? `${final.note} ` : "";
+    final = trim({ ...final, note: `${keep}Non-negotiables: ${line}.` });
+    issues.push({ type: "guardrail", note: `Added missing rules: ${leftOut.map(r => r.short).join("; ")}` });
     probs = problems(final);
   }
   // Length is fixed by trimming above, so only real problems (privacy, voice, a cut-off, a missing number) withhold the answer.
