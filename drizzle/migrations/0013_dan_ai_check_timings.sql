@@ -1,0 +1,1 @@
+ALTER TABLE public.dan_ai_checks ADD COLUMN IF NOT EXISTS timing jsonb; COMMENT ON COLUMN public.dan_ai_checks.timing IS 'Admin-only execution durations and model token/cache usage; no prompts or credentials.';

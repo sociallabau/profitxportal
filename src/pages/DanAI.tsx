@@ -5,7 +5,6 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { functionErrorMessage } from '@/lib/functionError';
 import { resourceCatalogue } from '@/data/resourceCatalogue';
 import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -13,9 +12,12 @@ import DanAiOrb, { type OrbState } from '@/components/DanAiOrb';
 import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
 import ChecksAdmin from '@/components/dan-ai/ChecksAdmin';
 import TestsAdmin from '@/components/dan-ai/TestsAdmin';
+import TimingSummary, { type DanTiming } from '@/components/dan-ai/TimingSummary';
+import { askDanStream } from '@/lib/danStream';
 
 interface Answer { answer: string; next_steps: string[]; resource: string | null; context_used?: boolean }
 interface Debug {
+  timing?: DanTiming;
   mode?: string; data_freshness?: string; brain_loaded?: boolean;
   derived?: Record<string, unknown> | null; plan?: unknown;
   passages?: { title: string; source_type: string; score: number }[];
@@ -65,6 +67,7 @@ export default function DanAI() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [pending, setPending] = useState<null | 'thinking' | 'checking'>(null);
+  const [status, setStatus] = useState('Reading your numbers…');
   const [examples, setExamples] = useState<string[]>(FALLBACK_EXAMPLES);
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [memberId, setMemberId] = useState('');
@@ -104,9 +107,10 @@ export default function DanAI() {
   };
 
   const openThread = async (id: string) => {
+    if (!user) return;
     setThreadId(id);
     const { data } = await supabase.from('dan_ai_messages')
-      .select('id, role, content').eq('thread_id', id).eq('user_id', user!.id).order('created_at');
+      .select('id, role, content').eq('thread_id', id).eq('user_id', user.id).order('created_at');
     setMessages((data ?? []).map(m => ({ ...m, role: m.role as Msg['role'], parsed: m.role === 'assistant' ? parseAnswer(m.content) : undefined })));
     setHistoryOpen(false);
     inputRef.current?.focus();
@@ -120,25 +124,24 @@ export default function DanAI() {
     setInput('');
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', content: asked }]);
     setPending('thinking');
-    const timer = setTimeout(() => setPending(p => (p ? 'checking' : p)), 9000);
-
-    const { data, error } = await supabase.functions.invoke('ask-dan', {
-      body: { question: asked, thread_id: threadId, catalogue: resourceCatalogue(), member_id: isAdmin && memberId ? memberId : undefined },
+    setStatus('Reading your numbers…');
+    try {
+    const data = await askDanStream({ question: asked, thread_id: threadId, catalogue: resourceCatalogue(), member_id: isAdmin && memberId ? memberId : undefined }, next => {
+      setStatus(next); setPending(next.startsWith('Checking') ? 'checking' : 'thinking');
     });
-    clearTimeout(timer);
-    setPending(null);
-    if (error || data?.error) {
-      toast.error((await functionErrorMessage(error, data)) ?? "Couldn't get an answer — try again");
-      setMessages(prev => prev.slice(0, -1));
-      setInput(asked);
-      return;
-    }
-    const parsed: Answer = { answer: data.answer ?? '', next_steps: data.next_steps ?? [], resource: data.resource ?? null, context_used: data.context_used };
-    setThreadId(data.thread_id);
-    setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, debug: isAdmin ? data.debug : undefined }]);
+    const parsed: Answer = { answer: String(data.answer ?? ''), next_steps: Array.isArray(data.next_steps) ? data.next_steps.map(String) : [], resource: typeof data.resource === 'string' ? data.resource : null, context_used: data.context_used === true };
+    setThreadId(typeof data.thread_id === 'string' ? data.thread_id : null);
+    setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, debug: isAdmin ? data.debug as Debug : undefined }]);
     loadThreads();
     setAnswered(true); setTimeout(() => setAnswered(false), 1300);
     inputRef.current?.focus();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't get an answer — try again");
+      setMessages(prev => prev.slice(0, -1));
+      setInput(asked);
+    } finally {
+      setPending(null);
+    }
   };
 
   const copy = async (text: string, key: string) => {
@@ -147,7 +150,8 @@ export default function DanAI() {
   };
 
   const save = async (question: string, answer: string) => {
-    const { error } = await supabase.from('saved_answers').insert({ question, answer, created_by: user!.id });
+    if (!user) return;
+    const { error } = await supabase.from('saved_answers').insert({ question, answer, created_by: user.id });
     if (error) toast.error('Could not save'); else toast.success('Saved — this wording gets reused next time');
   };
 
@@ -225,7 +229,7 @@ export default function DanAI() {
             </div>
             {pending && (
               <p className="text-center text-xs text-[hsl(var(--dan-muted))] mt-1">
-                {pending === 'thinking' ? 'Thinking…' : "Checking with Dan's playbook…"}
+                {status}
               </p>
             )}
 
@@ -265,6 +269,7 @@ export default function DanAI() {
                         <details className="text-[11px] text-[hsl(var(--dan-muted))] rounded-lg border border-[hsl(var(--dan-ink)/0.1)] px-3 py-2">
                           <summary className="cursor-pointer select-none">Context used</summary>
                           <div className="mt-2 space-y-2">
+                             {m.debug.timing && <TimingSummary timing={m.debug.timing} />}
                             <p><b>Mode:</b> {m.debug.mode ?? '–'} · <b>Member ID:</b> {m.debug.member_id ?? 'none'}</p>
                             {m.debug.brain && <p><b>Brain:</b> {m.debug.brain_loaded === false ? 'NOT LOADED' : `${m.debug.brain.docs} docs loaded, ${m.debug.brain.words.toLocaleString()} words`}</p>}
                             <p><b>Monthly totals:</b> {m.debug.monthly_totals.count} found{m.debug.monthly_totals.months.length ? ` (${m.debug.monthly_totals.months.join(', ')})` : ''} · <b>Freshness:</b> {m.debug.data_freshness ?? '–'} · <b>Goal:</b> {m.debug.goal ?? '–'}</p>
@@ -291,11 +296,11 @@ export default function DanAI() {
                         </Link>
                         {isAdmin && (
                           <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => save(messages[idx - 1]?.content ?? '', m.parsed!.answer)}
+                            <button onClick={() => save(messages[idx - 1]?.content ?? '', m.parsed?.answer ?? '')}
                               className="flex items-center gap-1 text-[11px] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))]">
                               <BookmarkPlus className="w-3 h-3" /> Save
                             </button>
-                            <button onClick={() => copy(m.parsed!.answer, m.id)}
+                            <button onClick={() => copy(m.parsed?.answer ?? '', m.id)}
                               className="flex items-center gap-1 text-[11px] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))]">
                               {copied === m.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copied === m.id ? 'Copied' : 'Copy'}
                             </button>

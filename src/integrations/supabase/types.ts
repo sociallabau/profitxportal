@@ -478,6 +478,7 @@ export type Database = {
           issues: Json
           pass: boolean
           question: string
+          timing: Json | null
           user_id: string
         }
         Insert: {
@@ -488,6 +489,7 @@ export type Database = {
           issues?: Json
           pass?: boolean
           question: string
+          timing?: Json | null
           user_id: string
         }
         Update: {
@@ -498,6 +500,7 @@ export type Database = {
           issues?: Json
           pass?: boolean
           question?: string
+          timing?: Json | null
           user_id?: string
         }
         Relationships: []

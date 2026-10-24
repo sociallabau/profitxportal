@@ -4,17 +4,14 @@
 // Modes: MEMBER (asker), ADMIN (optional "Context from" member), TEST (admin + synthetic persona).
 // Debug is returned to admins only. Test actions: test / grade / finalize (admin only).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { joinChunks, fetchStyleExamples } from "../_shared/danBrain.ts";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { timing, relevantExcerpt, checkerResult, type Timing } from "./performance.ts";
+import { joinChunks } from "../_shared/danBrain.ts";
 import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
 import { persona } from "./testPersonas.ts";
 import { BRAIN_HEADER, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, looksTruncated, matchResource, nameTokens, redact, wordCount } from "./guardrails.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const SONNET = "claude-sonnet-5";
 const HAIKU = "claude-haiku-5-5";
@@ -58,50 +55,56 @@ function toAnswer(v: unknown): Answer | null {
 }
 
 // ---------- model calls ----------
-async function callAnthropic(model: string, system: Block[], messages: Turn[], retried = false): Promise<string> {
+async function callAnthropic(model: string, system: Block[], messages: Turn[], retried = false, metrics?: Timing, stage = "other", signal?: AbortSignal): Promise<string> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("No Anthropic key");
+  const started = performance.now();
   const res = await fetch("https://api.anthropic.com/v1/messages", {
+    signal,
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model, max_tokens: 4000, system, messages }),
+    body: JSON.stringify({ model, max_tokens: stage === "plan" ? 400 : stage === "other" ? 4000 : 1200, thinking: { type: "disabled" }, system, messages }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  metrics?.calls.push({ stage, model, ms: Math.round(performance.now() - started), input_tokens: data.usage?.input_tokens ?? 0, cache_read_input_tokens: data.usage?.cache_read_input_tokens ?? 0, cache_creation_input_tokens: data.usage?.cache_creation_input_tokens ?? 0, output_tokens: data.usage?.output_tokens ?? 0, retry: retried });
   const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("");
   if (data.stop_reason === "max_tokens" && !retried) {
-    return callAnthropic(model, system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: "Be shorter. Return the complete JSON." }], true);
+    return callAnthropic(model, system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: "Be shorter. Return the complete JSON." }], true, metrics, stage, signal);
   }
   if (!text) throw new Error(`Claude returned no content (stop_reason: ${data.stop_reason ?? "unknown"})`);
   return text;
 }
-async function callGemini(system: Block[], messages: Turn[], retried = false): Promise<string> {
+async function callGemini(system: Block[], messages: Turn[], retried = false, metrics?: Timing, stage = "other"): Promise<string> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("No AI key configured");
+  const started = performance.now();
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash", max_tokens: 4000,
+      model: "google/gemini-2.5-flash", max_tokens: stage === "other" ? 4000 : 1200,
+      reasoning_effort: "none",
       messages: [{ role: "system", content: system.map(b => b.text).join("\n\n") }, ...messages],
     }),
   });
   if (!res.ok) throw new Error(`Lovable gateway ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  metrics?.calls.push({ stage, model: "google/gemini-2.5-flash", ms: Math.round(performance.now() - started), input_tokens: data.usage?.prompt_tokens ?? 0, cache_read_input_tokens: data.usage?.prompt_tokens_details?.cached_tokens ?? 0, cache_creation_input_tokens: 0, output_tokens: data.usage?.completion_tokens ?? 0, retry: retried });
   const text = data.choices?.[0]?.message?.content ?? "";
   if (data.choices?.[0]?.finish_reason === "length" && !retried) {
-    return callGemini(system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: "Be shorter. Return the complete JSON." }], true);
+    return callGemini(system, [...messages, { role: "assistant", content: text || "(cut off)" }, { role: "user", content: "Be shorter. Return the complete JSON." }], true, metrics, stage);
   }
   if (!text) throw new Error("Gateway returned no content");
   return text;
 }
 /** Sonnet, falling back to Gemini if Anthropic fails. */
-async function callMain(system: Block[], messages: Turn[]): Promise<string> {
-  try { return await callAnthropic(SONNET, system, messages); }
+async function callMain(system: Block[], messages: Turn[], metrics?: Timing, stage = "other"): Promise<string> {
+  try { return await callAnthropic(SONNET, system, messages, false, metrics, stage); }
   catch (err) {
     if (!Deno.env.get("LOVABLE_API_KEY")) throw err;
     console.error("Claude failed, falling back to Gemini:", err);
-    return await callGemini(system, messages);
+    return await callGemini(system, messages, false, metrics, stage);
   }
 }
 
@@ -147,17 +150,21 @@ const STOP = new Set("the and for with that this what how should does have from 
 function keywordTerms(q: string) {
   return [...new Set(q.toLowerCase().replace(/[^a-z0-9$\s]/g, " ").split(/\s+/).filter(w => w.length > 2 && !STOP.has(w)))].slice(0, 12);
 }
-async function runPlan(question: string, history: Turn[], summary: string): Promise<{ plan: Plan; fallback: boolean }> {
-  const convo = history.slice(-4).map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content.slice(0, 500)}`).join("\n") || "(none)";
-  const msg: Turn[] = [{ role: "user", content: `MEMBER SUMMARY: ${summary}\n\nRECENT CONVERSATION:\n${convo}\n\nQUESTION: ${question}` }];
-  const sys: Block[] = [{ type: "text", text: PLAN_PROMPT }];
-  for (const model of [HAIKU, SONNET]) {
-    try {
-      const p = parseJson(await callAnthropic(model, sys, msg)) as Plan | null;
-      if (p && Array.isArray(p.search_terms)) return { plan: p, fallback: false };
-    } catch (err) { console.error(`plan via ${model} failed`, err); }
-  }
-  return { plan: { topic: "other", search_terms: keywordTerms(question) }, fallback: true };
+async function runPlan(question: string, history: Turn[], metrics: Timing): Promise<{ plan: Plan; fallback: boolean }> {
+  const convo = history.slice(-4).map(t => `${t.role}: ${t.content.slice(0, 500)}`).join("\n");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+  try {
+    const parsed = parseJson(await callAnthropic(HAIKU, [{ type: "text", text: PLAN_PROMPT, cache_control: { type: "ephemeral" } }],
+      [{ role: "user", content: `RECENT CONVERSATION: ${convo}\nQUESTION: ${question}` }], false, metrics, "plan", controller.signal)) as Plan | null;
+    if (parsed && Array.isArray(parsed.search_terms)) return { plan: parsed, fallback: false };
+  } catch (err) {
+    metrics.calls.push({ stage: "plan", model: HAIKU, ms: 4000, input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0, retry: false, error: controller.signal.aborted ? "4s deadline; keyword fallback" : "plan failed; keyword fallback" });
+  } finally { clearTimeout(timeout); }
+  // Classification remains conservative; the full draft/checker still adjudicates boundaries from the question.
+  const boundary = /(?:ProfitX.*(?:bill|paus|cancel|refund|invoice)|(?:paus|cancel|refund|invoice).*ProfitX|mental health|legal|personal crisis)/i.test(question);
+  const privacy = /(?:what.*(?:making|revenue)|who.*gate|other members?)/i.test(question);
+  return { plan: { topic: boundary ? "boundary" : privacy ? "privacy" : /ads?|campaign|leads?|scal/i.test(question) ? "ads" : "other", is_boundary: boundary, asks_about_other_member: privacy, search_terms: keywordTerms(question) }, fallback: true };
 }
 
 // ---------- retrieval ----------
@@ -168,10 +175,8 @@ async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy
   const terms = (plan.search_terms ?? []).map(s => String(s).trim()).filter(Boolean).slice(0, 15);
   const ladder = [terms.join(" or "), question, keywordTerms(question).join(" or ")];
   const seen = new Map<string, Chunk>();
-  for (const q of ladder) {
-    if (seen.size >= 60) break;
-    for (const c of await search(q, 60)) if (!seen.has(c.chunk_id) && seen.size < 60) seen.set(c.chunk_id, c);
-  }
+  const searches = await Promise.all([...new Set(ladder)].map(q => search(q, 60)));
+  for (const results of searches) for (const c of results) if (!seen.has(c.chunk_id) && seen.size < 60) seen.set(c.chunk_id, c);
   let cands = [...seen.values()].filter(c => c.source_type !== "brain");
 
   if (opts.privacy) {
@@ -205,7 +210,7 @@ async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy
   const picked: Scored[] = [];
   const perDoc = new Map<string, number>();
   for (const c of scored) {
-    if (picked.length >= 20) break;
+    if (picked.length >= 12) break;
     if ((perDoc.get(c.doc_id) ?? 0) >= 2) continue;
     const w = words(c.content);
     const dup = picked.some(p => {
@@ -217,54 +222,59 @@ async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy
     perDoc.set(c.doc_id, (perDoc.get(c.doc_id) ?? 0) + 1);
     picked.push(c);
   }
-  return picked;
+  return picked.map(c => ({ ...c, content: relevantExcerpt(c.content, lowerTerms) }));
 }
 
 // ---------- the pipeline ----------
 type PipelineInput = {
   admin: DB; question: string; history: Turn[]; catalogue: string;
-  mode: "member" | "admin" | "test"; member: MemberInput | null; memberId: string | null;
+  mode: "member" | "admin" | "test"; member: MemberInput | null | Promise<MemberInput | null>; memberId: string | null;
+  clock: ReturnType<typeof timing>; status?: (status: string) => void;
 };
 async function answerPipeline(p: PipelineInput) {
   const issues: { type: string; note: string }[] = [];
   const privacy = p.mode !== "admin";
-  const [brain, styleExamples, { data: allProfiles }] = await Promise.all([
-    loadBrain(p.admin), fetchStyleExamples(p.admin, 30), p.admin.from("profiles").select("id, full_name"),
+  const clock = p.clock;
+  const planned = clock.measure("plan", () => runPlan(p.question, p.history, clock.data));
+  const [brain, member, { data: allProfiles }, catalogue] = await Promise.all([
+    clock.measure("brain_load", () => loadBrain(p.admin)), p.member, p.admin.from("profiles").select("id, full_name"), Promise.resolve(p.catalogue),
   ]);
-  const askerName = p.member?.name ?? null;
+  const askerName = member?.name ?? null;
+  p.status?.("Thinking…");
   const otherNames = ((allProfiles ?? []) as { id: string; full_name: string | null }[])
-    .filter(x => x.id !== p.memberId && x.full_name).map(x => x.full_name!);
+    .filter(x => x.id !== p.memberId && x.full_name).map(x => x.full_name ?? "");
   const tokens = nameTokens(otherNames, p.mode === "test" ? null : askerName);
 
-  const block = p.member ? buildMemberBlock(p.member) : { text: "ABOUT THIS MEMBER: none (general answer, no member selected).", derived: null, hasContext: false, summary: "no member" };
-  const { plan, fallback: planFallback } = await runPlan(p.question, p.history, block.summary);
-  const passages = await retrieve(p.admin, p.question, plan, { privacy, askerName, otherTokens: tokens });
+  const block = member ? buildMemberBlock(member) : { text: "ABOUT THIS MEMBER: none (general answer, no member selected).", derived: null, hasContext: false, summary: "no member" };
+  const { plan, fallback: planFallback } = await planned;
+  const passages = await clock.measure("retrieval", () => retrieve(p.admin, p.question, plan, { privacy, askerName, otherTokens: tokens }));
   const passageText = passages.map(c => `[${SOURCE_TAGS[c.source_type] ?? c.source_type}] ${c.title}\n${c.content}`).join("\n\n---\n\n");
 
   const brainBlock: Block[] = brain.text ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }] : [];
   const catalogueLines = p.catalogue.split("\n").map(l => l.trim()).filter(Boolean);
-  const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt(styleExamples, p.catalogue) }];
+  const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-  const userTurn = `${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
   let draft: Answer | null = null;
-  for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await callMain(draftSystem, [{ role: "user", content: userTurn }])));
+  for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(draftSystem, [{ role: "user", content: userTurn }], clock.data, "draft"))));
   if (!draft) {
     issues.push({ type: "guardrail", note: "Draft JSON invalid twice — flagged to Dan" });
     const final = { answer: FLAG_REPLY, next_steps: [], resource: null };
-    return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback };
+    return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish() };
   }
 
   // CHECK
-  const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT }];
-  const checkBase = `${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
+  p.status?.("Checking with Dan's playbook…");
+  const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT, cache_control: { type: "ephemeral" } }];
+  const checkBase = `RESOURCES\n${catalogue}\n\nPASSAGES\n${passageText}\n\n${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
     for (let i = 0; i < 2; i++) {
       try {
-        const parsed = parseJson(await callMain(checkSystem, [{ role: "user", content: `${checkBase}\n\n=====\n\nDRAFT\n${JSON.stringify(current)}${extra ? `\n\n=====\n\nMUST FIX: ${extra}` : ""}` }]));
-        const fin = toAnswer(parsed?.final);
-        if (parsed && fin) return { final: fin, pass: parsed.pass === true, issues: Array.isArray(parsed.issues) ? parsed.issues as { type: string; note: string }[] : [] };
+        const parsed = parseJson(await clock.measure(extra || i ? "check_retry" : "check", () => callMain(checkSystem, [{ role: "user", content: `${checkBase}\n\n=====\n\nDRAFT\n${JSON.stringify(current)}${extra ? `\n\n=====\n\nMUST FIX: ${extra}` : ""}` }], clock.data, "check")));
+        const result = checkerResult(parsed, current, toAnswer);
+        if (result) return result;
       } catch (err) { console.error("checker call failed", err); }
     }
     return null;
@@ -273,9 +283,11 @@ async function answerPipeline(p: PipelineInput) {
   let final: Answer = draft;
   const checked = await runCheck(draft);
   if (checked) { final = checked.final; pass = checked.pass; issues.push(...checked.issues); }
-  else { issues.push({ type: "guardrail", note: "Checker returned invalid JSON twice — using draft with code checks" }); }
+  else { issues.push({ type: "guardrail", note: "Checker unavailable — safe fallback; unchecked draft withheld" }); final = { answer: FLAG_REPLY, next_steps: [], resource: null }; }
 
-  // GUARDRAILS — collect problems, send back to the checker once.
+  const guardStarted = performance.now();
+  const retryBefore = clock.data.steps.check_retry ?? 0;
+  // GUARDRAILS — deterministic repairs first; only privacy gets another checker call.
   const problems = (a: Answer) => {
     const text = [a.answer, ...a.next_steps].join("\n");
     const out: string[] = [];
@@ -301,32 +313,56 @@ async function answerPipeline(p: PipelineInput) {
     }
     return { out, names };
   };
-  let probs = problems(final);
-  if (probs.out.length) {
-    issues.push({ type: "guardrail", note: `Sent back to checker: ${probs.out.join("; ")}` });
-    const again = await runCheck(final, probs.out.join("; "));
-    if (again) { final = again.final; issues.push(...again.issues.map(x => ({ ...x, note: `(round 2) ${x.note}` }))); }
-    probs = problems(final);
-    if (probs.names.length) {
-      issues.push({ type: "guardrail", note: "Member names still present — replaced with the privacy reply" });
-      final = { answer: NAME_FALLBACK, next_steps: [], resource: null };
-    } else if (probs.out.length) {
-      issues.push({ type: "guardrail", note: `Still failing after rewrite: ${probs.out.join("; ")}` });
+  const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
+  const maximum = shortReply ? 60 : 220;
+  const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
+  final = { ...final, answer: clean(final.answer), next_steps: final.next_steps.map(clean).filter(Boolean) };
+  // Code may append only precomputed member facts or the exact fixed sequence rule, never invent coaching.
+  const cpc = block.derived?.cost_per_client;
+  if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !final.answer.includes(String(Math.round(cpc)))) {
+    const price = block.derived?.lowest_retainer_price;
+    if (typeof price === "number" && price > 0) {
+      const verdict = block.derived?.cac_vs_first_month;
+      final.answer += `\n\nThat's ~$${Math.round(cpc)} a client vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 50 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}.`;
     }
+  }
+  const followupProblem = /no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question);
+  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 50 && /\bscal/i.test(final.answer)) {
+    final.answer = final.answer.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
+  }
+  if (wordCount(final.answer) > maximum) {
+    const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
+    let kept = "";
+    for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
+    if (kept) final = { ...final, answer: kept };
+  }
+  if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final.answer = final.answer.trim() + ".";
+  let probs = problems(final);
+  if (probs.names.length) {
+    issues.push({ type: "guardrail", note: "Privacy re-check" });
+    const again = await runCheck(final, probs.out.join("; "));
+    if (again) { final = again.final; issues.push(...again.issues); }
+    probs = problems(final);
+  }
+  if (probs.out.length || !final.answer.trim() || wordCount(final.answer) < (shortReply ? 15 : 40)) {
+    // Never publish an answer still violating privacy, semantics, voice or the unchanged word limits.
+    issues.push({ type: "guardrail", note: `Unsafe final withheld: ${probs.out.join("; ") || "length"}` });
+    final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, next_steps: [], resource: null };
     pass = false;
   }
+  clock.data.steps.guardrails = Math.max(0, Math.round(performance.now() - guardStarted) - ((clock.data.steps.check_retry ?? 0) - retryBefore));
   // JSON parsed fine, so an unpunctuated ending is style, not a cut-off: close it.
   if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final = { ...final, answer: final.answer.trim() + "." };
   const matched = matchResource(final.resource, catalogueLines);
   if (final.resource && !matched) issues.push({ type: "guardrail", note: `Resource "${final.resource}" not in catalogue — removed` });
   final = { ...final, resource: matched };
 
-  return { draft, final, pass, issues, plan, passages, brain, block, planFallback };
+  return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish() };
 }
 
 function buildDebug(mode: string, memberId: string | null, member: MemberInput | null, r: Awaited<ReturnType<typeof answerPipeline>>) {
   return {
-    mode, member_id: memberId,
+    mode, member_id: memberId, timing: r.timing,
     brain_loaded: r.brain.docs > 0, brain: { docs: r.brain.docs, words: r.brain.words },
     monthly_totals: { count: member?.totals.length ?? 0, months: (member?.totals ?? []).map(t => t.month) },
     data_freshness: r.block.derived?.data_freshness ?? "none",
@@ -359,6 +395,8 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 
 // ---------- handler ----------
 Deno.serve(async (req) => {
+  const clock = timing();
+  const authStart = performance.now();
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -374,6 +412,7 @@ Deno.serve(async (req) => {
     const { data: isAdminRaw } = await admin.rpc("is_admin", { _user_id: userId });
     const isAdmin = isAdminRaw === true;
 
+    clock.data.steps.auth = Math.round(performance.now() - authStart);
     const body = await req.json().catch(() => ({}));
     const uuidRe = /^[0-9a-f-]{36}$/i;
     const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 20000) : "(none available)";
@@ -393,14 +432,14 @@ Deno.serve(async (req) => {
         const { data: test } = await admin.from("dan_ai_tests").select("*").eq("id", body.test_id).single();
         const member = persona(test.persona_key);
         if (!member) return json({ error: `Unknown persona ${test.persona_key}` }, 400);
-        const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, mode: "test", member, memberId: null });
+        const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, mode: "test", member, memberId: null, clock });
         const { data: allProfiles } = await admin.from("profiles").select("full_name");
         const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
         const short = !!r.plan.is_boundary || !!r.plan.asks_about_other_member;
         const checks = codeChecks(r.final, catalogueLines, tokens, short);
         const debug = buildDebug("test", null, member, r);
         await admin.from("dan_ai_test_results").upsert({ run_id: body.run_id, test_id: test.id, answer: r.final, debug, code_checks: checks, criteria: [], pass: null }, { onConflict: "run_id,test_id" });
-        await admin.from("dan_ai_checks").insert({ user_id: userId, question: `[TEST ${test.name}] ${test.question}`, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues });
+        await admin.from("dan_ai_checks").insert({ user_id: userId, question: `[TEST ${test.name}] ${test.question}`, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues, timing: r.timing });
         return json({ ok: true, answer: r.final, code_checks: checks });
       }
 
@@ -409,7 +448,8 @@ Deno.serve(async (req) => {
         if (!res) return json({ error: "No result to grade" }, 404);
         const test = res.dan_ai_tests;
         const brain = await loadBrain(admin);
-        const member = persona(test.persona_key)!;
+        const member = persona(test.persona_key);
+        if (!member) return json({ error: "Unknown persona" }, 400);
         let compare = "";
         if (test.name === "ADS_5_DAYS_SCALE") {
           const { data: t9 } = await admin.from("dan_ai_test_results").select("answer, dan_ai_tests!inner(name)").eq("run_id", body.run_id).eq("dan_ai_tests.name", "ADS_5_DAYS_EARLY").maybeSingle();
@@ -420,10 +460,11 @@ Deno.serve(async (req) => {
           ...(test.must_not as string[]).map(c => `must_not: ${c}`),
         ].join("\n");
         const sys: Block[] = [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }, { type: "text", text: GRADER_PROMPT }];
-        const msg = `${buildMemberBlock(member).text}\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
+        const counted = wordCount(res.answer?.answer ?? "");
+        const msg = `${buildMemberBlock(member).text}\n\nANSWER FIELD WORD COUNT (computed in code, use for length criteria): ${counted}. Do not count next_steps or resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
         let graded: Record<string, unknown> | null = null;
         for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
-        const crit = Array.isArray(graded?.criteria) ? graded!.criteria as { pass: boolean }[] : [];
+        const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];
         const codeOk = (res.code_checks as { pass: boolean }[]).every(c => c.pass);
         const pass = crit.length > 0 && crit.every(c => c.pass === true) && codeOk;
         await admin.from("dan_ai_test_results").update({ criteria: crit, pass }).eq("id", res.id);
@@ -461,18 +502,19 @@ Deno.serve(async (req) => {
       return json({ error: "Admins only" }, 403);
     }
 
+    const memberPromise = clock.measure("context_load", () => memberId ? loadMemberInput(admin, memberId) : Promise.resolve(null));
+    const execute = async (status?: (status: string) => void) => {
+    status?.("Reading your numbers…");
     const { data: past } = await admin.from("dan_ai_messages").select("role, content").eq("user_id", userId).eq("thread_id", threadId)
       .order("created_at", { ascending: false }).limit(10);
     const history: Turn[] = (past ?? []).reverse().map((m: Turn) => {
-      if (m.role === "assistant") { const a = toAnswer(parseJson(m.content)); return { role: "assistant", content: a ? a.answer : m.content }; }
-      return { role: "user", content: m.content };
+      const a = m.role === "assistant" ? toAnswer(parseJson(m.content)) : null;
+      return { role: m.role, content: a ? a.answer : m.content };
     });
-
-    const member = memberId ? await loadMemberInput(admin, memberId) : null;
-    const r = await answerPipeline({ admin, question, history, catalogue, mode, member, memberId });
-
+    const r = await answerPipeline({ admin, question, history, catalogue, mode, member: memberPromise, memberId, clock, status });
+    const member = r.member;
     await Promise.all([
-      admin.from("dan_ai_checks").insert({ user_id: userId, question, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues }),
+      admin.from("dan_ai_checks").insert({ user_id: userId, question, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues, timing: r.timing }),
       admin.from("dan_ai_messages").insert([
         { user_id: userId, thread_id: threadId, role: "user", content: question },
         { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...r.final, context_used: r.block.hasContext }) },
@@ -480,10 +522,21 @@ Deno.serve(async (req) => {
       admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.next_steps, resource: r.final.resource }),
     ]);
 
-    return json({
+    return {
       ...r.final, thread_id: threadId, context_used: r.block.hasContext,
       ...(isAdmin ? { debug: buildDebug(mode, memberId, member, r) } : {}),
-    });
+    };
+    };
+    if (body.stream === true) {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({ start(controller) {
+        let connected = true;
+        const emit = (event: string, data: unknown) => { if (connected) { try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch { connected = false; } } };
+        execute(status => emit("status", { status })).then(result => emit("answer", result)).catch(() => emit("error", { error: "Could not get a checked answer — try again" })).finally(() => { if (connected) controller.close(); });
+      } });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+    }
+    return json(await execute());
   } catch (err) {
     console.error("ask-dan error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);

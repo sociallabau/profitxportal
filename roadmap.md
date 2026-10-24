@@ -10,5 +10,8 @@
 - [x] Add private member Context Rooms with seven collapsible sections and per-section saving.
 - [x] Add admin inspection/editing, onboarding capture and AI-safe Markdown exports.
 - [x] Verify saving, privacy rules, and the dropdown layout.
+- [x] Measure Dan AI baseline and stage timings; leave test criteria unchanged (baseline timed out after 8 completed answers).
+- [x] Parallelize loads/retrieval, cache fixed prompts, shorten passing checks and stream safe status updates.
+- [x] Run the final Dan AI version twice, verify cache hits and report speed and scores; stable 17/17 quality was not reached (repeat failed FREE_CLIENT_TRAP and ADS_5_DAYS_EARLY).
 - [x] Carry prior member settings/context into Context Rooms without overwriting newer answers.
 - [x] Keep basic details visible and deeper questions collapsed; verify saving and layout.
