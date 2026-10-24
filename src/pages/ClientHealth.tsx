@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HeartPulse, ArrowUpCircle, Search, LayoutGrid, Table2, ClipboardCheck, ChevronRight, ChevronLeft } from 'lucide-react';
+import { HeartPulse, ArrowUpCircle, Search, LayoutGrid, Table2, ClipboardCheck, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import ClientDetailPanel from '@/components/client-health/ClientDetailPanel';
@@ -15,7 +15,6 @@ import {
   TIER_OPTIONS,
   normalizeTier,
   formatTierLabel,
-  ON_RAMP_MODULE_IDS,
   LOW_CONFIDENCE,
   LOW_NPS,
   TARGET_MARGIN,
@@ -26,6 +25,9 @@ import {
   BAND,
 } from '@/lib/clientHealth';
 import { computeDrift, DRIFT_BAND, gateNumber, type DriftBand } from '@/lib/driftRisk';
+import { gateHealth, type GateMonth } from '@/lib/gateHealth';
+import { ROMAN, gateNumber as gateNum, type TaskProgress } from '@/lib/growthHub';
+import { useGrowthHubContent } from '@/hooks/useGrowthHub';
 
 export default function ClientHealth() {
   const { user } = useRequireAuth();
@@ -111,13 +113,29 @@ export default function ClientHealth() {
   });
 
 
-  // Fetch all checklist completions to detect on-ramp graduates
-  const { data: allCompletions = [] } = useQuery({
-    queryKey: ['all-checklist-completions'],
+  // The gate system: every build task, each member's ticks, their gate-bar numbers and Dan AI's read on them.
+  const { data: content } = useGrowthHubContent();
+  const { data: gateData = { progress: {}, months: {}, focus: {} } } = useQuery({
+    queryKey: ['client-gate-health'],
     enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
-      const { data } = await supabase.from('checklist_progress').select('user_id, task_key, completed').eq('completed', true);
-      return data ?? [];
+      const [progress, months, memory] = await Promise.all([
+        supabase.from('member_task_progress').select('*'),
+        supabase.from('monthly_totals').select('user_id, month, content_posts, leads_generated, new_clients').order('month', { ascending: false }).limit(1000),
+        supabase.from('member_memory').select('user_id, memory, brief'),
+      ]);
+      const byUser = <T extends { user_id: string }>(rows: T[]) =>
+        rows.reduce<Record<string, T[]>>((acc, r) => ((acc[r.user_id] ??= []).push(r), acc), {});
+      const focus: Record<string, string> = {};
+      for (const m of memory.data ?? []) {
+        const f = (m.memory as { next_focus?: string } | null)?.next_focus ?? m.brief;
+        if (f) focus[m.user_id] = f;
+      }
+      return {
+        progress: byUser((progress.data ?? []) as (TaskProgress & { user_id: string })[]),
+        months: byUser((months.data ?? []) as (GateMonth & { user_id: string })[]),
+        focus,
+      };
     },
   });
 
@@ -146,17 +164,8 @@ export default function ClientHealth() {
     return clients
       .filter((c: ClientOverview) => !archivedIds.includes(c.id))
       .map((c: ClientOverview) => {
-      const clientCompletions = allCompletions.filter(cp => cp.user_id === c.id);
-      const clientCompletedKeys = clientCompletions.map(cp => cp.task_key);
-      const allOnRampDone = ON_RAMP_MODULE_IDS.every(id => clientCompletedKeys.includes(id));
-
-      const tier = normalizeTier(c.tier);
       const monthlyRevenue = Number(c.last_total_revenue || 0);
-
-      // Ready to move from Onboarding → In Flow (under $20k) once all on-ramp modules are done.
-      const readyForInFlow = tier === 'onboarding' && allOnRampDone;
-      // Ready to step up from "under $20k" → "over $20k" once they cross $20k/mth.
-      const readyForOver20k = tier === 'in_flow_starter' && monthlyRevenue >= 20000;
+      const gh = gateHealth(gateNum(clientGates[c.id]), content?.tasks ?? [], gateData.progress[c.id] ?? [], gateData.months[c.id] ?? []);
 
       const drift = computeDrift({
         revenueSeries: revenueTrends.revenue?.[c.id] ?? [],
@@ -168,21 +177,21 @@ export default function ClientHealth() {
         ...c,
         health: calcHealthScore(c),
         conclusion: generateConclusion(c),
-        readyForInFlow,
-        readyForOver20k,
+        gh,
+        danFocus: gateData.focus[c.id] ?? null,
         monthlyRevenue,
         drift,
         gate: clientGates[c.id] ?? null,
       };
     }).sort((a, b) => b.health.score - a.health.score);
-  }, [clients, allCompletions, archivedIds, revenueTrends, clientGates]);
+  }, [clients, archivedIds, revenueTrends, clientGates, content, gateData]);
 
 
   const greenCount = clientsWithHealth.filter(c => c.health.band === 'green').length;
   const amberCount = clientsWithHealth.filter(c => c.health.band === 'amber').length;
   const redCount   = clientsWithHealth.filter(c => c.health.band === 'red').length;
-  const readyForInFlow = clientsWithHealth.filter(c => c.readyForInFlow);
-  const readyForOver20k = clientsWithHealth.filter(c => c.readyForOver20k);
+  const readyToMoveUp = clientsWithHealth.filter(c => c.gh.readyToMoveUp);
+  const waitingOnDan = clientsWithHealth.filter(c => c.gh.toApprove > 0);
 
 
 
@@ -224,63 +233,55 @@ export default function ClientHealth() {
       </div>
 
 
-      {/* Ready to graduate from Onboarding → In Flow (under $20k) */}
-      {readyForInFlow.length > 0 && (
+      {/* Ready to move up a gate: whole build list approved and the gate's monthly bars held 2 months */}
+      {readyToMoveUp.length > 0 && (
         <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpCircle className="w-5 h-5 text-primary" />
-            <h2 className="text-sm font-bold text-primary">Ready to Move to In Flow</h2>
+            <h2 className="text-sm font-bold text-primary">Ready to move up a gate</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            {readyForInFlow.length === 1 ? 'This client has' : `${readyForInFlow.length} clients have`} finished all On-Ramp modules — ready to graduate from Onboarding.
+            Build list fully approved and their gate's monthly bars held 2 months running. Move them up in their profile.
           </p>
           <div className="space-y-2">
-            {readyForInFlow.map(client => (
-              <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
-                <div>
-                  <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
-                  {client.monthlyRevenue > 0 && (
-                    <span className="ml-2 text-xs text-muted-foreground">${Number(client.monthlyRevenue).toLocaleString()}/mo</span>
-                  )}
-                </div>
-                <button
-                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_starter' })}
-                  className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-primary hover:bg-purple-500/30 transition"
-                >
-                  Move to In Flow →
-                </button>
-              </div>
+            {readyToMoveUp.map(client => (
+              <button
+                key={client.id}
+                onClick={() => setSelectedClient(client)}
+                className="w-full flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border hover:bg-card transition text-left"
+              >
+                <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
+                <span className="text-xs text-muted-foreground">
+                  Gate {ROMAN[client.gh.gate!]} → {ROMAN[client.gh.gate! + 1]} · {client.gh.goals.map(g => `${g.label} ${g.value ?? 0}/${g.target}`).join(' · ')}
+                </span>
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Ready to step up from under $20k → over $20k */}
-      {readyForOver20k.length > 0 && (
+      {/* Ticks waiting on Dan's approval (proof comes in on WhatsApp) */}
+      {waitingOnDan.length > 0 && (
         <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <ArrowUpCircle className="w-5 h-5 text-orange-600" />
-            <h2 className="text-sm font-bold text-orange-600">Ready to Step Up — Over $20k/mth</h2>
+            <CheckCircle2 className="w-5 h-5 text-orange-600" />
+            <h2 className="text-sm font-bold text-orange-600">
+              Waiting on your approval ({waitingOnDan.reduce((n, c) => n + c.gh.toApprove, 0)})
+            </h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            {readyForOver20k.length === 1 ? 'This client has' : `${readyForOver20k.length} clients have`} crossed $20k/month — unlock the full roadmap.
+            They've ticked these off and sent proof on WhatsApp. Approve or send back in their Growth Hub.
           </p>
-          <div className="space-y-2">
-            {readyForOver20k.map(client => (
-              <div key={client.id} className="flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border">
-                <div>
-                  <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">${Number(client.monthlyRevenue).toLocaleString()}/mo</span>
-                </div>
-                <button
-                  onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_scale' })}
-                  className="px-3 py-1 text-xs font-bold rounded-lg bg-orange-500/20 text-orange-600 hover:bg-orange-500/30 transition"
-                >
-                  Unlock Over $20k →
-                </button>
-              </div>
+          <div className="flex flex-wrap gap-2">
+            {waitingOnDan.map(client => (
+              <button
+                key={client.id}
+                onClick={() => setSelectedClient(client)}
+                className="px-3 py-1.5 rounded-lg bg-card/60 border border-border text-xs font-semibold hover:bg-card transition"
+              >
+                {client.full_name} · {client.gh.toApprove}
+              </button>
             ))}
-
           </div>
         </div>
       )}
@@ -508,11 +509,12 @@ export default function ClientHealth() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[620px]">
+              <table className="w-full text-sm min-w-[780px]">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
                     <th className="py-2.5 px-4 font-semibold">Client</th>
-                    <th className="py-2.5 px-3 font-semibold">Tier</th>
+                    <th className="py-2.5 px-3 font-semibold">Gate</th>
+                    <th className="py-2.5 px-3 font-semibold">Build list</th>
                     <th className="py-2.5 px-3 font-semibold">Revenue</th>
                     <th className="py-2.5 px-3 font-semibold">Drift</th>
                     <th className="py-2.5 px-3 font-semibold">Last login</th>
@@ -544,7 +546,21 @@ export default function ClientHealth() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">{formatTierLabel(client.tier)}</td>
+                        <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">
+                          {client.gh.gate ? `Gate ${ROMAN[client.gh.gate]}` : 'No gate'}
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          {client.gh.build.total ? (
+                            <>
+                              <span className="text-foreground">{client.gh.build.approved}/{client.gh.build.total}</span>
+                              {client.gh.toApprove > 0 && <span className="ml-1.5 text-xs text-orange-600">{client.gh.toApprove} to approve</span>}
+                              {client.gh.sentBack > 0 && <span className="ml-1.5 text-xs text-destructive">{client.gh.sentBack} sent back</span>}
+                              {client.gh.behind.length > 0 && (
+                                <p className="mt-0.5 text-[10px] text-muted-foreground">{client.gh.behind.join(' · ')}</p>
+                              )}
+                            </>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </td>
                         <td className="py-3 px-3 whitespace-nowrap">
                           <span className="text-foreground">${Number(client.last_total_revenue || 0).toLocaleString()}</span>
                           {change !== null && (
@@ -565,6 +581,11 @@ export default function ClientHealth() {
                           {client.drift && client.drift.signals.length > 0 && (
                             <p className="mt-0.5 text-[10px] text-muted-foreground max-w-[180px] truncate">
                               {client.drift.signals.join(' · ')}
+                            </p>
+                          )}
+                          {client.danFocus && (
+                            <p className="mt-0.5 text-[10px] text-primary max-w-[220px] truncate" title={client.danFocus}>
+                              Dan AI: {client.danFocus}
                             </p>
                           )}
                         </td>

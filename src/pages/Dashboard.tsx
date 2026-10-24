@@ -13,12 +13,12 @@ import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 import ExampleLabel from '@/components/ExampleLabel';
-import { BuildList, NextMove } from '@/components/growth-hub/GrowthHubCards';
+import { NextMove } from '@/components/growth-hub/GrowthHubCards';
 import DanAiButton from '@/components/DanAiButton';
 import { useGateBuild } from '@/hooks/useGrowthHub';
 import { useDanBrief } from '@/hooks/useDanBrief';
 import { gateNumber, nextTask } from '@/lib/growthHub';
-import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS, EXAMPLE_BUILD, EXAMPLE_NEXT, EXAMPLE_BRIEF } from '@/lib/dashboardExample';
+import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS, EXAMPLE_NEXT, EXAMPLE_BRIEF } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
@@ -326,8 +326,7 @@ export default function Dashboard() {
       <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} moveUp={dashboardProfile?.gate_move_up} keyTask={dashboardProfile?.gate_key_task}
         nextMove={example
           ? <NextMove task={EXAMPLE_NEXT} brief={EXAMPLE_BRIEF} isAdmin={Boolean(profile?.is_admin)} compact />
-          : <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact noGate={!gate} />}
-        buildSteps={example ? <BuildList tasks={EXAMPLE_BUILD} isAdmin={false} /> : gate ? <BuildList tasks={buildTasks} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} /> : undefined} />
+          : <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact noGate={!gate} />} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">

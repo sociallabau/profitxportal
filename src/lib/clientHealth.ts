@@ -1,5 +1,6 @@
 import type { ViewRow } from '@/lib/db';
 import type { DriftResult } from '@/lib/driftRisk';
+import type { GateHealth } from '@/lib/gateHealth';
 
 /**
  * Everything Client Health knows about judging a client: the tier labels, the
@@ -22,8 +23,10 @@ export type HealthResult = {
 export type ClientWithHealth = ClientOverview & {
   health: HealthResult;
   conclusion: string;
-  readyForInFlow: boolean;
-  readyForOver20k: boolean;
+  /** Where they stand in the gate system: build list, approvals, gate bars. */
+  gh: GateHealth;
+  /** Dan AI's current read on what they should focus on (member_memory). */
+  danFocus: string | null;
   monthlyRevenue: number;
   /** Outcome-based drift detection, computed in the page. */
   drift?: DriftResult;

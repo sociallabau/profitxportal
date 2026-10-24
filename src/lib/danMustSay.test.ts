@@ -43,3 +43,16 @@ describe('mustSay creatives', () => {
     expect(missingRules(r.filter(x => x.short.includes('creatives')), 'Add 3–4 creatives to the SAME campaign.')).toEqual([]);
   });
 });
+
+describe('mustSay $50 boost check', () => {
+  const rule = mustSay({ gate: null, revenue: 3000, hasContext: true, hasMember: true, question: 'skip boosting and go straight to lead gen at $50/day?' }).filter(r => r.short.includes('$50'));
+  it('is not fooled by "$50/day" lead gen', () => {
+    expect(rule).toHaveLength(1);
+    expect(missingRules(rule, 'Lead gen at $50/day is a Gate 3 step, skip boosting for now.')).toHaveLength(1);
+    expect(missingRules(rule, 'Put a ~$50 profile-visit boost behind your best posts.')).toHaveLength(0);
+  });
+  it('keeps Gate 3 rules away from early gates', () => {
+    const early = mustSay({ gate: 1, revenue: 3000, hasContext: true, hasMember: true, costPerClient: 600, lowestPrice: 2950, question: 'Lead gen 5 days, bump to $40/day?' });
+    expect(early.map(r => r.short).join(' ')).not.toContain('Growth Hub');
+  });
+});

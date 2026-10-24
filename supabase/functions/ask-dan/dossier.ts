@@ -87,7 +87,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     q(admin.from("ad_campaigns").select("status, daily_budget, ad_hook, launched_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(3)),
     q(admin.from("roadmap_audits").select("focus, issue, created_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(1).maybeSingle()),
     q(admin.from("roadmap_scores").select("module_number, pillar, score").eq("user_id", memberId)),
-    q(admin.from("monthly_reviews").select("month, focus").eq("user_id", memberId).order("month", { ascending: false }).limit(1).maybeSingle()),
+    q(admin.from("monthly_reviews").select("month, focus, admin_breakdown").eq("user_id", memberId).order("month", { ascending: false }).limit(1).maybeSingle()),
     q(admin.from("client_notes").select("note, created_at").eq("client_id", memberId).order("created_at", { ascending: false }).limit(5)),
     q(admin.from("client_health").select("health_status, notes").eq("client_user_id", memberId).maybeSingle()),
     q(admin.from("client_questions").select("question, created_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(8)),
@@ -157,7 +157,10 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     audit: a ? clip([a.focus, a.issue].filter(Boolean).join(" — "), 260) || null : null,
     weak_modules: weak,
     review_focus: review ? clip((review as { focus: string | null }).focus, 260) || null : null,
-    coach_notes: ((notes ?? []) as { note: string }[]).map(n => clip(n.note, 200)),
+    coach_notes: [
+      ...((notes ?? []) as { note: string }[]).map(n => clip(n.note, 200)),
+      ...(review && (review as { admin_breakdown: string | null }).admin_breakdown ? [`Dan's private read on their ${(review as { month: string }).month.slice(0, 7)} numbers: ${clip((review as { admin_breakdown: string }).admin_breakdown, 700)}`] : []),
+    ],
     health: h ? clip([h.health_status, h.notes].filter(Boolean).join(" — "), 200) || null : null,
     recent_questions: [...new Set([
       ...((chats ?? []) as { content: string }[]).map(x => clip(x.content, 120)),

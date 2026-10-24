@@ -336,9 +336,11 @@ async function answerPipeline(p: PipelineInput) {
   const privacy = p.mode !== "admin";
   const clock = p.clock;
   const planned = clock.measure("plan", () => runPlan(p.question, p.history, clock.data));
-  const [brain, member, { data: allProfiles }, catalogue] = await Promise.all([
+  const [brain, member, { data: allProfiles }, catalogue, { data: voice }] = await Promise.all([
     clock.measure("brain_load", () => loadBrain(p.admin)), p.member, p.admin.from("profiles").select("id, full_name"), Promise.resolve(p.catalogue),
+    p.admin.from("voice_profile").select("content").eq("slug", "default").maybeSingle(),
   ]);
+  const voiceText = (voice as { content: string } | null)?.content?.trim() ? `\n\nDAN'S VOICE PROFILE (built from his real messages; match it):\n${(voice as { content: string }).content.trim().slice(0, 4000)}` : "";
   const askerName = member?.name ?? null;
   p.status?.("Thinking…");
   const otherNames = ((allProfiles ?? []) as { id: string; full_name: string | null }[])
@@ -375,9 +377,10 @@ async function answerPipeline(p: PipelineInput) {
     revenue: block.derived?.total_revenue_latest ?? block.derived?.mrr_latest ?? null,
     hasContext: block.hasContext, hasMember: !!member,
     costPerClient: block.derived?.cost_per_client ?? null, lowestPrice: block.derived?.lowest_retainer_price ?? null,
+    fastTrack: !!member?.extras?.fast_track_lead_gen,
   });
   const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}\n\n=====\n\n` : "";
-  const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], "") + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
+  const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], "") + voiceText + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
   const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
@@ -484,7 +487,7 @@ async function answerPipeline(p: PipelineInput) {
         let pts = [...final.points];
         let note = final.note;
         const over = () => wordCount(fullText({ ...final, points: pts, note })) > maximum;
-        const dataNudge = !!note && /context room|latest totals|submit|90-day goal|non-negotiables:/i.test(note);
+        const dataNudge = !!note && /context room|latest totals|submit|90-day goal|also bro:/i.test(note);
         while (note && !dataNudge && over()) note = null;
         const carriesCost = (pt: Point) => typeof cpc === "number" && Number.isFinite(cpc) && hasCostPerClient(`${pt.do} ${pt.why}`, cpc);
         while (pts.length > 2 && over()) {
@@ -500,7 +503,7 @@ async function answerPipeline(p: PipelineInput) {
   // Any MUST SAY rule still missing gets one rewrite that merges it in, within the word limit.
   const stillMissing = () => missingRules(must, fullText(final));
   if (checked && stillMissing().length) {
-    const fix = await runCheck(final, `add these missing rules of Dan's, merged into the existing points (max 4 points, stay under ~110 words, shorten other wording to make room): ${stillMissing().map(r => r.say).join(" ")}`);
+    const fix = await runCheck(final, `these rules of Dan's are missing and MUST appear inside the points (not the note): ${stillMissing().map(r => `"${r.short}"`).join("; ")}. Merge each into the point it fits (in its \"why\" if needed) or use a 4th point. Stay under ~110 words total by cutting filler words, never other rules or their numbers.`);
     if (fix && missingRules(must, fullText(fix.final)).length < stillMissing().length) { final = trim(fix.final); issues.push(...fix.issues); }
   }
   if (checked && !shortReply && member && !block.hasContext && !/context room/i.test(fullText(final))) {
@@ -530,9 +533,19 @@ async function answerPipeline(p: PipelineInput) {
   if (leftOut.length && final.answer !== FLAG_REPLY) {
     const line = leftOut.map(r => r.short).join("; ");
     const keep = final.note && /context room|latest totals|submit|90-day goal/i.test(final.note) ? `${final.note} ` : "";
-    final = trim({ ...final, note: `${keep}Non-negotiables: ${line}.` });
+    final = trim({ ...final, note: `${keep}Also bro: ${line}.` });
     issues.push({ type: "guardrail", note: `Added missing rules: ${leftOut.map(r => r.short).join("; ")}` });
     probs = problems(final);
+  }
+  // Hard cap so every answer stays inside the format: shorten the note to its first sentence, then drop it, then trim the last point's reason.
+  const cap = shortReply ? 60 : buildHelp ? 185 : 118;
+  if (wordCount(fullText(final)) > cap && final.note) final = { ...final, note: final.note.split(/(?<=[.!?])\s+/)[0] };
+  if (wordCount(fullText(final)) > cap && final.note && !/also bro:/i.test(final.note)) final = { ...final, note: null };
+  while (wordCount(fullText(final)) > cap && final.points.length) {
+    const last = final.points[final.points.length - 1];
+    const words = last.why.split(/\s+/);
+    if (words.length <= 6) break;
+    final = { ...final, points: [...final.points.slice(0, -1), { ...last, why: words.slice(0, words.length - (wordCount(fullText(final)) - cap)).join(" ").replace(/[,;:]$/, "") + "." }] };
   }
   // Length is fixed by trimming above, so only real problems (privacy, voice, a cut-off, a missing number) withhold the answer.
   probs = { ...probs, out: probs.out.filter(o => !/^cut to under/.test(o)) };
@@ -597,7 +610,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.8";
+const VERSION = "2026-10-24.9";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));

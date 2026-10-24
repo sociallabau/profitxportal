@@ -6,7 +6,7 @@
 
 export type MustSayInput = {
   question: string; gate: number | null; revenue: number | null; hasContext: boolean; hasMember: boolean;
-  costPerClient?: number | null; lowestPrice?: number | null;
+  costPerClient?: number | null; lowestPrice?: number | null; fastTrack?: boolean;
 };
 export type Rule = { say: string; short: string; test: RegExp };
 
@@ -31,7 +31,8 @@ export function statedRetainers(question: string): number | null {
 export function mustSay(i: MustSayInput): Rule[] {
   const q = i.question.toLowerCase();
   const out: Rule[] = [];
-  const freeWork = /\bfree\b|for nothing|unpaid|trial (month|client)|case stud|testimonial/.test(q);
+  const freeWork = /\bfree\b|for nothing|unpaid|trial (month|client)|no charge/.test(q);
+  const caseStudy = /case stud|testimonial/.test(q);
   const workload = /hire|hiring|editor|outsourc|\bva\b|assistant|overwhelm|burn(ed|t)? ?out|too busy|no time|drowning|workload|boundar|scope|extra|weekend|capacity/.test(q);
   const adsMoney = /\bads?\b|ad spend|budget|boost|awareness|lead gen|campaign|save (money|cash)|cut (back|costs)|switch off|turn off|pause/.test(q);
   const path = /\bgate\b|next step|what (should|do) i (focus|do)|where (am i|do i start)|path|roadmap|what'?s next|level up|move up/.test(q);
@@ -44,18 +45,19 @@ export function mustSay(i: MustSayInput): Rule[] {
     out.push({ say: `They have ${retainers} paying retainers, so say plainly they're not at Gate 1 yet (Gate 1 = 3 paying retainers held 2 months).`, short: "you're not at Gate 1 yet (that's 3 paying retainers held 2 months)", test: /not (at |in )?gate (1|i)\b|not (at |in )?gate (1|i) yet|below gate (1|i)\b/i });
   }
   if (workload || freeWork) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
+  if (freeWork || caseStudy) out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
   if (freeWork) {
-    out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
     out.push({ say: "Ad spend sits on top of the fee, through the client's own ad account.", short: "ad spend sits on top of the fee, through the client's own ad account", test: /on top of (the |your )?(fee|retainer|price)/i });
   }
   if (freeWork || (adsMoney && /save|cut|cash|switch off|turn off|skip|stop/.test(q))) {
     out.push({ say: "Never switch off awareness/lead gen to save cash; keep awareness running.", short: "never switch off awareness", test: /(never|don'?t|do not)\s+(switch|turn|shut)\s+(off|it off)|(switch|turn)ing off|keep (your )?(awareness|it|boosting)\s+(running|on|going)/i });
   }
   if ((i.gate == null || i.gate <= 1) && (adsMoney || /\bgate\b/.test(q)) && (path || adsMoney)) {
-    out.push({ say: "Below or at Gate 1: put a ~$50 profile-visit boost behind their best posts; awareness ads come at Gate 2.", short: "for now it's a ~$50 profile-visit boost behind your best posts; awareness comes at Gate 2", test: /\$\s?50\b[^.]*\b(boost|profile)|\b(boost|profile)[^.]*\$\s?50\b/i });
+    out.push({ say: "Below or at Gate 1: put a ~$50 profile-visit boost behind their best posts; awareness ads come at Gate 2.", short: "for now it's a ~$50 profile-visit boost behind your best posts; awareness comes at Gate 2", test: /\$\s?50(?![\d,])(?!\s*\/\s*(day|d)\b)[^.]{0,80}\b(profile|pv|boost)|\b(profile[- ]visit|pv) boost[^.]{0,40}\$\s?50(?![\d,])(?!\s*\/)/i });
   }
   const cpc = i.costPerClient, price = i.lowestPrice;
-  if (adsMoney && typeof cpc === "number" && Number.isFinite(cpc) && typeof price === "number" && price > 0) {
+  // Cost per client and scaling are Gate 3 steps (or Dan's lead gen fast-track); earlier gates get their own gate's step instead.
+  if (adsMoney && (i.gate != null && i.gate >= 3 || i.fastTrack) && typeof cpc === "number" && Number.isFinite(cpc) && typeof price === "number" && price > 0) {
     const under = cpc < price / 2;
     out.push({ say: `Say their ~${money(cpc)} a client is ${under ? "UNDER" : "NOT under"} half their ${money(price)} first month's fee, in those words.`, short: `~${money(cpc)} a client is ${under ? "under" : "not under"} half your ${money(price)} first month`, test: under ? /under half/i : /not under half|over half|more than half/i });
     if (scale) out.push({ say: "Scaling only works if every lead and follow-up is tracked in their Growth Hub.", short: "track every lead and follow-up in your Growth Hub", test: /growth hub|\bhub\b/i });

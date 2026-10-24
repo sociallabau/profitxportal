@@ -8,7 +8,6 @@ import {
 export type GateModule = { gate: GateNumber; module_code: string; note: string | null; position: number };
 export type MemberGrowthHub = { fast_track_lead_gen: boolean; fast_track_since: string | null; extra_modules: string[] };
 
-/** Gate copy, every task and every gate→module link. Same for all members, so cached long. */
 /** Which modules have training content, same list the Roadmap tiles use. */
 export function useModulePages() {
   const { data = [], isSuccess } = useQuery({
@@ -18,6 +17,7 @@ export function useModulePages() {
   return isSuccess ? (code: string) => data.includes(code) : undefined;
 }
 
+/** Gate copy, every task and every gate→module link. Same for all members, so cached long. */
 export function useGrowthHubContent() {
   return useQuery({
     queryKey: ['growth-hub-content'],

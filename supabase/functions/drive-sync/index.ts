@@ -302,6 +302,69 @@ async function ingestDriveFile(admin: DB, token: string, clientEmail: string, id
   }
 }
 
+type Section = { type?: string; label?: string; title?: string; text?: string; items?: unknown; steps?: unknown };
+const itemText = (i: unknown): string => typeof i === "string" ? i : i && typeof i === "object" ? String((i as Record<string, unknown>).text ?? (i as Record<string, unknown>).title ?? (i as Record<string, unknown>).label ?? "") : "";
+function sectionsToText(sections: unknown): string {
+  const out: string[] = [];
+  for (const sec of (Array.isArray(sections) ? sections : []) as Section[]) {
+    const head = sec.title ?? sec.label;
+    if (head) out.push(`## ${head}`);
+    if (sec.text) out.push(sec.text);
+    if (Array.isArray(sec.items)) out.push(...sec.items.map(i => `- ${itemText(i)}`).filter(l => l.length > 2));
+    if (Array.isArray(sec.steps)) out.push(...sec.steps.map((st, n) => `${n + 1}. ${itemText(st)}`));
+  }
+  return out.join("\n");
+}
+
+/** Replace a portal-content doc when its source changed since it was last ingested. */
+async function upsertPortalDoc(admin: DB, sourceId: string, title: string, url: string, text: string, changedAt: string | null): Promise<string | null> {
+  const { data: existing } = await admin.from("knowledge_docs").select("id, created_at").eq("source_id", sourceId).maybeSingle();
+  if (existing && (!changedAt || changedAt <= existing.created_at)) return null;
+  if (text.split(/\s+/).length < 20) return null;
+  if (existing) await admin.from("knowledge_docs").delete().eq("id", existing.id);
+  const n = await insertDoc(admin, { title, source_type: "teaching", source_id: sourceId, source_url: url }, text);
+  return `${existing ? "updated" : "added"}: ${title} (${n} chunks)`;
+}
+
+/** Training and tools Dan wrote inside the portal: Roadmap module pages, DM scripts, resources, Growth Hub build lists. */
+async function syncPortal(admin: DB): Promise<string[]> {
+  const out: string[] = [];
+  const latest = (rows: { updated_at?: string | null; created_at?: string | null }[]) => rows.map(r => r.updated_at ?? r.created_at ?? "").sort().pop() || null;
+  try {
+    const { data: modules } = await admin.from("module_pages").select("module_id, title, subtitle, pillar, sections, updated_at, created_at");
+    for (const m of (modules ?? []) as { module_id: string; title: string; subtitle: string | null; pillar: string; sections: unknown; updated_at: string | null; created_at: string | null }[]) {
+      const r = await upsertPortalDoc(admin, `module-${m.module_id}`, `Roadmap module ${m.module_id} — ${m.title}`, `/module/${m.module_id}`,
+        `# ${m.module_id} — ${m.title}${m.subtitle ? `\n${m.subtitle}` : ""}\nPillar: ${m.pillar}\n\n${sectionsToText(m.sections)}`, m.updated_at ?? m.created_at);
+      if (r) out.push(r);
+    }
+    const { data: dms } = await admin.from("dm_templates").select("label, stage_key, body, updated_at, created_at").order("sort_order");
+    const dmRows = (dms ?? []) as { label: string; stage_key: string; body: string; updated_at: string; created_at: string }[];
+    if (dmRows.length) {
+      const r = await upsertPortalDoc(admin, "portal-dm-templates", "Dan's DM scripts (Hot List templates)", "/hot-list",
+        dmRows.map(d => `## ${d.label} (stage: ${d.stage_key})\n${d.body}`).join("\n\n"), latest(dmRows));
+      if (r) out.push(r);
+    }
+    const { data: res } = await admin.from("resources").select("title, category, description, url, created_at").eq("is_active", true).order("sort_order");
+    const resRows = (res ?? []) as { title: string; category: string; description: string | null; url: string; created_at: string | null }[];
+    if (resRows.length) {
+      const r = await upsertPortalDoc(admin, "portal-resources", "Portal resource library", "/resources",
+        resRows.map(x => `- ${x.title} (${x.category})${x.description ? `: ${x.description}` : ""} — ${x.url}`).join("\n"), latest(resRows));
+      if (r) out.push(r);
+    }
+    const { data: gates } = await admin.from("playbook_gates").select("gate, name, headline, focus, what_you_get, updated_at").order("gate");
+    const { data: tasks } = await admin.from("playbook_tasks").select("gate, position, title, why, kind, module_codes, training_label, proof_hint, active, updated_at, created_at").eq("active", true).order("gate").order("position");
+    const g = (gates ?? []) as { gate: number; name: string; headline: string; focus: string; what_you_get: string; updated_at: string }[];
+    const t = (tasks ?? []) as { gate: number; title: string; why: string; kind: string; module_codes: string[]; training_label: string | null; proof_hint: string; updated_at?: string; created_at?: string }[];
+    if (g.length || t.length) {
+      const text = g.map(x => `# Gate ${x.gate} — ${x.name}: ${x.headline}\nFocus: ${x.focus}. What you get: ${x.what_you_get}\n` +
+        t.filter(k => k.gate === x.gate).map(k => `- ${k.title} (${k.kind}${k.module_codes?.length ? `; training ${k.module_codes.join(" + ")}` : k.training_label ? `; training ${k.training_label}` : ""}): ${k.why} Proof: ${k.proof_hint}`).join("\n")).join("\n\n");
+      const r = await upsertPortalDoc(admin, "portal-growth-hub", "Growth Hub gates and build lists", "/growth-hub", text, latest([...g, ...t]));
+      if (r) out.push(r);
+    }
+  } catch (err) { out.push(`portal sync error: ${err instanceof Error ? err.message : String(err)}`); }
+  return out;
+}
+
 /** Loads whatever the Vault page links to that isn't in the knowledge base yet, a few items per run. */
 async function syncVault(admin: DB, token: string, clientEmail: string, limit: number): Promise<string[]> {
   const ids = VAULT_FILES.flatMap(v => [...v.drive, ...v.fathom, ...v.notion.map(n => `notion-${n.id}`)]);
@@ -417,6 +480,7 @@ Deno.serve(async (req) => {
 
     // Every Vault entry's files (notes, recordings, Fathom transcripts, Notion workbooks) go in as soon as they're on the Vault page.
     const vault = await syncVault(admin, token, sa.client_email, Number(body.vault_limit) || 4);
+    const portal = await syncPortal(admin);
     let ingested = 0;
     let remaining = 0;
     let queued = 0;
@@ -514,7 +578,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return json({ ingested, queued, skipped, remaining, hasMore: remaining > 0, errors, vault });
+    return json({ ingested, queued, skipped, remaining, hasMore: remaining > 0, errors, vault, portal });
   } catch (err) {
     console.error("drive-sync error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);

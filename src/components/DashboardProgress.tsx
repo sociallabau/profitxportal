@@ -25,10 +25,10 @@ function FocusList({ items, fallback }: { items: string[]; fallback?: string }) 
   );
 }
 
-/** Once the member has a gate, the Growth Hub's "Your next move" card and build list replace the Focus card. */
-export default function DashboardProgress({ series, gate, keyTask, moveUp, nextMove, buildSteps, example = false }: {
+/** The Growth Hub's "Your next move" card takes the Focus card's place when given. */
+export default function DashboardProgress({ series, gate, keyTask, moveUp, nextMove, example = false }: {
   series: RevenuePoint[]; gate?: string | null; keyTask?: string | null; moveUp?: string | null;
-  nextMove?: ReactNode; buildSteps?: ReactNode; example?: boolean;
+  nextMove?: ReactNode; example?: boolean;
 }) {
   const navigate = useNavigate();
   const current = series.at(-1);
@@ -60,16 +60,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-5">
         <div className="flex flex-col gap-5">
-          {nextMove ? (<>
-            {nextMove}
-            {buildSteps && <div className="rounded-lg bg-card border border-border p-5">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="text-xs font-semibold text-muted-foreground flex items-center gap-2">Your action steps{gate ? ` · ${gate}` : ''} <ExampleLabel show={example} /></h2>
-                <Button variant="link" size="sm" className="px-0 h-auto" disabled={example} onClick={() => navigate('/growth-hub')}>Growth Hub <ArrowUpRight /></Button>
-              </div>
-              {buildSteps}
-            </div>}
-          </>) : (
+          {nextMove ?? (
           <div className="dashboard-focus rounded-lg border border-primary/35 bg-card p-5 flex-1">
             <div className="flex items-center justify-between gap-2 mb-4">
               <h2 className="text-xs font-semibold text-primary flex items-center gap-2 flex-wrap"><Crosshair className="w-4 h-4" /> Your Focus <ExampleLabel show={example} /></h2>
