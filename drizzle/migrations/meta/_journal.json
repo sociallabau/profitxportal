@@ -120,6 +120,13 @@
       "when": 1792822559104,
       "tag": "0016_member_task_progress_own_untick",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792829057191,
+      "tag": "0017_monthly_check_in_gate_metrics",
+      "breakpoints": true
     }
   ]
 }

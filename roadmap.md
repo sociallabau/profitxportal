@@ -22,3 +22,6 @@
 - [x] Run the Drive sync command once; response timed out at the migration's default 5 seconds, with null status and content.
 - [x] Deploy the eight requested edge functions and remove the deployed legacy dan-ai function.
 - [x] Rename every Playbooks mention to Growth Hub (sidebar, page heading, links, editor, Dan status) and redirect the old address.
+- [ ] Apply the synced seven-column monthly check-in migration and verify it.
+- [ ] Deploy ask-dan and monthly-review and request site publishing after the security check.
+- [ ] Run all 17 deployed Dan AI tests unchanged and report every result and missed criterion.
