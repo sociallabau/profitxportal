@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Flag, Crosshair, ArrowUpRight, Flame, TrendingUp } from 'lucide-react';
+import { Flag, Crosshair, ArrowUpRight, Flame, TrendingUp, Ticket } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { REVENUE_STEPS, focusBullets, revenuePosition, submissionStreak } from '@/lib/dashboardProgress';
 import { brisbaneDateKey } from '@/data/calls';
@@ -10,6 +10,8 @@ import ExampleLabel from '@/components/ExampleLabel';
 export type RevenuePoint = { month: string; monthKey: string; revenue: number };
 const money = (amount: number) => `$${amount.toLocaleString('en-AU', { maximumFractionDigits: 0 })}`;
 const stepLabel = (amount: number) => amount === 150000 ? 'Black Book' : amount ? `$${amount / 1000}k` : '$0';
+/** Members at $45k/mth get invited into the Inner Circle (quarterly catch-ups and masterminds). */
+const INNER_CIRCLE = 45000;
 
 function FocusList({ items, fallback }: { items: string[]; fallback?: string }) {
   const rows = items.length ? items : fallback ? [fallback] : [];
@@ -51,10 +53,20 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
             <span className="h-2 w-px bg-foreground" />
           </div>}
           <div className="revenue-prism h-2 rounded-full" />
+          <span className="absolute top-1 -translate-x-1/2 -translate-y-1/2 h-4 w-1 rounded-full bg-white ring-1 ring-amber-500" style={{ left: `${revenuePosition(INNER_CIRCLE)}%` }} aria-hidden />
           {current && <span className="absolute top-1 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-foreground border-2 border-card" style={{ left: `${position}%` }} />}
         </div>
         <div className="flex justify-between mt-3 gap-1 text-[9px] sm:text-[10px] text-muted-foreground">
           {REVENUE_STEPS.map(step => <span key={step}>{stepLabel(step)}</span>)}
+        </div>
+        <div className="relative mx-3 h-6 mt-1.5">
+          <span
+            className={`absolute -translate-x-1/2 inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold ${revenue >= INNER_CIRCLE ? 'border-amber-500 bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.45)]' : 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}
+            style={{ left: `${revenuePosition(INNER_CIRCLE)}%` }}
+            title="Hit $45k/mth to get your invite: quarterly catch-ups and masterminds"
+          >
+            <Ticket className="w-3 h-3" aria-hidden />Inner Circle invite · $45k
+          </span>
         </div>
       </div>
 
