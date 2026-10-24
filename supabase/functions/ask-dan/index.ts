@@ -305,7 +305,7 @@ async function answerPipeline(p: PipelineInput) {
   const retryBefore = clock.data.steps.check_retry ?? 0;
   // GUARDRAILS — deterministic repairs first; only privacy gets another checker call.
   const problems = (a: Answer) => {
-    const text = [a.answer, ...a.next_steps].join("\n");
+    const text = fullText(a);
     const out: string[] = [];
     const names = privacy ? findNames(text, tokens) : [];
     if (names.length) out.push(`remove other member names (${names.join(", ")})`);
@@ -313,44 +313,66 @@ async function answerPipeline(p: PipelineInput) {
     if (banned.length) out.push(`rewrite the lines containing banned phrases/swearing: ${banned.join(", ")}`);
     if (looksTruncated(a.answer)) out.push("the answer is cut off — finish it cleanly");
     const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
-    if (wordCount(a.answer) > (shortReply ? 60 : 220)) out.push(shortReply ? "cut to under 60 words" : "cut to under 170 words");
+    if (shortReply) {
+      if (wordCount(a.answer) > 60) out.push("cut to under 60 words");
+    } else {
+      if (a.points.length < 2 || a.points.length > 4) out.push("needs 2–4 dot points");
+      if (wordCount(text) > 130) out.push("cut to under ~110 words total");
+    }
     // Ads/scaling/pricing questions must use the member's cost per client — only when it was actually computed.
     const cpc = block.derived?.cost_per_client;
     if (typeof cpc === "number" && Number.isFinite(cpc) && !shortReply) {
-      if (["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(a.answer.replace(/\$(15|20)\b/g, ""))) {
+      if (["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(text.replace(/\$(15|20)\b/g, ""))) {
         out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client vs their lowest retainer${block.derived?.lowest_retainer_price ? ` $${block.derived.lowest_retainer_price}` : ""}) and say whether it's under half`);
-      } else if (plan.topic === "ads" && !a.answer.includes(String(Math.round(cpc)))) {
+      } else if (plan.topic === "ads" && !text.includes(String(Math.round(cpc)))) {
         out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client) and say whether it's under half their first month's fee`);
       }
     }
     // Sequence rule: follow-up problem + allowed to scale → scaling must be conditional on speed to lead.
-    if (/no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question) && /\bscal/i.test(a.answer) && !/15\s*[–-]\s*30/.test(a.answer)) {
+    if (/no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question) && /\bscal/i.test(text) && !/15\s*[–-]\s*30/.test(text)) {
       out.push(`put follow-up first and make scaling conditional: "you can scale, but only once you're calling every lead within 15–30 mins"`);
     }
     return { out, names };
   };
   const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
-  const maximum = shortReply ? 60 : 220;
+  const maximum = shortReply ? 60 : 130;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
-  final = { ...final, answer: clean(final.answer), next_steps: final.next_steps.map(clean).filter(Boolean) };
+  final = {
+    ...final,
+    answer: clean(final.answer),
+    points: final.points.map(pt => ({ do: clean(pt.do), why: clean(pt.why) })).filter(pt => pt.do),
+    note: final.note ? clean(final.note) : null,
+  };
   // Code may append only precomputed member facts or the exact fixed sequence rule, never invent coaching.
   const cpc = block.derived?.cost_per_client;
-  if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !final.answer.includes(String(Math.round(cpc)))) {
+  if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !fullText(final).includes(String(Math.round(cpc)))) {
     const price = block.derived?.lowest_retainer_price;
     if (typeof price === "number" && price > 0) {
       const verdict = block.derived?.cac_vs_first_month;
-      final.answer += `\n\nThat's ~$${Math.round(cpc)} a client vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 50 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}.`;
+      const why = `vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 50 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}`;
+      if (final.points.length < 4) final = { ...final, points: [...final.points, { do: `That's ~$${Math.round(cpc)} a client`, why }] };
+      else final = { ...final, note: `That's ~$${Math.round(cpc)} a client ${why}.` };
     }
   }
   const followupProblem = /no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question);
-  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 50 && /\bscal/i.test(final.answer)) {
-    final.answer = final.answer.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
+  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 50 && /\bscal/i.test(fullText(final))) {
+    const fix = (s: string) => s.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
+    final = { ...final, answer: fix(final.answer), points: final.points.map(pt => ({ do: fix(pt.do), why: fix(pt.why) })) };
   }
-  if (wordCount(final.answer) > maximum) {
-    const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
-    let kept = "";
-    for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
-    if (kept) final = { ...final, answer: kept };
+  if (wordCount(fullText(final)) > maximum) {
+    if (shortReply) {
+      const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
+      let kept = "";
+      for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
+      if (kept) final = { ...final, answer: kept };
+    } else {
+      // Drop the lowest-priority points (and the note) until the total fits.
+      let pts = [...final.points];
+      let note = final.note;
+      while (note && wordCount(fullText({ ...final, points: pts, note })) > maximum) note = null;
+      while (pts.length > 2 && wordCount(fullText({ ...final, points: pts, note })) > maximum) pts = pts.slice(0, -1);
+      final = { ...final, points: pts, note };
+    }
   }
   if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final.answer = final.answer.trim() + ".";
   let probs = problems(final);
@@ -360,10 +382,10 @@ async function answerPipeline(p: PipelineInput) {
     if (again) { final = again.final; issues.push(...again.issues); }
     probs = problems(final);
   }
-  if (probs.out.length || !final.answer.trim() || wordCount(final.answer) < (shortReply ? 15 : 40)) {
-    // Never publish an answer still violating privacy, semantics, voice or the unchanged word limits.
+  if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 15 : 30)) {
+    // Never publish an answer still violating privacy, semantics, voice or the word limits.
     issues.push({ type: "guardrail", note: `Unsafe final withheld: ${probs.out.join("; ") || "length"}` });
-    final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, next_steps: [], resource: null };
+    final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, points: [], note: null, resource: null };
     pass = false;
   }
   clock.data.steps.guardrails = Math.max(0, Math.round(performance.now() - guardStarted) - ((clock.data.steps.check_retry ?? 0) - retryBefore));
