@@ -26,6 +26,9 @@ export function signals(m: MemberInput, d: Derived): Signal[] {
   if (sentBack) out.push({ problem: `Dan sent back "${sentBack.title}"${sentBack.review_note ? `: ${sentBack.review_note}` : ""}`, fix: "fix it with Dan's note before anything else" });
 
   if (t) {
+    // Rows from before the gate-aligned check-in saved blank boxes as 0, so a 0 there means "not filled in".
+    const newForm = t.active_retainers != null || t.retainer_convos != null || t.ad_leads != null;
+    const known = (v: number | null | undefined) => (v == null || (!newForm && v === 0) ? null : v);
     const retainers = t.active_retainers;
     if ((gate == null || gate <= 1) && retainers != null && retainers < 3) out.push({ problem: `${retainers} paying retainers, below Gate 1's 3`, fix: "sign the next paying retainer: conversations first, then content" });
     if (t.retainers_lost) out.push({ problem: `lost ${t.retainers_lost} retainer${t.retainers_lost > 1 ? "s" : ""} last month`, fix: "retention: first 90 days, proactive check-ins, 3-month reviews (Delivery Magic, Smooth Operator)" });
@@ -33,23 +36,24 @@ export function signals(m: MemberInput, d: Derived): Signal[] {
     if (d.all_oneoff) out.push({ problem: "all revenue is one-off, nothing recurring", fix: "turn one-off clients into a retainer offer (Profit By Design)" });
 
     const postTarget = gate ? POSTS[gate] : null;
-    if (postTarget && t.content_posts != null && t.content_posts < postTarget) out.push({ problem: `${t.content_posts} posts last month vs the Gate ${gate} bar of ${postTarget}`, fix: "post consistently on their own account: BTS and case studies (Organic Content Snowball)" });
-    const convos = t.retainer_convos ?? t.leads_generated ?? null;
+    const posts = known(t.content_posts);
+    if (postTarget && posts != null && posts < postTarget) out.push({ problem: `${posts} posts last month vs the Gate ${gate} bar of ${postTarget}`, fix: "post consistently on their own account: BTS and case studies (Organic Content Snowball)" });
+    const convos = t.retainer_convos ?? known(t.leads_generated);
     const convoTarget = gate ? CONVOS[gate] : null;
     if (convoTarget && convos != null && convos < convoTarget) out.push({ problem: `${convos} conversations last month vs the Gate ${gate} bar of ${convoTarget}`, fix: "start more retainer conversations and track every one (The System)" });
     if (gate === 2 && t.case_studies_posted === 0) out.push({ problem: "no case studies posted last month (Gate II needs 4)", fix: "post case studies on their own account (Organic Content Snowball)" });
 
     const leads = t.ad_leads ?? (gate && gate >= 3 ? t.leads_generated : null);
-    if (leads && leads >= 5 && t.booked_calls != null && t.booked_calls / leads < 0.2) out.push({ problem: `${leads} leads but only ${t.booked_calls} calls booked`, fix: "speed to lead: call every lead within 15–30 mins and follow up (The System)" });
+    if (d.calls_tracked && leads && leads >= 5 && t.booked_calls != null && (newForm || t.booked_calls > 0) && t.booked_calls / leads < 0.2) out.push({ problem: `${leads} leads but ${t.booked_calls ? `only ${t.booked_calls}` : "no"} calls booked`, fix: "speed to lead: call every lead within 15–30 mins and follow up (The System)" });
     if (t.booked_calls && t.calls_showed != null && t.calls_showed / t.booked_calls < 0.6) out.push({ problem: `${t.calls_showed} of ${t.booked_calls} booked calls showed`, fix: "confirm and remind every booking; call fast (The System)" });
     if ((t.ad_spend ?? 0) > 0 && !t.new_clients) out.push({ problem: `${money(t.ad_spend!)} ad spend with no new clients`, fix: "track cost per lead and per client before spending more (Ad Metrics & Tracking 101)" });
     if (d.cac_vs_first_month != null && d.cac_vs_first_month >= 50) out.push({ problem: `cost per client ~${money(d.cost_per_client!)} is ${d.cac_vs_first_month}% of the first month's fee`, fix: "fix creatives and offer before scaling: 3–5 variations in the same campaign (Paid Ad Powerup)" });
 
-    const meetings = t.meetings ?? t.booked_calls ?? null;
+    const meetings = known(t.meetings) ?? known(t.booked_calls);
     if (meetings && meetings >= 3 && t.new_clients != null && t.new_clients / meetings > 0.6) out.push({ problem: `closing ${t.new_clients} of ${meetings} calls (over 60%)`, fix: "they're underpriced: raise prices on new clients first (Profit By Design)" });
     const revenue = t.total_revenue ?? mrrOf(t) ?? 0;
     if (revenue > 0 && t.expenses != null && (revenue - t.expenses) / revenue < 0.2) out.push({ problem: `margin ${Math.round(((revenue - t.expenses) / revenue) * 100)}% on ${money(revenue)}`, fix: "pricing, tiers and costs (Profit By Design)" });
-    if (revenue >= 15000 && (t.expense_contractors ?? 0) === 0) out.push({ problem: `${money(revenue)}/mo and no editor costs`, fix: "past the ~$15–20k/mo editor cue: hire an editor (Editing Team Building)" });
+    if (revenue >= 15000 && t.expense_contractors === 0) out.push({ problem: `${money(revenue)}/mo and no editor costs`, fix: "past the ~$15–20k/mo editor cue: hire an editor (Editing Team Building)" });
   }
 
   const conf = x?.check_ins.find(c => c.business_confidence != null)?.business_confidence;
@@ -58,7 +62,6 @@ export function signals(m: MemberInput, d: Derived): Signal[] {
     const early = Object.entries(x.pipeline.by_stage).filter(([k]) => /lead|new|contact|cold|warm|dm/i.test(k)).reduce((n, [, v]) => n + v, 0);
     if (early / x.pipeline.total > 0.7) out.push({ problem: `${early} of ${x.pipeline.total} Hot List people stuck at the first stage`, fix: "follow up and book calls (The System)" });
   }
-  if (x && x.content_30d.posts === 0 && !x.instagram?.posts.length && gate) out.push({ problem: "no content logged in 30 days", fix: "post on their own account this week (Organic Content Snowball)" });
   return out.slice(0, 6);
 }
 

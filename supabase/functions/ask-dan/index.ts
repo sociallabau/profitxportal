@@ -597,7 +597,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.4";
+const VERSION = "2026-10-24.5";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -607,7 +607,7 @@ async function sameSecret(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
-/** Read-only checks for Claude's test loop: version, data coverage, answers for real members or personas, graded tests. Writes nothing. */
+/** Claude's test loop: version, data coverage, answers for real members or personas, graded tests (all read-only), plus building member memory. */
 // deno-lint-ignore no-explicit-any
 async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) {
   const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 20000) : "(none available)";
@@ -698,6 +698,19 @@ async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) 
     const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];
     const pass = crit.length > 0 && crit.every(c => c.pass === true) && checks.every(c => c.pass);
     return { version: VERSION, name: test.name, question: test.question, pass, criteria: crit, code_checks: checks, final: r.final, debug: buildDebug("test", null, member, r) };
+  }
+
+  if (action === "refresh_memory") {
+    const ids: string[] = Array.isArray(body.member_ids) ? body.member_ids.filter((x: unknown) => typeof x === "string").slice(0, 8) : [];
+    const results = [];
+    for (const id of ids) results.push({ id, ...(await refreshMemory(admin, id, true)) });
+    return { results };
+  }
+
+  if (action === "jobs") {
+    const { data } = await admin.from("transcription_jobs").select("title, status, error, provider, created_at, submitted_at, completed_at, transcript_chars, drive_file_id").order("created_at", { ascending: false }).limit(25);
+    const { data: mem } = await admin.from("member_memory").select("user_id, refreshed_at, dirty_at, instagram_handle, instagram_fetched_at, summary").limit(100);
+    return { jobs: data ?? [], memory_rows: ((mem ?? []) as { user_id: string; refreshed_at: string | null; dirty_at: string; instagram_handle: string | null; summary: string }[]).map(m => ({ ...m, summary: m.summary?.slice(0, 80) })) };
   }
 
   if (action === "list_tests") {
