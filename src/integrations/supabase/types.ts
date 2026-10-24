@@ -1167,6 +1167,13 @@ export type Database = {
       }
       monthly_totals: {
         Row: {
+          active_retainers: number | null
+          ad_leads: number | null
+          ad_spend_awareness: number | null
+          ad_spend_leadgen: number | null
+          case_studies_posted: number | null
+          retainer_convos: number | null
+          retainers_lost: number | null
           ad_spend: number | null
           biggest_win: string | null
           booked_calls: number | null
@@ -1196,6 +1203,13 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          active_retainers?: number | null
+          ad_leads?: number | null
+          ad_spend_awareness?: number | null
+          ad_spend_leadgen?: number | null
+          case_studies_posted?: number | null
+          retainer_convos?: number | null
+          retainers_lost?: number | null
           ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null
@@ -1225,6 +1239,13 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          active_retainers?: number | null
+          ad_leads?: number | null
+          ad_spend_awareness?: number | null
+          ad_spend_leadgen?: number | null
+          case_studies_posted?: number | null
+          retainer_convos?: number | null
+          retainers_lost?: number | null
           ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null

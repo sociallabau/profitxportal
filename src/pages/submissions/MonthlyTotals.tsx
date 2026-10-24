@@ -8,6 +8,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { Link } from 'react-router-dom';
 import { useGateBuild } from '@/hooks/useGrowthHub';
 import { ROMAN, buildProgress, gateNumber } from '@/lib/growthHub';
+import { CHECK_IN_SECTIONS, checkInValues, visibleSections } from '@/lib/checkIn';
 
 function ScoreSlider({ label, sublabel, value, onChange }: {
   label: string; sublabel?: string; value: string; onChange: (v: string) => void;
@@ -27,6 +28,14 @@ function ScoreSlider({ label, sublabel, value, onChange }: {
   );
 }
 
+const blankForm: Record<string, string> = {
+  oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '', expense_contractors: '', expense_software: '', expense_owner_pay: '', expense_other: '',
+  ...Object.fromEntries(CHECK_IN_SECTIONS.flatMap(s => s.fields.map(f => [f.key, '']))),
+  new_clients_total_value: '', new_clients_is_mrr: 'false',
+  business_confidence: '5', nps: '5',
+  biggest_win: '', needs_this_month: '',
+};
+
 export default function MonthlyTotals() {
   const { user } = useRequireAuth();
   usePageTracking('monthly-totals');
@@ -43,13 +52,7 @@ export default function MonthlyTotals() {
     };
   });
 
-  const [form, setForm] = useState({
-    oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '', expense_contractors: '', expense_software: '', expense_owner_pay: '', expense_other: '',
-    ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
-    new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
-    business_confidence: '5', nps: '5',
-    biggest_win: '', needs_this_month: '',
-  });
+  const [form, setForm] = useState<Record<string, string>>(blankForm);
   const [saved, setSaved] = useState(false);
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
   const { data: profile } = useProfile();
@@ -84,11 +87,7 @@ export default function MonthlyTotals() {
         expense_software: form.expense_software ? parseFloat(form.expense_software) : null,
         expense_owner_pay: form.expense_owner_pay ? parseFloat(form.expense_owner_pay) : null,
         expense_other: form.expense_other ? parseFloat(form.expense_other) : null,
-        ad_spend: parseFloat(form.ad_spend) || 0,
-        content_posts: parseInt(form.content_posts) || 0,
-        leads_generated: parseInt(form.leads_generated) || 0,
-        meetings: parseInt(form.meetings) || 0,
-        new_clients: parseInt(form.new_clients) || 0,
+        ...checkInValues(form, gate),
         new_clients_total_value: parseFloat(form.new_clients_total_value) || 0,
         new_clients_is_mrr: form.new_clients_is_mrr === 'true',
         business_confidence: parseInt(form.business_confidence),
@@ -115,13 +114,7 @@ export default function MonthlyTotals() {
       qc.invalidateQueries({ queryKey: ['monthly-totals-history'] });
       qc.invalidateQueries({ queryKey: ['monthly-history'] });
       qc.invalidateQueries({ queryKey: ['wins-wall'] });
-      setForm({
-        oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '', expense_contractors: '', expense_software: '', expense_owner_pay: '', expense_other: '',
-        ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
-        new_clients: '', new_clients_total_value: '', new_clients_is_mrr: 'false',
-        business_confidence: '5', nps: '5',
-        biggest_win: '', needs_this_month: '',
-      });
+      setForm(blankForm);
       setSaved(true);
       setTimeout(() => setSaved(false), 4000);
     },
@@ -182,12 +175,6 @@ export default function MonthlyTotals() {
                 placeholder="2000"
                 className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">Ad Spend ($)</label>
-              <input type="number" value={form.ad_spend} onChange={e => set('ad_spend', e.target.value)}
-                placeholder="500"
-                className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
-            </div>
           </div>
 
           <div className="mt-5 pt-5 border-t border-border">
@@ -224,24 +211,23 @@ export default function MonthlyTotals() {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-4">Activity & Funnel</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {[
-              { k: 'content_posts', l: 'Content Pieces Posted', p: '20' },
-              { k: 'leads_generated', l: 'Convos / Leads', p: '15' },
-              { k: 'meetings', l: 'Meetings', p: '5' },
-              { k: 'new_clients', l: 'New Clients Signed', p: '2' },
-            ].map(f => (
-              <div key={f.k}>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">{f.l}</label>
-                <input type="number" value={form[f.k as keyof typeof form]} onChange={e => set(f.k, e.target.value)}
-                  placeholder={f.p}
-                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
-              </div>
-            ))}
+        {visibleSections(gate).map(section => (
+          <div key={section.title} className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-4">{section.title}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {section.fields.map(f => (
+                <div key={f.key}>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">{f.label}</label>
+                  <input type="number" min="0" step={f.money ? 'any' : '1'} value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                  {f.hint && <p className="text-xs text-muted-foreground mt-1">{f.hint}</p>}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ))}
+        {gate && <p className="text-xs text-muted-foreground -mt-2">Showing the numbers for Gate {ROMAN[gate]} and the gate above it.</p>}
 
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-4">New Client Value</h3>
@@ -306,7 +292,7 @@ export default function MonthlyTotals() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
-                  {['Month','MRR','One-Offs','Revenue','Expenses','Profit','Content','Leads','Meetings','New Clients','Confidence','Satisfaction'].map(h => (
+                  {['Month','MRR','One-Offs','Revenue','Expenses','Profit','Content','Convos + leads','Meetings','New Clients','Confidence','Satisfaction'].map(h => (
                     <th key={h} className="pb-2 text-xs font-semibold text-muted-foreground pr-4 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>

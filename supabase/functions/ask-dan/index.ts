@@ -157,7 +157,7 @@ async function loadMemberInput(admin: DB, memberId: string): Promise<MemberInput
     profileQuery,
     admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
     admin.from("monthly_totals")
-      .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts")
+      .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts, active_retainers, retainers_lost, retainer_convos, ad_leads, case_studies_posted, ad_spend_awareness, ad_spend_leadgen")
       .eq("user_id", memberId).order("month", { ascending: false }).limit(6),
     admin.from("goals").select("starting_mrr, target_mrr, target_date, retainer_tier_1, retainer_tier_2, retainer_tier_3").eq("user_id", memberId).maybeSingle(),
     extrasPromise,

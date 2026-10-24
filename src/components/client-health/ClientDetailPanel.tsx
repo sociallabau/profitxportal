@@ -73,7 +73,7 @@ export default function ClientDetailPanel({
       queryFn: async () => {
     const { data } = await supabase
       .from('monthly_totals')
-      .select('month, mrr_manual, mrr, oneoff_revenue, total_revenue, expenses, content_posts, leads_generated, new_clients, new_clients_total_value, new_clients_is_mrr')
+      .select('month, mrr_manual, mrr, oneoff_revenue, total_revenue, expenses, content_posts, leads_generated, new_clients, new_clients_total_value, new_clients_is_mrr, active_retainers, retainers_lost, retainer_convos, ad_leads, case_studies_posted')
       .eq('user_id', client.id)
       .order('month', { ascending: false })
       .limit(6);
@@ -617,6 +617,8 @@ export default function ClientDetailPanel({
                             </span>
                             <span className="text-foreground">${r.toLocaleString()} rev</span>
                             <span className="text-foreground">{row.content_posts ?? '—'} posts</span>
+                            <span className="text-foreground" title="Retainer conversations / ad leads">{row.retainer_convos ?? row.leads_generated ?? '—'}{row.ad_leads != null ? ` + ${row.ad_leads} ads` : ''} convos</span>
+                            {row.active_retainers != null && <span className="text-foreground">{row.active_retainers} retainers{row.retainers_lost ? ` (−${row.retainers_lost})` : ''}</span>}
                             <span className="text-success">{row.new_clients ?? '—'} clients</span>
                           </div>
                         );

@@ -9,6 +9,8 @@ export type Totals = {
   new_clients?: number | null; ad_spend?: number | null; content_posts?: number | null;
   booked_calls?: number | null; leads_generated?: number | null; offers_made?: number | null;
   oneoff_revenue?: number | null; expenses?: number | null; calls_showed?: number | null;
+  active_retainers?: number | null; retainers_lost?: number | null; retainer_convos?: number | null; ad_leads?: number | null;
+  case_studies_posted?: number | null; ad_spend_awareness?: number | null; ad_spend_leadgen?: number | null;
 };
 export type Goal = {
   starting_mrr?: number | null; target_mrr?: number | null; target_date?: string | null;
@@ -133,8 +135,14 @@ export function buildMemberBlock(m: MemberInput, today = new Date()): { text: st
       if (t.total_revenue != null) parts.push(`total revenue ${money(t.total_revenue)}`);
       if (t.oneoff_revenue != null) parts.push(`one-off revenue ${money(t.oneoff_revenue)}`);
       if (t.new_clients != null) parts.push(`new clients ${t.new_clients}`);
-      if (t.ad_spend != null) parts.push(`ad spend ${money(t.ad_spend)}`);
-      if (t.leads_generated != null) parts.push(`leads ${t.leads_generated}`);
+      if (t.active_retainers != null) parts.push(`paying retainers ${t.active_retainers}`);
+      if (t.retainers_lost) parts.push(`retainers lost ${t.retainers_lost}`);
+      if (t.ad_spend != null) parts.push(`ad spend ${money(t.ad_spend)}${t.ad_spend_awareness != null || t.ad_spend_leadgen != null ? ` (awareness ${money(t.ad_spend_awareness ?? 0)}, lead gen ${money(t.ad_spend_leadgen ?? 0)})` : ""}`);
+      if (t.retainer_convos != null || t.ad_leads != null) {
+        if (t.retainer_convos != null) parts.push(`retainer conversations ${t.retainer_convos}`);
+        if (t.ad_leads != null) parts.push(`ad leads ${t.ad_leads}`);
+      } else if (t.leads_generated != null) parts.push(`leads ${t.leads_generated}`);
+      if (t.case_studies_posted != null) parts.push(`case studies posted ${t.case_studies_posted}`);
       if (t.booked_calls != null) parts.push(`booked calls ${t.booked_calls}`);
       if (t.offers_made != null) parts.push(`offers ${t.offers_made}`);
       if (t.content_posts != null) parts.push(`posts ${t.content_posts}`);

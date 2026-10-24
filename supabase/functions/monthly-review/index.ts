@@ -116,7 +116,10 @@ function describe(row: MonthRow, label: string): string {
   return [
     `${label}:`,
     `  revenue $${revenue.toLocaleString()}, expenses $${expenses.toLocaleString()}${margin !== null ? `, net margin ${margin}%` : ""}`,
-    `  content posted ${n("content_posts")}, ad spend $${adSpend.toLocaleString()}`,
+    `  content posted ${n("content_posts")}, ad spend $${adSpend.toLocaleString()}${row.ad_spend_awareness != null || row.ad_spend_leadgen != null ? ` (awareness $${n("ad_spend_awareness").toLocaleString()}, lead gen $${n("ad_spend_leadgen").toLocaleString()})` : ""}`,
+    row.active_retainers != null ? `  paying retainers ${n("active_retainers")}${n("retainers_lost") ? `, lost ${n("retainers_lost")} this month` : ""}` : "",
+    row.retainer_convos != null || row.ad_leads != null ? `  retainer conversations ${n("retainer_convos")}, ad leads ${n("ad_leads")}` : "",
+    row.case_studies_posted != null ? `  case studies posted ${n("case_studies_posted")}` : "",
     `  leads ${leads}, calls booked ${n("booked_calls")}, calls showed ${n("calls_showed")}, offers made ${n("offers_made")}`,
     `  new clients ${clients}${conversion !== null ? `, conversion ${conversion}% of leads` : ""}`,
     cac !== null ? `  cost to acquire $${cac}${perClient ? ` against a client worth $${perClient}` : ""}` : "",
