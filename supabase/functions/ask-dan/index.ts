@@ -317,6 +317,19 @@ async function answerPipeline(p: PipelineInput) {
   const maximum = shortReply ? 60 : 170;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = { ...final, answer: clean(final.answer), next_steps: final.next_steps.map(clean).filter(Boolean) };
+  // Code may append only precomputed member facts or the exact fixed sequence rule, never invent coaching.
+  const cpc = block.derived?.cost_per_client;
+  if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !final.answer.includes(String(Math.round(cpc)))) {
+    const price = block.derived?.lowest_retainer_price;
+    if (typeof price === "number" && price > 0) {
+      const verdict = block.derived?.cac_vs_first_month;
+      final.answer += `\n\nThat's ~$${Math.round(cpc)} a client vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 0.5 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}.`;
+    }
+  }
+  const followupProblem = /no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question);
+  if (followupProblem && /\bscal/i.test(final.answer)) {
+    final.answer = final.answer.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
+  }
   if (wordCount(final.answer) > maximum) {
     const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
     let kept = "";
