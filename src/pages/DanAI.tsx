@@ -37,7 +37,6 @@ function resourceTitle(r: string) {
 }
 interface Thread { id: string; title: string; at: string }
 
-const FALLBACK_EXAMPLES = [
   'How much should I charge for a monthly retainer?',
   'A client wants to drop their price — do I hold or move?',
   "My ads are getting leads but nobody's booking calls",
