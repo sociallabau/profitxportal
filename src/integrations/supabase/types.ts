@@ -1979,6 +1979,7 @@ export type Database = {
           rank: number
         }[]
       }
+      verify_cron_token: { Args: { _token: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
