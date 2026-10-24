@@ -39,11 +39,11 @@ type DmTemplate = { id: string; stage_key: string; label: string; body: string; 
 
 const STAGES: { key: string; label: string; color: string }[] = [
   { key: 'new', label: 'New', color: 'bg-muted text-muted-foreground' },
-  { key: 'qualified', label: 'Qualified', color: 'bg-blue-500/15 text-blue-400' },
-  { key: 'dmd', label: "DM'd", color: 'bg-amber-500/15 text-amber-400' },
-  { key: 'replied', label: 'Replied', color: 'bg-purple-500/15 text-purple-400' },
-  { key: 'positive', label: 'Positive Reply 🔥', color: 'bg-orange-500/15 text-orange-400' },
-  { key: 'booked', label: 'Booked Call', color: 'bg-emerald-500/15 text-emerald-400' },
+  { key: 'qualified', label: 'Qualified', color: 'bg-blue-500/15 text-blue-600' },
+  { key: 'dmd', label: "DM'd", color: 'bg-amber-500/15 text-amber-600' },
+  { key: 'replied', label: 'Replied', color: 'bg-purple-500/15 text-primary' },
+  { key: 'positive', label: 'Positive Reply 🔥', color: 'bg-orange-500/15 text-orange-600' },
+  { key: 'booked', label: 'Booked Call', color: 'bg-emerald-500/15 text-success' },
   { key: 'passed', label: 'Passed', color: 'bg-destructive/15 text-destructive' },
 ];
 
@@ -203,7 +203,7 @@ export default function LaunchHQ() {
               <Rocket className="w-7 h-7 text-primary" /> Launch Command Centre
             </h1>
             <p className="text-muted-foreground mt-1">
-              Stupidly Simple Ad → New followers → DMs → Calls. All-guns-blazing mode.
+              Profile Visit Ads → New followers → DMs → Calls. All-guns-blazing mode.
             </p>
           </div>
           {!campaign && (
@@ -295,7 +295,7 @@ function CampaignTracker({ campaign, followers }: { campaign: Campaign; follower
         <div>
           <Badge className="mb-2 bg-primary/20 text-primary border-primary/30">🚀 LIVE — Day {dayNum} of {campaign.duration_days}</Badge>
           <h2 className="text-2xl font-bold">${totalSpend} / ${totalBudget} spent</h2>
-          <p className="text-sm text-muted-foreground mt-1">{campaign.ad_hook || 'Stupidly Simple Ad running'}</p>
+          <p className="text-sm text-muted-foreground mt-1">{campaign.ad_hook || 'Profile Visit Ads running'}</p>
         </div>
         <div className="text-right">
           <div className="text-3xl font-bold text-primary">{followers.length}</div>

@@ -27,7 +27,7 @@ export default function ContentCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [editingPost, setEditingPost] = useState<any>(null);
+  const [editingPost, setEditingPost] = useState<Row<'content_posts'> | null>(null);
 
   // Form state
   const [platform, setPlatform] = useState<string>('Instagram');

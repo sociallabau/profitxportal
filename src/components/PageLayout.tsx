@@ -7,7 +7,7 @@ interface PageLayoutProps {
 
 export default function PageLayout({ children, mainClassName = '' }: PageLayoutProps) {
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
+    <div className="flex min-h-screen w-full overflow-x-clip">
       <AppSidebar />
       <main className={`flex-1 min-w-0 overflow-x-hidden ${mainClassName}`}>
         <div className="page-enter max-w-6xl mx-auto px-4 sm:px-6 py-8 pt-16 lg:pt-8">

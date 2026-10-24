@@ -18,6 +18,8 @@
  * without touching the page.
  */
 
+import { gateNumber as parseGate } from './playbook';
+
 export type DriftBand = 'green' | 'amber' | 'red';
 
 export type DriftResult = {
@@ -41,10 +43,9 @@ export const CONFIDENCE_DROP = 2;
 /** Revenue within ±5% counts as flat. */
 export const FLAT_TOLERANCE = 0.05;
 
-/** profiles.gate stores labels like "Gate 3 (Scale)" — pull the number out. */
-export function gateNumber(gate?: string | null): '1' | '2' | '3' {
-  const match = String(gate ?? '').match(/[123]/);
-  return (match?.[0] as '1' | '2' | '3') ?? '1';
+/** profiles.gate stores labels like "Gate 3 (Scale)" — the gate as a string key, Gate 1 if unset. */
+export function gateNumber(gate?: string | null): '1' | '2' | '3' | '4' {
+  return String(parseGate(gate) ?? 1) as '1' | '2' | '3' | '4';
 }
 
 /** True when the newest 2–3 revenues are all flat or declining. */
@@ -91,7 +92,7 @@ export function computeDrift(input: DriftInput, now: Date = new Date()): DriftRe
 }
 
 export const DRIFT_BAND = {
-  green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', dot: 'bg-green-400', label: 'Steady' },
-  amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', dot: 'bg-yellow-400', label: 'Watch' },
-  red:   { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', dot: 'bg-red-400', label: 'Needs Support' },
+  green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-success', dot: 'bg-green-400', label: 'Steady' },
+  amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-amber-600', dot: 'bg-yellow-400', label: 'Watch' },
+  red:   { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-destructive', dot: 'bg-red-400', label: 'Needs Support' },
 } as const;

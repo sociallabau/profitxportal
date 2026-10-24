@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     }
 
     const historyText = Array.isArray(dmHistory)
-      ? dmHistory.slice(-8).map((m: any) => `${m.role === "me" ? "Me" : "Prospect"}: ${m.text}`).join("\n")
+      ? dmHistory.slice(-8).map((m: { role?: string; text?: string }) => `${m.role === "me" ? "Me" : "Prospect"}: ${m.text}`).join("\n")
       : "";
 
     const systemPrompt = `You are a top-tier Instagram DM closer for videographers selling monthly retainers. Your goal: keep the conversation natural, build rapport, and move toward booking a 15-minute call. Never sound salesy or scripted. Match the prospect's energy and length. Use lowercase casual tone, max 2 short paragraphs. Never use emojis more than 1 per message. Always end with a soft question or low-friction next step.`;

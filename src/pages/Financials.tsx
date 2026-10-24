@@ -44,7 +44,7 @@ const EXAMPLE_LATEST = {
 
 function ExampleBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/40 text-blue-400">
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/40 text-blue-600">
       <Eye className="w-3 h-3" /> Example
     </span>
   );
@@ -67,7 +67,7 @@ function MarginBar({ label, value, min, max, isExample }: { label: string; value
   const inRange = value >= min && value <= max;
   const low = value < min;
   const barColor = isExample ? '#60a5fa' : (inRange ? '#4ade80' : low ? '#f97316' : '#60a5fa');
-  const valColor = isExample ? 'text-blue-400' : (inRange ? 'text-green-400' : low ? 'text-orange-400' : 'text-blue-400');
+  const valColor = isExample ? 'text-blue-600' : (inRange ? 'text-success' : low ? 'text-orange-600' : 'text-blue-600');
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
@@ -169,7 +169,7 @@ export default function Financials() {
     );
   }
 
-  const accent = isExample ? 'text-blue-400' : 'text-primary';
+  const accent = isExample ? 'text-blue-600' : 'text-primary';
   const accentBorder = isExample ? 'border-blue-500/30' : 'border-border';
   const sparkColor = isExample ? '#60a5fa' : 'hsl(var(--primary))';
 
@@ -196,9 +196,9 @@ export default function Financials() {
     <PageLayout>
       {isExample && (
         <div className="bg-blue-500/10 border border-blue-500/40 rounded-xl p-4 mb-6 flex items-center gap-3 flex-wrap">
-          <Eye className="w-5 h-5 text-blue-400 shrink-0" />
+          <Eye className="w-5 h-5 text-blue-600 shrink-0" />
           <div className="flex-1 min-w-[200px]">
-            <p className="text-sm font-bold text-blue-400">Example data shown (admin view)</p>
+            <p className="text-sm font-bold text-blue-600">Example data shown (admin view)</p>
             <p className="text-xs text-muted-foreground mt-0.5">Clients see their real check-in numbers on this page.</p>
           </div>
         </div>
@@ -240,8 +240,8 @@ export default function Financials() {
           <div className="space-y-2.5">
             {flags.map((f, i) => {
               const cfg = {
-                warning: { cls: 'bg-orange-500/10 border-orange-500/30', icon: <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0" /> },
-                good:    { cls: 'bg-green-500/10 border-green-500/30',   icon: <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" /> },
+                warning: { cls: 'bg-orange-500/10 border-orange-500/30', icon: <AlertTriangle className="w-4 h-4 text-orange-600 shrink-0" /> },
+                good:    { cls: 'bg-green-500/10 border-green-500/30',   icon: <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> },
                 tip:     { cls: 'bg-primary/10 border-primary/30',       icon: <TrendingUp className="w-4 h-4 text-primary shrink-0" /> },
               }[f.type];
               return (
@@ -270,7 +270,7 @@ export default function Financials() {
             { label: 'New Clients', value: newClients || '—', subValue: newClients > 0 ? `$${Math.round(newClientVal / newClients).toLocaleString()}/client` : null },
           ].map(({ label, value, subValue }, i, arr) => (
             <div key={label} className="flex items-center gap-2">
-              <div className={`flex flex-col items-center px-3 py-2 rounded-xl border text-center min-w-[80px] ${isExample ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' : 'bg-primary/15 text-primary border-primary/30'}`}>
+              <div className={`flex flex-col items-center px-3 py-2 rounded-xl border text-center min-w-[80px] ${isExample ? 'bg-blue-500/15 text-blue-600 border-blue-500/30' : 'bg-primary/15 text-primary border-primary/30'}`}>
                 <span className="text-lg font-bold leading-tight">{value}</span>
                 <span className="text-xs font-medium opacity-80">{label}</span>
                 {subValue && <span className="text-xs font-bold mt-1 opacity-100">{subValue}</span>}

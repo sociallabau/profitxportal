@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -74,6 +74,16 @@ export default function DanAI() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [answered, setAnswered] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const [params, setParams] = useSearchParams();
+
+  // "Help me do this" on a build task lands here with the question ready to send.
+  useEffect(() => {
+    const q = params.get('q');
+    if (!q) return;
+    setInput(q.slice(0, 4000));
+    setParams({}, { replace: true });
+    inputRef.current?.focus();
+  }, [params, setParams]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {

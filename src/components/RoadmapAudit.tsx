@@ -30,7 +30,7 @@ export default function RoadmapAudit({ onOpenModule, includeScale }: { onOpenMod
       const res = classifyAudit(next);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { error } = await (supabase as any).from('roadmap_audits').insert({
+      const { error } = await supabase.from('roadmap_audits').insert({
         user_id: user.id, answers: next, issue: res.issue, focus: res.focus,
       });
       if (error) toast.error('Could not save your audit');

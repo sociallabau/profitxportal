@@ -34,7 +34,7 @@ function MarginBar({ label, value, min, max }: { label: string; value: number; m
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground">{label}</span>
-        <span className={`text-sm font-bold ${inRange ? 'text-green-400' : low ? 'text-orange-400' : 'text-blue-400'}`}>{value.toFixed(1)}%</span>
+        <span className={`text-sm font-bold ${inRange ? 'text-success' : low ? 'text-orange-600' : 'text-blue-600'}`}>{value.toFixed(1)}%</span>
       </div>
       <div className="relative w-full bg-muted rounded-full h-3 overflow-hidden">
         <div className="absolute top-0 h-3 bg-primary/25 rounded" style={{ left: `${min}%`, width: `${max - min}%` }} />
@@ -49,8 +49,8 @@ function MarginBar({ label, value, min, max }: { label: string; value: number; m
 
 function FlagCard({ type, message }: { type: 'warning' | 'good' | 'tip'; message: string }) {
   const cfg = {
-    warning: { cls: 'bg-orange-500/10 border-orange-500/30', icon: <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0" /> },
-    good:    { cls: 'bg-green-500/10 border-green-500/30',   icon: <CheckCircle2  className="w-4 h-4 text-green-400 shrink-0"  /> },
+    warning: { cls: 'bg-orange-500/10 border-orange-500/30', icon: <AlertTriangle className="w-4 h-4 text-orange-600 shrink-0" /> },
+    good:    { cls: 'bg-green-500/10 border-green-500/30',   icon: <CheckCircle2  className="w-4 h-4 text-success shrink-0"  /> },
     tip:     { cls: 'bg-primary/10 border-primary/30',       icon: <TrendingUp    className="w-4 h-4 text-primary shrink-0"    /> },
   }[type];
   return <div className={`flex items-start gap-3 p-3 rounded-lg border ${cfg.cls}`}>{cfg.icon}<p className="text-sm text-foreground">{message}</p></div>;
@@ -199,9 +199,9 @@ export default function MyFinances() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             {[
               { icon: TrendingUp, label: 'Revenue', value: `$${latestRevenue.toLocaleString()}`, sub: revenueGrowth !== null ? `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth}% vs last month` : null, color: 'text-primary' },
-              { icon: Receipt, label: 'Expenses', value: `$${latestExpenses.toLocaleString()}`, color: 'text-orange-400' },
-              { icon: DollarSign, label: 'Profit', value: `$${latestProfit.toLocaleString()}`, color: latestProfit >= 0 ? 'text-green-400' : 'text-destructive' },
-              { icon: DollarSign, label: 'Net Margin', value: revenue > 0 ? `${Math.round(netMargin)}%` : '—', color: netMargin >= targets.netMin ? 'text-green-400' : 'text-orange-400' },
+              { icon: Receipt, label: 'Expenses', value: `$${latestExpenses.toLocaleString()}`, color: 'text-orange-600' },
+              { icon: DollarSign, label: 'Profit', value: `$${latestProfit.toLocaleString()}`, color: latestProfit >= 0 ? 'text-success' : 'text-destructive' },
+              { icon: DollarSign, label: 'Net Margin', value: revenue > 0 ? `${Math.round(netMargin)}%` : '—', color: netMargin >= targets.netMin ? 'text-success' : 'text-orange-600' },
             ].map((s, i) => (
               <div key={i} className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
@@ -239,8 +239,8 @@ export default function MyFinances() {
             {[
               { label: 'Total Revenue', value: `$${revenue.toLocaleString()}`, color: 'text-foreground' },
               { label: 'MRR', value: `$${mrr.toLocaleString()}`, color: 'text-primary' },
-              { label: 'Gross Profit', value: `$${grossProfit.toLocaleString()}`, color: grossProfit >= 0 ? 'text-green-400' : 'text-destructive' },
-              { label: 'Net Profit', value: `$${netProfit.toLocaleString()}`, color: netProfit >= 0 ? 'text-green-400' : 'text-destructive' },
+              { label: 'Gross Profit', value: `$${grossProfit.toLocaleString()}`, color: grossProfit >= 0 ? 'text-success' : 'text-destructive' },
+              { label: 'Net Profit', value: `$${netProfit.toLocaleString()}`, color: netProfit >= 0 ? 'text-success' : 'text-destructive' },
             ].map((s, i) => (
               <div key={i} className="bg-card border border-border rounded-xl p-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{s.label}</p>
@@ -268,11 +268,11 @@ export default function MyFinances() {
             <h2 className="text-sm font-semibold text-foreground mb-3">Funnel</h2>
             <div className="flex flex-wrap items-center gap-2">
               {[
-                { label: 'Content', value: content || '—', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-                { label: 'Ad Spend', value: adSpend > 0 ? `$${adSpend.toLocaleString()}` : '—', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-                { label: 'Leads', value: leads || '—', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
-                { label: 'Meetings', value: meetings || '—', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-                { label: 'Clients', value: newClients || '—', color: 'bg-green-500/20 text-green-300 border-green-500/30' },
+                { label: 'Content', value: content || '—', color: 'bg-purple-500/20 text-primary border-purple-500/30' },
+                { label: 'Ad Spend', value: adSpend > 0 ? `$${adSpend.toLocaleString()}` : '—', color: 'bg-blue-500/20 text-blue-600 border-blue-500/30' },
+                { label: 'Leads', value: leads || '—', color: 'bg-yellow-500/20 text-amber-600 border-yellow-500/30' },
+                { label: 'Meetings', value: meetings || '—', color: 'bg-orange-500/20 text-orange-600 border-orange-500/30' },
+                { label: 'Clients', value: newClients || '—', color: 'bg-green-500/20 text-success border-green-500/30' },
                 { label: 'New $', value: newClientVal > 0 ? `$${newClientVal.toLocaleString()}` : '—', color: 'bg-primary/20 text-primary border-primary/30' },
               ].map((s, i, arr) => (
                 <div key={i} className="flex items-center gap-2">
@@ -326,18 +326,18 @@ export default function MyFinances() {
         {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
           {[
-            { icon: Users, label: 'Active Members', value: `${counts.active}`, color: 'text-green-400' },
-            { icon: UserMinus, label: 'Churned', value: `${counts.churned}`, color: 'text-red-400' },
+            { icon: Users, label: 'Active Members', value: `${counts.active}`, color: 'text-success' },
+            { icon: UserMinus, label: 'Churned', value: `${counts.churned}`, color: 'text-destructive' },
             {
               icon: TrendingUp, label: 'Churn Rate (this month)',
               value: latestPoint?.churnRate !== null && latestPoint ? `${(latestPoint.churnRate * 100).toFixed(1)}%` : '—',
-              color: (latestPoint?.churnRate ?? 0) > 0.05 ? 'text-orange-400' : 'text-green-400',
+              color: (latestPoint?.churnRate ?? 0) > 0.05 ? 'text-orange-600' : 'text-success',
             },
             {
               icon: Repeat, label: 'Renewal Rate (this month)',
               value: renewal.rate !== null ? `${Math.round(renewal.rate * 100)}%` : '—',
               sub: renewal.due > 0 ? `${renewal.renewed} of ${renewal.due} renewals kept` : undefined,
-              color: (renewal.rate ?? 1) >= 0.9 ? 'text-green-400' : 'text-orange-400',
+              color: (renewal.rate ?? 1) >= 0.9 ? 'text-success' : 'text-orange-600',
             },
             {
               icon: DollarSign, label: 'Member LTV',
@@ -349,13 +349,13 @@ export default function MyFinances() {
               icon: Crosshair, label: 'CAC',
               value: cacValue !== null ? `$${Math.round(cacValue).toLocaleString()}` : '—',
               sub: acquisitionSpend > 0 ? `$${acquisitionSpend.toLocaleString()} ÷ ${latestPoint?.newMembers ?? 0} new` : 'set acquisition spend',
-              color: 'text-blue-400',
+              color: 'text-blue-600',
             },
             {
               icon: TrendingUp, label: 'LTV : CAC',
               value: ltvCac !== null ? `${ltvCac.toFixed(1)} : 1` : '—',
               sub: ltvCacBandResult === 'green' ? '≥3 — outspend everyone' : ltvCacBandResult === 'amber' ? '1–3 — workable' : ltvCacBandResult === 'red' ? '<1 — losing money per member' : 'needs LTV and CAC',
-              color: ltvCacBandResult === 'green' ? 'text-green-400' : ltvCacBandResult === 'amber' ? 'text-yellow-400' : ltvCacBandResult === 'red' ? 'text-red-400' : 'text-muted-foreground',
+              color: ltvCacBandResult === 'green' ? 'text-success' : ltvCacBandResult === 'amber' ? 'text-amber-600' : ltvCacBandResult === 'red' ? 'text-destructive' : 'text-muted-foreground',
             },
           ].map((s, i) => (
             <div key={i} className="bg-card border border-border rounded-xl p-4">

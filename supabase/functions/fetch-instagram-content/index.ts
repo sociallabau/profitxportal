@@ -12,6 +12,22 @@ const APIFY_BASE = "https://api.apify.com/v2"
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
+/** The fields we read from Apify's instagram-scraper items (shape varies by actor version). */
+type Count = { count?: number }
+type ApifyItem = {
+  id?: string; shortCode?: string; shortcode?: string; url?: string; type?: string; productType?: string; product_type?: string
+  displayUrl?: string; imageUrl?: string; thumbnailUrl?: string; thumbnail_src?: string; thumbnailSrc?: string
+  videoUrl?: string; videoPlayUrl?: string; video_url?: string; isVideo?: boolean; is_video?: boolean
+  caption?: string; alt?: string; edge_media_to_caption?: { edges?: { node?: { text?: string } }[] }
+  likesCount?: number; likes?: number; edge_liked_by?: Count; edge_media_preview_like?: Count
+  commentsCount?: number; comments?: number; edge_media_to_comment?: Count
+  videoViewCount?: number; views?: number; playsCount?: number; video_view_count?: number
+  timestamp?: string; takenAt?: string; taken_at_timestamp?: string | number
+  ownerUsername?: string; username?: string; ownerFollowersCount?: number; followersCount?: number
+  owner?: { username?: string; followers_count?: number; edge_followed_by?: Count }
+  topPosts?: ApifyItem[]; latestPosts?: ApifyItem[]
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -113,7 +129,7 @@ Deno.serve(async (req) => {
     }
 
     // Hashtag search may return a wrapper object with `topPosts`/`latestPosts` arrays
-    let items: any[] = rawPosts
+    let items: ApifyItem[] = rawPosts
     if (rawPosts.length > 0 && (rawPosts[0].topPosts || rawPosts[0].latestPosts)) {
       const wrapper = rawPosts[0]
       items = [...(wrapper.topPosts || []), ...(wrapper.latestPosts || [])]
@@ -121,10 +137,10 @@ Deno.serve(async (req) => {
     }
 
     // Filter out items that are clearly not posts (no shortcode/id)
-    items = items.filter((p: any) => p && (p.shortCode || p.shortcode || p.id))
+    items = items.filter((p) => p && (p.shortCode || p.shortcode || p.id))
 
     // Map to consistent shape
-    let posts = items.map((p: any) => {
+    let posts = items.map((p) => {
       const productType = (p.productType || p.product_type || "").toString().toLowerCase()
       const typeStr = (p.type || "").toString().toLowerCase()
       const isVideo = !!(p.videoUrl || p.videoPlayUrl || p.video_url || p.isVideo || p.is_video) || typeStr === "video" || productType.includes("clips") || productType === "reel"
@@ -151,14 +167,14 @@ Deno.serve(async (req) => {
     // Keyword mode: prefer Reels (videos), then enrich with follower counts and filter to 5k+
     if (mode === "keyword") {
       const beforeReels = posts.length
-      const reelsOnly = posts.filter((p: any) => p.isReel)
+      const reelsOnly = posts.filter((p) => p.isReel)
       console.log(`Reels filter: ${beforeReels} -> ${reelsOnly.length}`)
       // If reel detection wiped everything, fall back to all posts (better than 0 results)
       if (reelsOnly.length > 0) posts = reelsOnly
 
       // Enrich top candidates with follower count (parallel profile lookups, capped to 15)
-      const candidates = posts.slice(0, 15).filter((p: any) => p.ownerUsername)
-      const uniqueHandles = [...new Set(candidates.map((p: any) => p.ownerUsername))]
+      const candidates = posts.slice(0, 15).filter((p) => p.ownerUsername)
+      const uniqueHandles = [...new Set(candidates.map((p) => p.ownerUsername))]
       console.log(`Enriching ${uniqueHandles.length} unique profiles for follower counts`)
 
       const followerMap = new Map<string, number>()
@@ -178,11 +194,11 @@ Deno.serve(async (req) => {
       }))
 
       const enriched = posts
-        .map((p: any) => ({ ...p, ownerFollowers: followerMap.get(p.ownerUsername) || p.ownerFollowers || 0 }))
-      const filtered = enriched.filter((p: any) => p.ownerFollowers >= 5000)
+        .map((p) => ({ ...p, ownerFollowers: followerMap.get(p.ownerUsername) || p.ownerFollowers || 0 }))
+      const filtered = enriched.filter((p) => p.ownerFollowers >= 5000)
       console.log(`After 5k+ follower filter: ${filtered.length}`)
       // If follower enrichment failed for everyone (all 0), don't drop everything
-      const anyFollowerData = enriched.some((p: any) => p.ownerFollowers > 0)
+      const anyFollowerData = enriched.some((p) => p.ownerFollowers > 0)
       posts = anyFollowerData ? filtered : enriched
     }
 
@@ -202,12 +218,12 @@ Deno.serve(async (req) => {
       const mid = Math.floor(sorted.length / 2)
       return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
     }
-    const medianViews = median(posts.map((p: any) => p.views))
-    const medianLikes = median(posts.map((p: any) => p.likes))
-    const avgLikes = posts.reduce((sum: number, p: any) => sum + p.likes, 0) / posts.length
-    const avgViews = posts.reduce((sum: number, p: any) => sum + p.views, 0) / posts.length
+    const medianViews = median(posts.map((p) => p.views))
+    const medianLikes = median(posts.map((p) => p.likes))
+    const avgLikes = posts.reduce((sum: number, p) => sum + p.likes, 0) / posts.length
+    const avgViews = posts.reduce((sum: number, p) => sum + p.views, 0) / posts.length
 
-    posts.forEach((p: any) => {
+    posts.forEach((p) => {
       const useViews = p.views > 0 && medianViews > 0
       const metric = useViews ? p.views : p.likes
       const baseline = useViews ? medianViews : medianLikes
@@ -215,15 +231,15 @@ Deno.serve(async (req) => {
     })
 
     // Sort by outlier score descending
-    posts.sort((a: any, b: any) => b.outlierScore - a.outlierScore)
+    posts.sort((a, b) => b.outlierScore - a.outlierScore)
 
     return new Response(
       JSON.stringify({ posts, count: posts.length, avgLikes: Math.round(avgLikes), avgViews: Math.round(avgViews) }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
 
-  } catch (error: any) {
-    console.error("fetch-instagram-content error:", error?.message || error)
+  } catch (error) {
+    console.error("fetch-instagram-content error:", error instanceof Error ? error.message : error)
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

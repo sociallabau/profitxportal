@@ -52,9 +52,9 @@ function leadBaseline(rows: MonthRow[]): number | null {
 type Verdict = 'good' | 'watch' | 'bad' | 'none';
 
 const VERDICT_STYLE: Record<Verdict, string> = {
-  good: 'text-green-400',
-  watch: 'text-amber-400',
-  bad: 'text-orange-400',
+  good: 'text-success',
+  watch: 'text-amber-600',
+  bad: 'text-orange-600',
   none: 'text-muted-foreground',
 };
 
@@ -78,7 +78,7 @@ function Trend({ current, previous }: { current: number; previous: number | null
   }
   const up = change > 0;
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] ${up ? 'text-green-400' : 'text-orange-400'}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] ${up ? 'text-success' : 'text-orange-600'}`}>
       {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
       {Math.abs(change)}%
     </span>

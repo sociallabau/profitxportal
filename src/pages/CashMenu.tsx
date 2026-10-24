@@ -163,9 +163,9 @@ If you're a [niche] business that's actually serious about making content work �
   {
     key: 'simple_ad',
     emoji: '💸',
-    label: 'The Stupidly Simple Ad',
-    subtitle: 'A simple paid ad system to put your offer in front of warm strangers and start conversations.',
-    effort: '1 hour to set up, 5 days to run',
+    label: 'Profile Visit Ads',
+    subtitle: 'Put a $50 profile-visit boost behind your best post so local businesses find you and start conversations.',
+    effort: '15 minutes to set up, runs all week',
     expectedResult: '2–5 warm engagements, 1–3 conversations',
     opensModule: 'stupidly-simple-ad',
     scripts: [],
@@ -345,7 +345,7 @@ export default function CashMenu() {
                               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
                               {copied === `${action.key}-${i}` ? (
-                                <><Check className="w-3 h-3 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
+                                <><Check className="w-3 h-3 text-success" /><span className="text-success">Copied!</span></>
                               ) : (
                                 <><Copy className="w-3 h-3" />Copy</>
                               )}

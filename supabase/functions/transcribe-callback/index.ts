@@ -25,7 +25,13 @@ function chunkText(text: string, size = 1400, overlap = 200): string[] {
 }
 
 /** Prefers speaker-labelled paragraphs; falls back to the flat transcript. */
-function extractTranscript(payload: Record<string, any>): string {
+type DeepgramAlternative = {
+  transcript?: string;
+  paragraphs?: { paragraphs?: { speaker?: number; sentences?: { text: string }[] }[] };
+};
+type DeepgramPayload = { results?: { channels?: { alternatives?: DeepgramAlternative[] }[] } };
+
+function extractTranscript(payload: DeepgramPayload): string {
   const alt = payload?.results?.channels?.[0]?.alternatives?.[0];
   if (!alt) return "";
 

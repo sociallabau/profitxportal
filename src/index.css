@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,9 +8,9 @@
   /* === LIGHT THEME — ProfitX cream / violet (default) === */
   :root {
     /* Surfaces */
-    --background: 38 36% 87%;        /* canvas / tan #E9E1D2 */
+    --background: 36 45% 97%;        /* bright cream #FBF8F3 (liquid glass canvas) */
     --foreground: 300 14% 8%;        /* ink #161014 */
-    --card: 36 50% 97%;              /* paper #FBF7F1 */
+    --card: 0 0% 100%;               /* white glass base */
     --card-foreground: 300 14% 8%;
     --popover: 0 0% 100%;
     --popover-foreground: 300 14% 8%;
@@ -24,10 +24,10 @@
     --accent-foreground: 0 0% 100%;
 
     /* Muted / lines */
-    --muted: 38 41% 92%;             /* lighter hairline area */
-    --muted-foreground: 36 13% 55%;  /* muted tan #9A8F7C */
-    --border: 38 41% 88%;            /* #ECE3D4 */
-    --input: 38 41% 88%;
+    --muted: 265 40% 96%;            /* lilac wash */
+    --muted-foreground: 266 9% 55%;   /* #8A8197 */
+    --border: 265 35% 91%;           /* soft lilac hairline */
+    --input: 265 35% 89%;
     --ring: 266 91% 59%;
 
     /* Status */
@@ -41,13 +41,13 @@
     --radius: 0.5rem;                /* 8px components */
 
     /* Sidebar */
-    --sidebar-background: 36 50% 97%;
-    --sidebar-foreground: 36 13% 35%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 266 9% 38%;
     --sidebar-primary: 266 91% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 263 86% 93%;
     --sidebar-accent-foreground: 257 63% 29%;
-    --sidebar-border: 38 41% 88%;
+    --sidebar-border: 265 35% 91%;
     --sidebar-ring: 266 91% 59%;
 
     /* Brand-specific extras */
@@ -215,7 +215,7 @@
 --------------------------------------------------------------------------- */
 
 :root {
-  --radius: 0.875rem;                                   /* softer corners throughout */
+  --radius: 1.25rem;                                    /* big rounded glass corners */
   --elevation-1: 0 1px 2px hsl(var(--foreground) / 0.04), 0 1px 3px hsl(var(--foreground) / 0.03);
   --elevation-2: 0 2px 4px hsl(var(--foreground) / 0.04), 0 12px 28px -18px hsl(var(--foreground) / 0.22);
   --elevation-3: 0 4px 8px hsl(var(--foreground) / 0.05), 0 24px 48px -24px hsl(var(--foreground) / 0.28);
@@ -377,20 +377,20 @@ select:focus {
 
 /* Dan AI page canvas (light ProfitX paper scoped to /dan-ai) */
 .dan-canvas {
-  --dan-bg: 260 25% 7%;
-  --dan-paper: 260 18% 12%;
-  --dan-ink: 0 0% 96%;
-  --dan-muted: 260 8% 65%;
+  --dan-bg: 36 45% 97%;
+  --dan-paper: 0 0% 100%;
+  --dan-ink: 300 14% 9%;
+  --dan-muted: 266 9% 52%;
   --dan-violet: 270 100% 62%;
   --dan-violet-fg: 0 0% 100%;
-  background: hsl(var(--dan-bg));
+  background: transparent;
   color: hsl(var(--dan-ink));
   position: relative;
   isolation: isolate;
 }
 .dan-canvas::before, .dan-canvas::after {
   content: ""; position: fixed; z-index: -1; pointer-events: none;
-  border-radius: 9999px; filter: blur(90px); opacity: 0.45;
+  border-radius: 9999px; filter: blur(90px); opacity: 0.28;
 }
 .dan-canvas::before {
   width: 520px; height: 520px; top: -120px; left: 20%;
@@ -433,3 +433,95 @@ select:focus {
   animation: dan-prism-sheen 1.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) { .dan-prism-fill, .dan-prism-fill::after { animation: none; } .dan-prism-fill { width: 60%; } }
+
+/* ---------------------------------------------------------------------------
+   Liquid glass (light). Same content on every page; surfaces become frosted
+   glass floating over soft violet / peach light. Dark theme is untouched.
+--------------------------------------------------------------------------- */
+:root:not(.dark) body {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(40rem 40rem at -8% -12%, rgb(201 168 255 / 0.55), transparent 70%),
+    radial-gradient(34rem 34rem at 108% 6%, rgb(255 226 196 / 0.6), transparent 70%),
+    radial-gradient(38rem 38rem at 55% 112%, rgb(216 196 255 / 0.5), transparent 70%),
+    radial-gradient(28rem 28rem at 96% 96%, rgb(191 230 255 / 0.35), transparent 70%),
+    linear-gradient(160deg, #fbf8f3 0%, #f4eefb 45%, #fdf9f2 100%);
+  background-attachment: fixed;
+}
+:root:not(.dark) body::before { display: none; }
+
+:root:not(.dark) [class~='bg-card'] {
+  background-color: transparent;
+  background-image: linear-gradient(145deg, rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.42));
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border-color: rgb(255 255 255 / 0.9);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95), 0 24px 48px -26px rgb(90 60 140 / 0.3);
+}
+/* Nested glass reads as a lighter inset tile instead of a second blur. */
+:root:not(.dark) [class~='bg-card'] [class~='bg-card'] {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background-image: linear-gradient(145deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.5));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+:root:not(.dark) [class*='bg-card'][class*='rounded-xl'],
+:root:not(.dark) [class*='bg-card'][class*='rounded-2xl'],
+:root:not(.dark) [class*='bg-card'][class*='rounded-lg'] { border-radius: var(--radius); }
+:root:not(.dark) [class*='bg-card'][class*='rounded-xl']::before,
+:root:not(.dark) [class*='bg-card'][class*='rounded-2xl']::before { display: none; }
+
+/* Only real bg-muted fills (not hover:bg-muted/…) become a lilac wash. */
+:root:not(.dark) [class~='bg-muted'] { background-color: rgb(133 54 245 / 0.06); }
+:root:not(.dark) [class~='bg-background'] { background-color: rgb(255 255 255 / 0.6); }
+:root:not(.dark) [role='dialog'][class~='bg-background'],
+:root:not(.dark) [role='alertdialog'][class~='bg-background'] {
+  background-color: rgb(255 255 255 / 0.86);
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%);
+  border-color: rgb(255 255 255 / 0.95);
+}
+
+/* Primary surfaces get the violet gradient + glow. */
+:root:not(.dark) [class~='bg-primary'] { background-image: linear-gradient(140deg, #9b5cff, #7a2ff0); }
+:root:not(.dark) button[class~='bg-primary'], :root:not(.dark) a[class~='bg-primary'] {
+  box-shadow: 0 10px 24px -12px rgb(133 54 245 / 0.75);
+}
+
+/* Sidebar: a floating glass panel. */
+@media (min-width: 1024px) {
+  :root:not(.dark) aside.sticky {
+    height: calc(100vh - 2rem); top: 1rem; margin: 1rem 0 1rem 1rem;
+    border: 1px solid rgb(255 255 255 / 0.9); border-radius: 1.75rem;
+  }
+}
+:root:not(.dark) aside { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95), 0 24px 48px -26px rgb(90 60 140 / 0.3); }
+:root:not(.dark) aside .border-border { border-color: rgb(133 54 245 / 0.08); }
+
+/* Headings: heavy italic display titles like the Playbooks map. */
+:root:not(.dark) main h1 { font-weight: 900; font-style: italic; letter-spacing: -0.035em; }
+
+/* Inputs: frosted wells. */
+:root:not(.dark) input:not([type='checkbox']):not([type='radio']),
+:root:not(.dark) textarea,
+:root:not(.dark) [role='combobox'] { background-color: rgb(255 255 255 / 0.7); }
+
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(133 54 245 / 0.18); }
+
+/* Shared glass helpers for new screens (Playbooks etc). */
+.glass {
+  background-image: linear-gradient(145deg, rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.4));
+  -webkit-backdrop-filter: blur(26px) saturate(170%); backdrop-filter: blur(26px) saturate(170%);
+  border: 1px solid rgb(255 255 255 / 0.9);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95), 0 24px 48px -24px rgb(90 60 140 / 0.28);
+}
+.glass-tile { background: rgb(255 255 255 / 0.6); border: 1px solid rgb(255 255 255 / 0.95); }
+.violet-grad { background-image: linear-gradient(140deg, #9b5cff, #7a2ff0); }
+.mono-label { font-family: 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.24em; text-transform: uppercase; }
+@keyframes orb-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+@keyframes orb-pulse { 0%,100% { box-shadow: 0 0 0 12px rgb(155 92 255 / 0.16), 0 0 0 30px rgb(155 92 255 / 0.07), 0 30px 70px -14px rgb(133 54 245 / 0.85) } 50% { box-shadow: 0 0 0 16px rgb(155 92 255 / 0.2), 0 0 0 38px rgb(155 92 255 / 0.05), 0 30px 80px -10px rgb(133 54 245 / 0.95) } }
+@keyframes spin-slow { to { transform: rotate(360deg) } }
+@keyframes dash-flow { to { stroke-dashoffset: -26 } }
+@keyframes unlock-pop { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.08); opacity: 1 } 100% { transform: scale(1) } }
+@media (prefers-reduced-motion: reduce) {
+  [style*='orb-float'], [style*='orb-pulse'], [style*='spin-slow'], [style*='dash-flow'] { animation: none !important; }
+}

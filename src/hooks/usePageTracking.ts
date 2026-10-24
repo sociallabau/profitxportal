@@ -10,7 +10,7 @@ export function usePageTracking(page: string) {
     const track = async () => {
       try {
         await supabase.from('page_views').insert({ user_id: user.id, page });
-      } catch {}
+      } catch { /* page views are best-effort analytics */ }
     };
     track();
   }, [user, page]);

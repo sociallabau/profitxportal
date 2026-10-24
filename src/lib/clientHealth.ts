@@ -191,7 +191,7 @@ export function generateConclusion(client: ClientOverview) {
 }
 
 export const BAND = {
-  green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', dot: 'bg-green-400', label: 'On Track' },
-  amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', dot: 'bg-yellow-400', label: 'Good' },
-  red:   { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', dot: 'bg-red-400', label: 'Needs Help' },
+  green: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-success', dot: 'bg-green-400', label: 'On Track' },
+  amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-amber-600', dot: 'bg-yellow-400', label: 'Good' },
+  red:   { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-destructive', dot: 'bg-red-400', label: 'Needs Help' },
 };

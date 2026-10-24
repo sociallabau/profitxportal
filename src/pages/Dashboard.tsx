@@ -13,15 +13,19 @@ import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 import ExampleLabel from '@/components/ExampleLabel';
+import { NextMove } from '@/components/playbook/PlaybookCards';
+import { useGateBuild } from '@/hooks/usePlaybook';
+import { useDanBrief } from '@/hooks/useDanBrief';
+import { gateNumber, nextTask } from '@/lib/playbook';
 import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
 const PHASES: Phase[] = ['Build', 'Implement', 'Reflect'];
 const PHASE_META: Record<Phase, { icon: LucideIcon; blurb: string; color: string; bg: string }> = {
-  Build:     { icon: Hammer,  blurb: 'Learn or improve the core components of a ProfitX Business.', color: 'text-orange-400', bg: 'from-orange-500/25 to-orange-500/5' },
-  Implement: { icon: Rocket,  blurb: 'Implement the components into your business. Take massive action.', color: 'text-blue-400', bg: 'from-blue-500/25 to-blue-500/5' },
-  Reflect:   { icon: Compass, blurb: 'Reflect on how the implementation went. Set direction for the next quarter.', color: 'text-green-400', bg: 'from-green-500/25 to-green-500/5' },
+  Build:     { icon: Hammer,  blurb: 'Learn or improve the core components of a ProfitX Business.', color: 'text-orange-600', bg: 'from-orange-500/25 to-orange-500/5' },
+  Implement: { icon: Rocket,  blurb: 'Implement the components into your business. Take massive action.', color: 'text-blue-600', bg: 'from-blue-500/25 to-blue-500/5' },
+  Reflect:   { icon: Compass, blurb: 'Reflect on how the implementation went. Set direction for the next quarter.', color: 'text-success', bg: 'from-green-500/25 to-green-500/5' },
 };
 
 // One-day intensives — March, July, November (each year)
@@ -247,6 +251,11 @@ export default function Dashboard() {
   const dataUserId = user?.id;
   const example = isExampleDashboard(dataUserId);
   const dashboardProfile = example ? EXAMPLE_PROFILE : profile;
+  // The build list drives "what to do next" everywhere, so Dashboard and Playbooks always agree.
+  const gate = example ? null : gateNumber(profile?.gate);
+  const { tasks: buildTasks } = useGateBuild(example ? null : user?.id, gate);
+  const next = nextTask(buildTasks);
+  const brief = useDanBrief(example ? null : user?.id);
 
   const { calls: allUpcoming } = useUpcomingCalls();
   const upcomingCalls = (example ? EXAMPLE_CALLS : allUpcoming).slice(0, 2);
@@ -310,7 +319,13 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} keyTask={dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up} />
+      {gate && (
+        <div className="mb-6">
+          <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} compact />
+        </div>
+      )}
+
+      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} keyTask={next?.title ?? dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">

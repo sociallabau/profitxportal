@@ -195,8 +195,8 @@ export const ROADMAP_RESOURCES: RoadmapResource[] = [
   },
   {
     "id": "stupidly-simple-ad",
-    "name": "Stupidly Simple Ad",
-    "desc": "$20/day for 5 days \u2014 the fastest way to get warm leads in.",
+    "name": "Profile Visit Ads",
+    "desc": "$50 profile-visit boost behind each post at Gate 1, then an always-on awareness campaign from Gate 2.",
     "tier": "on-ramp"
   },
   {

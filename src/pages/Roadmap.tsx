@@ -11,10 +11,12 @@ import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { PROFITX_MODULES } from '@/data/modules';
+import { MODULE_GATE, ROMAN } from '@/lib/playbook';
 
 const PILLARS = [
   {
-    id: 'build', name: 'BUILD', color: 'text-blue-400', borderColor: 'border-blue-400/20',
+    id: 'build', name: 'BUILD', color: 'text-blue-600', borderColor: 'border-blue-400/20',
     modules: [
       { id: 'design-retainer-offer', name: 'Design Retainer Offer', desc: 'Package your offer, set pricing, and map out exactly what clients get.', tier: 'on-ramp', circleUrl: '' },
       { id: 'delivery-roadmap', name: 'Delivery Roadmap', desc: 'Build a step-by-step operating system for delivering your retainer from sign to published post.', tier: 'on-ramp', circleUrl: '' },
@@ -25,17 +27,17 @@ const PILLARS = [
     ],
   },
   {
-    id: 'traffic', name: 'TRAFFIC', color: 'text-purple-400', borderColor: 'border-purple-400/20',
+    id: 'traffic', name: 'TRAFFIC', color: 'text-primary', borderColor: 'border-purple-400/20',
     modules: [
       { id: 'optimise-profile', name: 'Optimise Your Profile', desc: 'Turn your IG/LinkedIn into a lead generation machine.', tier: 'on-ramp', circleUrl: '' },
-      { id: 'stupidly-simple-ad', name: 'Stupidly Simple Ad', desc: '$20/day for 5 days — the fastest way to get warm leads in.', tier: 'on-ramp', circleUrl: '' },
+      { id: 'stupidly-simple-ad', name: 'Profile Visit Ads', desc: '$50 profile-visit boost behind each post at Gate 1, then an always-on awareness campaign from Gate 2.', tier: 'on-ramp', circleUrl: '' },
       { id: 'warm-outreach', name: 'Warm Outreach', desc: 'DM scripts and sequences to reactivate your existing network.', tier: 'on-ramp', circleUrl: '' },
       { id: '5ps-framework', name: '5 Ps Framework', desc: 'A content framework that positions you as the go-to expert.', tier: 'growth', circleUrl: '' },
       { id: 'full-funnel-paid-ads', name: 'Full Funnel Paid Ads', desc: 'Run ads that bring in qualified leads at scale.', tier: 'scale', circleUrl: '' },
     ],
   },
   {
-    id: 'sales', name: 'SALES', color: 'text-green-400', borderColor: 'border-green-400/20',
+    id: 'sales', name: 'SALES', color: 'text-success', borderColor: 'border-green-400/20',
     modules: [
       { id: 'proposal-doc', name: 'Proposal Doc', desc: 'Build a proposal doc that does the selling for you, sent before the meeting and used during it.', tier: 'on-ramp', circleUrl: '' },
       { id: 'sales-meeting-flow', name: 'Sales Meeting Flow', desc: 'Walk into every sales meeting with conviction, diagnose what the client needs, and close.', tier: 'on-ramp', circleUrl: '' },
@@ -43,7 +45,7 @@ const PILLARS = [
     ],
   },
   {
-    id: 'scale', name: 'SCALE', color: 'text-orange-400', borderColor: 'border-orange-400/20',
+    id: 'scale', name: 'SCALE', color: 'text-orange-600', borderColor: 'border-orange-400/20',
     modules: [
       { id: 'hire-first-editor', name: 'Hire Your First Editor', desc: 'Remove yourself from production without losing quality.', tier: 'growth', circleUrl: '' },
       { id: 'lean-org-chart', name: 'Your Lean Organisation Chart', desc: 'Map the roles your business needs to run lean and scale without bloat.', tier: 'scale', circleUrl: '' },
@@ -55,9 +57,9 @@ const PILLARS = [
 ];
 
 const TIER_LABELS = [
-  { id: 'on-ramp', label: 'On-Ramp', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', activeBg: 'bg-blue-500/20' },
-  { id: 'growth', label: 'Growth', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', activeBg: 'bg-purple-500/20' },
-  { id: 'scale', label: 'Scale', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', activeBg: 'bg-orange-500/20' },
+  { id: 'on-ramp', label: 'On-Ramp', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/30', activeBg: 'bg-blue-500/20' },
+  { id: 'growth', label: 'Growth', color: 'text-primary', bg: 'bg-purple-500/10', border: 'border-purple-500/30', activeBg: 'bg-purple-500/20' },
+  { id: 'scale', label: 'Scale', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/30', activeBg: 'bg-orange-500/20' },
 ];
 
 // Maps the client's account tier to the legacy module difficulty tiers they can access.
@@ -248,14 +250,12 @@ const ONBOARDING_COVERED_CODES = new Set(['O1', 'O2', 'O3', 'C3']);
 // Opens a WhatsApp chat with Dan so members can book a call to cover the module.
 const DAN_WHATSAPP_URL = 'https://wa.me/61429662984?text=' + encodeURIComponent("Hey Dan — can we book a call to cover this module?");
 
-const PROFITX_MODULES: Record<string, string> = {
-  O1: 'Market & Message', O2: 'Golden Retainer', O3: 'Tier Flow',
-  O4: 'Revenue Architect', O5: 'Premium Positioning', O6: 'Financial Mastery',
-  C1: 'Organic Content Flywheel', C2: 'Stupidly Simple Ad', C3: 'Proposal Packs',
-  C4: 'Full Funnel Paid Ads', C5: 'Content Authority', C6: 'Client Retention System',
-  D1: 'Delivery Roadmap', D2: 'Onboarding Blueprint', D3: 'Getting Help',
-  D4: 'Build Your A-Team', D5: 'Airtight SOPs', D6: 'Leadership System',
-};
+/** Which gate a module first opens at, matching the Playbooks page. */
+function GateBadge({ code }: { code: string }) {
+  const gate = MODULE_GATE[code];
+  if (!gate) return null;
+  return <span className="shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white" title={`Opens at Gate ${gate}`}>G{ROMAN[gate]}</span>;
+}
 
 type Stage = {
   key: string;
@@ -307,6 +307,7 @@ function ProfitXRoadmapGrid({
                     {code}
                   </span>
                   <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <GateBadge code={code} />
                   <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
                 </div>
               </button>
@@ -322,6 +323,7 @@ function ProfitXRoadmapGrid({
                       {code}
                     </span>
                     <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <GateBadge code={code} />
                   </div>
                 </div>
                 <span className="text-[11px] leading-snug text-foreground/70 px-1">Covered in Onboarding</span>
@@ -340,6 +342,7 @@ function ProfitXRoadmapGrid({
                     {code}
                   </span>
                   <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <GateBadge code={code} />
                   <Lock className="w-3.5 h-3.5 text-white/70 shrink-0" />
                 </div>
               </div>
@@ -355,6 +358,7 @@ function ProfitXRoadmapGrid({
                       {code}
                     </span>
                     <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <GateBadge code={code} />
                   </div>
                 </div>
                 <a
@@ -380,6 +384,7 @@ function ProfitXRoadmapGrid({
                   {code}
                 </span>
                 <span className="text-xs font-medium text-white/90 sm:text-sm sm:font-semibold sm:truncate flex-1">{name}</span>
+                  <GateBadge code={code} />
               </div>
             </button>
           );
@@ -511,7 +516,7 @@ function PillarRoadmap({
                   aria-label={isComplete ? 'Mark incomplete' : 'Mark complete'}
                 >
                   {isComplete
-                    ? <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    ? <CheckCircle2 className="w-5 h-5 text-success" />
                     : <Circle className="w-5 h-5 text-muted-foreground/40 hover:text-primary/60" />
                   }
                 </button>
@@ -537,9 +542,9 @@ function PillarRoadmap({
                   <p className={`text-xs mt-0.5 ${isComplete ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>{module.desc}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
-                      module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-400'
-                      : module.tier === 'growth' ? 'bg-purple-500/10 text-purple-400'
-                      : 'bg-orange-500/10 text-orange-400'
+                      module.tier === 'on-ramp' ? 'bg-blue-500/10 text-blue-600'
+                      : module.tier === 'growth' ? 'bg-purple-500/10 text-primary'
+                      : 'bg-orange-500/10 text-orange-600'
                     }`}>{module.tier}</span>
                     {hasPage(module.id) && (
                       <button

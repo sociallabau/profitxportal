@@ -8,12 +8,15 @@ import { supabase } from '@/lib/supabase';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import OwnerRoute from './components/OwnerRoute';
+import { DAN_AI_MEMBERS_LIVE } from '@/lib/danAccess';
 import Auth from "./pages/Auth";
 
 // Routes load on demand, so the first paint does not carry the whole app.
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Roadmap = lazy(() => import("./pages/Roadmap"));
+const Playbooks = lazy(() => import("./pages/Playbooks"));
+const PlaybookEditor = lazy(() => import("./pages/admin/PlaybookEditor"));
 const NewClients = lazy(() => import("./pages/submissions/NewClients"));
 const MonthlyTotals = lazy(() => import("./pages/submissions/MonthlyTotals"));
 const Financials = lazy(() => import("./pages/Financials"));
@@ -77,6 +80,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
+          <Route path="/playbooks" element={<ProtectedRoute><Playbooks /></ProtectedRoute>} />
           <Route path="/content-studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
           <Route path="/content-generator" element={<ProtectedRoute><ContentGenerator /></ProtectedRoute>} />
           <Route path="/hot-list" element={<ProtectedRoute><HotList /></ProtectedRoute>} />
@@ -96,7 +100,8 @@ const App = () => (
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
-          <Route path="/dan-ai" element={<AdminRoute><DanAI /></AdminRoute>} />
+          <Route path="/dan-ai" element={DAN_AI_MEMBERS_LIVE ? <ProtectedRoute><DanAI /></ProtectedRoute> : <AdminRoute><DanAI /></AdminRoute>} />
+          <Route path="/admin/playbooks" element={<AdminRoute><PlaybookEditor /></AdminRoute>} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>

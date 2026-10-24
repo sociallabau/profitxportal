@@ -70,7 +70,7 @@ export default function HotList() {
       .select('*')
       .eq('user_id', user!.id)
       .order('position', { ascending: true });
-    if (!error && data) setCards(data as any as HotListCard[]);
+    if (!error && data) setCards(data as HotListCard[]);
     setLoading(false);
   };
 
@@ -113,7 +113,7 @@ export default function HotList() {
       const { error } = await supabase.from('hot_list').update({
         ...payload,
         updated_at: new Date().toISOString(),
-      } as any).eq('id', editingCard.id);
+      }).eq('id', editingCard.id);
       if (error) toast.error('Failed to update');
       else toast.success('Lead updated');
     } else {
@@ -121,7 +121,7 @@ export default function HotList() {
         user_id: user!.id,
         ...payload,
         position: cards.filter(c => c.column_id === form.column_id).length,
-      } as any);
+      });
       if (error) toast.error('Failed to add lead');
       else toast.success('Lead added');
     }

@@ -4,8 +4,8 @@ export type OrbState = 'idle' | 'thinking' | 'checking' | 'answered';
 
 interface Props { state?: OrbState; intro?: boolean; className?: string }
 
-// Violet palette from the brief (rgb triplets).
-const COLORS = [[133, 54, 245], [183, 148, 255], [228, 215, 255]];
+// Violet palette (rgb triplets), dark enough to read on the light glass canvas.
+const COLORS = [[133, 54, 245], [155, 92, 255], [75, 23, 176]];
 
 export default function DanAiOrb({ state = 'idle', intro = false, className = '' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,7 +74,8 @@ export default function DanAiOrb({ state = 'idle', intro = false, className = ''
       const proj: { x: number; y: number; z: number; c: number[]; i: number }[] = [];
       for (let i = 0; i < N; i++) {
         const p = pts[i];
-        let x = p.x * cr + p.z * sr, z = -p.x * sr + p.z * cr, y = p.y;
+        const x = p.x * cr + p.z * sr;
+        let z = -p.x * sr + p.z * cr, y = p.y;
         const y2 = y * ct - z * st; z = y * st + z * ct; y = y2;
         let jitter = 1;
         if (s === 'thinking' && !reduced) jitter = 1 + 0.04 * Math.sin(now / 120 + p.seed * 5);

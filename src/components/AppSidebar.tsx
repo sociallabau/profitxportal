@@ -3,13 +3,14 @@ import {
   Gauge, Route, Wallet, HeartPulse,
   SlidersHorizontal, LogOut, Menu, X,
   Trophy, Flame, Banknote, Lock, Video, DollarSign,
-  Compass, Sparkle, MessagesSquare,
+  Compass, Sparkle, Swords, ListChecks,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
 import { OWNER_USER_ID } from '@/lib/owner';
+import { DAN_AI_MEMBERS_LIVE } from '@/lib/danAccess';
 
 export const CIRCLE_URLS = {
   modules: 'https://app.circle.so/sign_in',
@@ -17,6 +18,8 @@ export const CIRCLE_URLS = {
 
 const mainNavItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
+  { label: 'Playbooks', path: '/playbooks', icon: Swords },
+  ...(DAN_AI_MEMBERS_LIVE ? [{ label: 'Dan AI', path: '/dan-ai', icon: Sparkle }] : []),
   { label: 'Hot List', path: '/hot-list', icon: Flame },
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
   { label: 'Wins Wall', path: '/wins', icon: Trophy },
@@ -30,7 +33,8 @@ const mainNavItems = [
 const adminItems = [
   { label: 'Client Health', path: '/client-health', icon: HeartPulse },
   { label: 'Client Journey', path: '/client-journey', icon: Compass },
-  { label: 'Dan AI', path: '/dan-ai', icon: Sparkle },
+  ...(DAN_AI_MEMBERS_LIVE ? [] : [{ label: 'Dan AI', path: '/dan-ai', icon: Sparkle }]),
+  { label: 'Playbook Editor', path: '/admin/playbooks', icon: ListChecks },
 ];
 
 const ownerItems = [

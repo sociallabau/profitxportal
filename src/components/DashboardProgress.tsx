@@ -66,6 +66,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, examp
             <p className="text-base font-semibold text-primary mb-4">{gate || 'Your next step'} <ExampleLabel show={example} /></p>
             <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-2">Key next task <ExampleLabel show={example} /></p>
             <FocusList items={focusBullets(keyTask)} fallback="Complete your monthly report" />
+            <Button variant="link" size="sm" className="px-0 mt-2" disabled={example} onClick={() => navigate('/playbooks')}>Open your playbook <ArrowUpRight /></Button>
             {moveUp && <div className="mt-4 pt-4 border-t border-primary/20">
               <p className="text-[10px] uppercase font-semibold text-primary flex items-center gap-1 mb-2 flex-wrap"><ArrowUpRight className="w-3 h-3" /> To move up a gate <ExampleLabel show={example} /></p>
               <FocusList items={focusBullets(moveUp)} />

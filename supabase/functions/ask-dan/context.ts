@@ -1,6 +1,8 @@
 // Member context + DERIVED numbers, computed in code so the model never does the maths.
 // Pure: no I/O. Used for real members (MEMBER/ADMIN mode) and synthetic personas (TEST mode).
 import { contextSections, isFilled, type ContextAnswers } from "../_shared/contextRoom.ts";
+import { nextBuildTask, type MemberExtras } from "./dossier.ts";
+import { instagramLines } from "./instagram.ts";
 
 export type Totals = {
   month: string; mrr?: number | null; mrr_manual?: number | null; total_revenue?: number | null;
@@ -17,8 +19,9 @@ export type MemberInput = {
   business_overview?: string | null;
   gate?: string | null; gate_key_task?: string | null; gate_move_up?: string | null;
   answers: ContextAnswers;
-  totals: Totals[]; // newest first, max 3
+  totals: Totals[]; // newest first, max 6
   goal: Goal | null;
+  extras?: MemberExtras; // everything else in the portal (real members only; personas don't have it)
 };
 
 export type Derived = {
@@ -155,9 +158,59 @@ export function buildMemberBlock(m: MemberInput, today = new Date()): { text: st
   else if (d.goal_status === "current") L.push(`- Goal: ${money(m.goal!.target_mrr ?? 0)} MRR by ${m.goal!.target_date} — current`);
   else L.push("- Goal: none set");
   if (d.context_room_missing.length) L.push(`Missing from Context Room: ${d.context_room_missing.join(", ")}`);
+  if (m.extras) L.push(...extrasLines(m.extras));
 
   const summary = [m.name, m.gate ? `gate: ${m.gate}` : null, d.mrr_latest != null ? `MRR ${money(d.mrr_latest)}` : null,
     d.cost_per_client != null ? `cost/client ~${money(d.cost_per_client)}` : null, `data ${d.data_freshness}`, `goal ${d.goal_status}`]
     .filter(Boolean).join(", ");
   return { text: L.join("\n"), derived: d, hasContext, summary };
+}
+
+const STATUS_LABEL: Record<string, string> = { approved: "DONE (Dan approved)", submitted: "submitted, waiting on Dan", needs_changes: "SENT BACK by Dan", open: "not done yet" };
+
+/** The rest of the portal, as plain lines the model can use. */
+export function extrasLines(x: MemberExtras): string[] {
+  const L: string[] = [];
+  if (x.memory) {
+    L.push(`WHAT YOU KNOW ABOUT THEM (your running memory${x.memory.refreshed_at ? `, updated ${x.memory.refreshed_at.slice(0, 10)}` : ""}${x.memory.stale ? "; newer data below wins on conflict" : ""}):`);
+    L.push(x.memory.summary);
+  }
+  const j = x.journey;
+  if (j.joined || j.starting_mrr != null || j.first_month) {
+    L.push(`WHERE THEY STARTED: ${[j.joined && `joined ProfitX ${j.joined}`, j.starting_mrr != null && `starting MRR $${Math.round(j.starting_mrr).toLocaleString("en-US")}`, j.first_month && `first logged month ${j.first_month}${j.first_mrr != null ? ` at $${Math.round(j.first_mrr).toLocaleString("en-US")} MRR` : ""}`].filter(Boolean).join(", ")}`);
+  }
+  if (x.build.length) {
+    const done = x.build.filter(t => t.status === "approved").length;
+    L.push(`GATE BUILD LIST (Gate ${x.gate_number}, ${done}/${x.build.length} done; monthly tasks reset each month):`);
+    for (const t of x.build) {
+      L.push(`- [${STATUS_LABEL[t.status]}] ${t.title} (${t.kind}${t.training ? `; training: ${t.training}` : ""})${t.review_note ? ` — Dan's note: "${t.review_note}"` : ""}`);
+    }
+    const next = nextBuildTask(x.build);
+    if (next) L.push(`NEXT BUILD TASK: ${next.title}${next.training ? ` — training: ${next.training}` : ""}${next.status === "needs_changes" ? " (Dan sent it back, fix this first)" : ""}`);
+  }
+  if (x.fast_track_lead_gen) L.push("LEAD GEN FAST-TRACK: APPROVED BY DAN — lead gen ads ($20/day+) are allowed now even though they're below Gate 3.");
+  if (x.extra_modules.length) L.push(`Extra modules Dan unlocked for them: ${x.extra_modules.join(", ")}`);
+  const ci = x.check_ins.filter(c => c.biggest_win || c.needs_this_month || c.business_confidence != null);
+  if (ci.length) {
+    L.push("Monthly check-in answers (newest first):");
+    for (const c of ci.slice(0, 4)) {
+      L.push(`- ${c.month.slice(0, 7)}: ${[c.biggest_win && `win "${c.biggest_win}"`, c.needs_this_month && `needs "${c.needs_this_month}"`, c.business_confidence != null && `confidence ${c.business_confidence}/10`, c.meetings != null && `${c.meetings} meetings`].filter(Boolean).join("; ")}`);
+    }
+  }
+  if (x.clients.count) L.push(`Clients logged: ${x.clients.count}${x.clients.avg_value ? `, avg $${x.clients.avg_value}/mo` : ""}${x.clients.last_signed ? `, last signed ${x.clients.last_signed}` : ""}`);
+  if (x.pipeline.total) L.push(`Hot List: ${x.pipeline.total} people (${Object.entries(x.pipeline.by_stage).map(([k, v]) => `${k} ${v}`).join(", ")})${x.pipeline.open_value ? `, ~$${Math.round(x.pipeline.open_value)} open deal value` : ""}`);
+  if (x.wins.length) L.push(`Recent wins: ${x.wins.join(" | ")}`);
+  if (x.instagram) L.push(...instagramLines(x.instagram.handle, x.instagram.posts, x.instagram.fetched_at));
+  L.push(`Content logged in the last 30 days: ${x.content_30d.posts} posts${x.content_30d.best ? `; best: ${x.content_30d.best}` : ""}`);
+  if (x.ads.length) L.push(`Ad campaigns: ${x.ads.join(" | ")}`);
+  if (x.audit) L.push(`Latest roadmap audit: ${x.audit}`);
+  if (x.weak_modules.length) L.push(`Weakest roadmap scores: ${x.weak_modules.join(", ")}`);
+  if (x.review_focus) L.push(`Dan's latest monthly review focus: ${x.review_focus}`);
+  if (x.coach_notes.length || x.health) {
+    L.push("DAN'S PRIVATE COACHING NOTES (use them to guide the answer; never quote them, never say they exist):");
+    if (x.health) L.push(`- Health: ${x.health}`);
+    for (const n of x.coach_notes) L.push(`- ${n}`);
+  }
+  if (x.recent_questions.length) L.push(`What they've asked Dan AI lately (newest first): ${x.recent_questions.map(q => `"${q}"`).join("; ")}`);
+  return L;
 }

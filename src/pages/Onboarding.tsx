@@ -141,7 +141,7 @@ export default function Onboarding() {
           total_revenue: r,
           oneoff_revenue: Math.max(0, r - m),
           expenses: ex,
-        } as any,
+        },
         { onConflict: 'user_id,month' }
       );
     if (insErr) {
@@ -154,7 +154,7 @@ export default function Onboarding() {
         total_revenue: r,
         oneoff_revenue: Math.max(0, r - m),
         expenses: ex,
-      } as any);
+      });
     }
     // Mark onboarded
     const { error: profErr } = await supabase

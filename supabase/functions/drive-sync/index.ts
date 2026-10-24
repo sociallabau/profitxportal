@@ -147,11 +147,16 @@ type DocTab = {
   childTabs?: DocTab[];
 };
 
+type DocElement = {
+  paragraph?: { elements?: { textRun?: { content?: unknown } }[] };
+  table?: { tableRows?: { tableCells?: { content?: unknown[] }[] }[] };
+};
+
 /** Pulls the plain text out of a Docs API body. */
 function extractBodyText(content: unknown[] | undefined): string {
   if (!content) return "";
   let out = "";
-  for (const element of content as Record<string, any>[]) {
+  for (const element of content as DocElement[]) {
     const paragraph = element.paragraph;
     if (paragraph?.elements) {
       for (const run of paragraph.elements) {

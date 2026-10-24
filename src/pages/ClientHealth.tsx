@@ -228,8 +228,8 @@ export default function ClientHealth() {
       {readyForInFlow.length > 0 && (
         <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <ArrowUpCircle className="w-5 h-5 text-purple-400" />
-            <h2 className="text-sm font-bold text-purple-400">Ready to Move to In Flow</h2>
+            <ArrowUpCircle className="w-5 h-5 text-primary" />
+            <h2 className="text-sm font-bold text-primary">Ready to Move to In Flow</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             {readyForInFlow.length === 1 ? 'This client has' : `${readyForInFlow.length} clients have`} finished all On-Ramp modules — ready to graduate from Onboarding.
@@ -245,7 +245,7 @@ export default function ClientHealth() {
                 </div>
                 <button
                   onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_starter' })}
-                  className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition"
+                  className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-primary hover:bg-purple-500/30 transition"
                 >
                   Move to In Flow →
                 </button>
@@ -259,8 +259,8 @@ export default function ClientHealth() {
       {readyForOver20k.length > 0 && (
         <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <ArrowUpCircle className="w-5 h-5 text-orange-400" />
-            <h2 className="text-sm font-bold text-orange-400">Ready to Step Up — Over $20k/mth</h2>
+            <ArrowUpCircle className="w-5 h-5 text-orange-600" />
+            <h2 className="text-sm font-bold text-orange-600">Ready to Step Up — Over $20k/mth</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             {readyForOver20k.length === 1 ? 'This client has' : `${readyForOver20k.length} clients have`} crossed $20k/month — unlock the full roadmap.
@@ -274,7 +274,7 @@ export default function ClientHealth() {
                 </div>
                 <button
                   onClick={() => changeTier.mutate({ clientId: client.id, tier: 'in_flow_scale' })}
-                  className="px-3 py-1 text-xs font-bold rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition"
+                  className="px-3 py-1 text-xs font-bold rounded-lg bg-orange-500/20 text-orange-600 hover:bg-orange-500/30 transition"
                 >
                   Unlock Over $20k →
                 </button>
@@ -324,7 +324,7 @@ export default function ClientHealth() {
             <button
               onClick={() => setNeedsSupportOnly(v => !v)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                needsSupportOnly ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/40' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                needsSupportOnly ? 'bg-red-500/20 text-destructive ring-1 ring-red-500/40' : 'bg-muted text-muted-foreground hover:bg-muted/70'
               }`}
             >
               Needs Support ({needsSupport.length})
@@ -342,11 +342,12 @@ export default function ClientHealth() {
           </div>
 
           {viewMode === 'board' ? (
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
               {([
                 { gate: '1', name: 'Fix' },
                 { gate: '2', name: 'Fuel' },
                 { gate: '3', name: 'Scale' },
+                { gate: '4', name: 'Supercharge' },
               ]).map(({ gate, name }) => {
                 const members = visible.filter(c => gateNumber(c.gate) === gate);
                 return (
@@ -439,22 +440,22 @@ export default function ClientHealth() {
                     {current.drift && current.drift.signals.length > 0 ? (
                       <ul className="space-y-1 mb-5">
                         {current.drift.signals.map(sig => (
-                          <li key={sig} className="text-sm text-orange-400">• {sig}</li>
+                          <li key={sig} className="text-sm text-orange-600">• {sig}</li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-green-400 mb-5">No drift signals — numbers are moving.</p>
+                      <p className="text-sm text-success mb-5">No drift signals — numbers are moving.</p>
                     )}
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => advance(true)}
-                        className="flex-1 py-2 rounded-lg text-sm font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition"
+                        className="flex-1 py-2 rounded-lg text-sm font-semibold bg-red-500/15 text-destructive hover:bg-red-500/25 transition"
                       >
                         Flag for support
                       </button>
                       <button
                         onClick={() => advance(false)}
-                        className="flex-1 py-2 rounded-lg text-sm font-semibold bg-green-500/15 text-green-400 hover:bg-green-500/25 transition"
+                        className="flex-1 py-2 rounded-lg text-sm font-semibold bg-green-500/15 text-success hover:bg-green-500/25 transition"
                       >
                         Looks fine
                       </button>
@@ -549,7 +550,7 @@ export default function ClientHealth() {
                           {change !== null && (
                             Math.abs(change) < 5
                               ? <span className="ml-1.5 text-xs text-muted-foreground">flat</span>
-                              : <span className={`ml-1.5 text-xs ${change > 0 ? 'text-green-400' : 'text-orange-400'}`}>
+                              : <span className={`ml-1.5 text-xs ${change > 0 ? 'text-success' : 'text-orange-600'}`}>
                                   {change > 0 ? '▲' : '▼'} {Math.abs(change)}%
                                 </span>
                           )}
@@ -567,7 +568,7 @@ export default function ClientHealth() {
                             </p>
                           )}
                         </td>
-                        <td className={`py-3 px-3 whitespace-nowrap ${days !== null && Number(days) > 14 ? 'text-orange-400' : 'text-muted-foreground'}`}>
+                        <td className={`py-3 px-3 whitespace-nowrap ${days !== null && Number(days) > 14 ? 'text-orange-600' : 'text-muted-foreground'}`}>
                           {days !== null ? `${days}d ago` : '—'}
                         </td>
                         <td className="py-3 px-4 text-right">

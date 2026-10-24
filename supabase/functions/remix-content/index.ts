@@ -17,7 +17,7 @@ function bytesToBase64(bytes: Uint8Array): string {
   let binary = ""
   const chunkSize = 0x8000
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)) as any)
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)))
   }
   return btoa(binary)
 }
@@ -145,8 +145,8 @@ async function transcribeViaModel(videoUrl: string): Promise<string | null> {
     }
     console.log(`Transcript length: ${text.length}`)
     return text
-  } catch (e: any) {
-    console.log("Transcription exception:", e?.message)
+  } catch (e) {
+    console.log("Transcription exception:", e instanceof Error ? e.message : e)
     return null
   }
 }
@@ -352,8 +352,8 @@ Use the step labels (e.g. "1. HOOK" or "S1 COVER") as headers. Under each, write
 **How it maps to your business:** 1 sentence connecting the idea to: ${businessOverview}.
 
 Keep it tight. No fluff, no preamble.`, `Transcript:\n"""\n${transcript}\n"""\n\nOriginal caption: "${postCaption || "(none)"}"`, 400)
-      } catch (e: any) {
-        console.log("Summary generation failed:", e?.message)
+      } catch (e) {
+        console.log("Summary generation failed:", e instanceof Error ? e.message : e)
       }
     }
 
@@ -362,8 +362,8 @@ Keep it tight. No fluff, no preamble.`, `Transcript:\n"""\n${transcript}\n"""\n\
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
 
-  } catch (error: any) {
-    console.error("remix-content error:", error?.message || error)
+  } catch (error) {
+    console.error("remix-content error:", error instanceof Error ? error.message : error)
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

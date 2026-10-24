@@ -9,11 +9,13 @@ import { timing, relevantExcerpt, checkerResult, type Timing } from "./performan
 import { joinChunks } from "../_shared/danBrain.ts";
 import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
+import { loadExtras } from "./dossier.ts";
+import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
-import { BRAIN_HEADER, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
+import { BRAIN_HEADER, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, looksTruncated, matchResource, nameTokens, redact, wordCount } from "./guardrails.ts";
 
-const SONNET = "claude-sonnet-5";
+const SONNET = "claude-sonnet-5-5";
 const HAIKU = "claude-haiku-5-5";
 const SOURCE_TAGS: Record<string, string> = {
   teaching: "Workshop/Q&A", transcript: "Training", note: "Note", whatsapp: "Dan in WhatsApp", call: "1:1 call",
@@ -144,21 +146,92 @@ async function loadBrain(admin: DB) {
 
 // ---------- member context ----------
 async function loadMemberInput(admin: DB, memberId: string): Promise<MemberInput> {
-  const [{ data: profile }, { data: room }, { data: totals }, { data: goal }] = await Promise.all([
-    admin.from("profiles").select("full_name, business_overview, gate, gate_key_task, gate_move_up").eq("id", memberId).maybeSingle(),
+  const profileQuery = admin.from("profiles").select("full_name, business_overview, gate, gate_key_task, gate_move_up").eq("id", memberId).maybeSingle();
+  const extrasPromise = profileQuery.then(({ data }: { data: { gate: string | null } | null }) => loadExtras(admin, memberId, data?.gate ?? null));
+  const [{ data: profile }, { data: room }, { data: totals }, { data: goal }, extras] = await Promise.all([
+    profileQuery,
     admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
     admin.from("monthly_totals")
       .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts")
-      .eq("user_id", memberId).order("month", { ascending: false }).limit(3),
+      .eq("user_id", memberId).order("month", { ascending: false }).limit(6),
     admin.from("goals").select("starting_mrr, target_mrr, target_date, retainer_tier_1, retainer_tier_2, retainer_tier_3").eq("user_id", memberId).maybeSingle(),
+    extrasPromise,
   ]);
   const answers = { ...((room?.answers ?? {}) as ContextAnswers) };
   delete (answers as Record<string, unknown>).anything_else;
   return {
     name: profile?.full_name ?? null, business_overview: profile?.business_overview ?? null,
     gate: profile?.gate ?? null, gate_key_task: profile?.gate_key_task ?? null, gate_move_up: profile?.gate_move_up ?? null,
-    answers, totals: totals ?? [], goal: goal ?? null,
+    answers, totals: totals ?? [], goal: goal ?? null, extras,
   };
+}
+
+// ---------- member memory ----------
+/** The member-facing brief, with any other member's name stripped out. */
+async function safeBrief(admin: DB, raw: unknown, memberId: string, ownName: string | null): Promise<string | null> {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const { data } = await admin.from("profiles").select("id, full_name");
+  const others = ((data ?? []) as { id: string; full_name: string | null }[]).filter(p => p.id !== memberId && p.full_name).map(p => p.full_name ?? "");
+  return redact(raw.trim().slice(0, 400), nameTokens(others, ownName));
+}
+// Sonnet rewrites each member's running memory from everything the portal holds.
+// Triggers mark it dirty when their data changes; refreshed after their questions
+// (debounced) and by the hourly job.
+const MEMORY_DEBOUNCE_MS = 10 * 60 * 1000;
+function memorySummary(m: Record<string, unknown>): string {
+  const list = (k: string, label: string) => Array.isArray(m[k]) && (m[k] as unknown[]).length ? `${label}: ${(m[k] as unknown[]).map(String).join("; ")}` : null;
+  return [
+    m.snapshot ? String(m.snapshot) : null,
+    list("working", "Working"), list("stuck", "Stuck"), list("commitments", "Committed to"),
+    list("patterns", "Patterns"), list("personal", "Personal"),
+    m.next_focus ? `Next focus: ${m.next_focus}` : null, list("watch_outs", "Watch out for"),
+  ].filter(Boolean).join("\n");
+}
+async function refreshMemory(admin: DB, memberId: string, force = false): Promise<{ ok: boolean; skipped?: string }> {
+  const { data: row } = await admin.from("member_memory").select("memory, refreshed_at, dirty_at, refresh_started_at, instagram_handle, instagram_fetched_at").eq("user_id", memberId).maybeSingle();
+  const now = Date.now();
+  if (!force && row?.refresh_started_at && now - Date.parse(row.refresh_started_at) < 2 * 60 * 1000) return { ok: true, skipped: "in progress" };
+  if (!force && row?.refreshed_at && row.dirty_at <= row.refreshed_at) return { ok: true, skipped: "up to date" };
+  const startedAt = new Date().toISOString();
+  await admin.from("member_memory").upsert({ user_id: memberId, refresh_started_at: startedAt }, { onConflict: "user_id" });
+  // Their Instagram: pulled at most daily (or when the handle changes), cached on the memory row.
+  const { data: room } = await admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle();
+  const handle = cleanHandle((room?.answers as Record<string, unknown> | null)?.instagram_handle);
+  if (handle && (handle !== row?.instagram_handle || !row?.instagram_fetched_at || now - Date.parse(row.instagram_fetched_at) > IG_REFRESH_MS)) {
+    try {
+      const posts = await fetchRecentPosts(handle);
+      if (posts) await admin.from("member_memory").update({ instagram: posts, instagram_handle: handle, instagram_fetched_at: new Date().toISOString() }).eq("user_id", memberId);
+    } catch (err) { console.error("instagram pull failed", handle, err); }
+  }
+  const member = await loadMemberInput(admin, memberId);
+  if (member.extras) member.extras.memory = null; // the previous memory goes in separately below
+  const { data: asked } = await admin.from("dan_ai_messages").select("content, created_at").eq("user_id", memberId).eq("role", "user").order("created_at", { ascending: false }).limit(20);
+  const msg = `${buildMemberBlock(member).text}\n\n=====\n\nEVERY QUESTION THEY'VE ASKED DAN AI RECENTLY (newest first)\n${((asked ?? []) as { content: string; created_at: string }[]).map(a => `- ${a.created_at.slice(0, 10)}: ${a.content.slice(0, 300)}`).join("\n") || "(none)"}\n\n=====\n\nYOUR PREVIOUS MEMORY\n${row?.memory && Object.keys(row.memory).length ? JSON.stringify(row.memory) : "(none yet)"}\n\nToday is ${startedAt.slice(0, 10)}.`;
+  let memory: Record<string, unknown> | null = null;
+  for (let i = 0; i < 2 && !memory; i++) {
+    try { memory = parseJson(await callMain([{ type: "text", text: MEMORY_PROMPT }], [{ role: "user", content: msg }], undefined, "other")); }
+    catch (err) { console.error("memory refresh failed", memberId, err); }
+  }
+  if (!memory) {
+    await admin.from("member_memory").update({ refresh_started_at: null }).eq("user_id", memberId);
+    return { ok: false };
+  }
+  const brief = await safeBrief(admin, memory.brief, memberId, member.name ?? null);
+  await admin.from("member_memory").update({
+    memory, summary: memorySummary(memory), refreshed_at: startedAt, refresh_started_at: null,
+    brief,
+    sources: { totals: member.totals.length, build: member.extras?.build.length ?? 0, questions: asked?.length ?? 0 },
+  }).eq("user_id", memberId);
+  return { ok: true };
+}
+/** Fire-and-forget refresh after a chat, so the next answer knows what just happened. */
+function refreshInBackground(admin: DB, memberId: string, member: MemberInput | null) {
+  const mem = member?.extras?.memory;
+  if (mem && mem.refreshed_at && Date.now() - Date.parse(mem.refreshed_at) < MEMORY_DEBOUNCE_MS) return;
+  const task = refreshMemory(admin, memberId).catch(err => console.error("background memory refresh", err));
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(task);
 }
 
 // ---------- plan ----------
@@ -174,7 +247,7 @@ async function runPlan(question: string, history: Turn[], metrics: Timing): Prom
     const parsed = parseJson(await callAnthropic(HAIKU, [{ type: "text", text: PLAN_PROMPT, cache_control: { type: "ephemeral" } }],
       [{ role: "user", content: `RECENT CONVERSATION: ${convo}\nQUESTION: ${question}` }], false, metrics, "plan", controller.signal)) as Plan | null;
     if (parsed && Array.isArray(parsed.search_terms)) return { plan: parsed, fallback: false };
-  } catch (err) {
+  } catch {
     metrics.calls.push({ stage: "plan", model: HAIKU, ms: 4000, input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0, retry: false, error: controller.signal.aborted ? "4s deadline; keyword fallback" : "plan failed; keyword fallback" });
   } finally { clearTimeout(timeout); }
   // Classification remains conservative; the full draft/checker still adjudicates boundaries from the question.
@@ -454,6 +527,19 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
+    // Scheduled memory rebuild (pg_cron), authenticated by CRON_SECRET instead of a user.
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (cronSecret && req.headers.get("x-cron-secret") === cronSecret) {
+      const body = await req.json().catch(() => ({}));
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: rows } = await admin.from("member_memory").select("user_id, dirty_at, refreshed_at").order("dirty_at", { ascending: false }).limit(200);
+      const due = ((rows ?? []) as { user_id: string; dirty_at: string; refreshed_at: string | null }[])
+        .filter(r => !r.refreshed_at || r.dirty_at > r.refreshed_at).slice(0, Math.min(Number(body.limit) || 10, 25));
+      const results = [];
+      for (const r of due) results.push({ user_id: r.user_id, ...(await refreshMemory(admin, r.user_id)) });
+      return json({ refreshed: results.length, results });
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
     const scoped = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
@@ -474,8 +560,16 @@ Deno.serve(async (req) => {
     if (body.action) {
       if (!isAdmin) return json({ error: "Admins only" }, 403);
 
+      if (body.action === "refresh_memory") {
+        if (!uuidRe.test(body.member_id ?? "")) return json({ error: "member_id required" }, 400);
+        const result = await refreshMemory(admin, body.member_id, true);
+        const { data } = await admin.from("member_memory").select("memory, summary, refreshed_at").eq("user_id", body.member_id).maybeSingle();
+        return json({ ...result, ...data });
+      }
+
       if (body.action === "start_run") {
-        const { data } = await admin.from("dan_ai_test_runs").insert({ round: Number(body.round) || 1 }).select("id").single();
+        const { data, error } = await admin.from("dan_ai_test_runs").insert({ round: Number(body.round) || 1 }).select("id").single();
+        if (error || !data) return json({ error: "Could not start a test run" }, 500);
         return json({ run_id: data.id });
       }
 
@@ -525,7 +619,7 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
 
       if (body.action === "finalize") {
         const { data: rows } = await admin.from("dan_ai_test_results").select("pass, criteria, code_checks, answer, debug, dan_ai_tests(name, category, position)").eq("run_id", body.run_id);
-        const list = (rows ?? []) as { pass: boolean | null; criteria: { pass: boolean }[]; code_checks: { pass: boolean }[]; dan_ai_tests: { name: string; category: string; position: number } }[];
+        const list = (rows ?? []) as unknown as { pass: boolean | null; criteria: { pass: boolean }[]; code_checks: { pass: boolean }[]; dan_ai_tests: { name: string; category: string; position: number } }[];
         const critTotal = list.reduce((n, r) => n + r.criteria.length, 0);
         const critPass = list.reduce((n, r) => n + r.criteria.filter(c => c.pass).length, 0);
         const summary = {
@@ -574,6 +668,7 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
       admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.points.map(pt => pt.why ? `${pt.do} — ${pt.why}` : pt.do), resource: r.final.resource }),
     ]);
 
+    if (memberId && mode === "member") refreshInBackground(admin, memberId, member);
     return {
       ...r.final, thread_id: threadId, context_used: r.block.hasContext,
       ...(isAdmin ? { debug: buildDebug(mode, memberId, member, r) } : {}),

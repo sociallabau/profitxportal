@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@
 import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ContextRoom from '@/components/ContextRoom';
+import PlaybookPanel from '@/components/client-health/PlaybookPanel';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -152,7 +153,7 @@ export default function ClientDetailPanel({
   const { data: audits = [] } = useQuery({
     queryKey: ['client-audits', client.id],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('roadmap_audits')
         .select('issue, focus, created_at')
         .eq('user_id', client.id)
@@ -226,7 +227,13 @@ export default function ClientDetailPanel({
               </div>
 
               <div className="p-6 space-y-5">
-                <Accordion type="single" collapsible>
+                <Accordion type="single" collapsible defaultValue="playbook" className="space-y-2">
+                  <AccordionItem value="playbook" className="border border-border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm hover:no-underline">Playbook &amp; Dan AI memory</AccordionTrigger>
+                    <AccordionContent>
+                      <PlaybookPanel key={client.id} memberId={client.id} gate={client.gate ?? null} />
+                    </AccordionContent>
+                  </AccordionItem>
                   <AccordionItem value="context-room" className="border border-border rounded-lg px-4">
                     <AccordionTrigger className="text-sm hover:no-underline">Context Room</AccordionTrigger>
                     <AccordionContent>
@@ -332,11 +339,11 @@ export default function ClientDetailPanel({
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         {[
                           { label: 'Revenue',    value: `$${revenue.toLocaleString()}`,                                   color: 'text-foreground' },
-                          { label: 'Expenses',   value: `$${expenses.toLocaleString()}`,                                  color: 'text-orange-400' },
-                          { label: 'Net Profit', value: `$${netProfit.toLocaleString()}`,                                 color: netProfit >= 0 ? 'text-green-400' : 'text-red-400' },
+                          { label: 'Expenses',   value: `$${expenses.toLocaleString()}`,                                  color: 'text-orange-600' },
+                          { label: 'Net Profit', value: `$${netProfit.toLocaleString()}`,                                 color: netProfit >= 0 ? 'text-success' : 'text-destructive' },
                           { label: 'MRR',        value: `$${Number(c.last_mrr || 0).toLocaleString()}`,                   color: 'text-primary' },
-                          { label: 'Ad Spend',   value: Number(c.last_ad_spend) > 0 ? `$${Number(c.last_ad_spend).toLocaleString()}` : '—', color: 'text-blue-400' },
-                          { label: 'New Clients',value: `${c.last_new_clients ?? '—'}`,                                   color: 'text-green-400' },
+                          { label: 'Ad Spend',   value: Number(c.last_ad_spend) > 0 ? `$${Number(c.last_ad_spend).toLocaleString()}` : '—', color: 'text-blue-600' },
+                          { label: 'New Clients',value: `${c.last_new_clients ?? '—'}`,                                   color: 'text-success' },
                           { label: 'Content',    value: `${c.last_content_posts ?? '—'} posts`,                           color: 'text-foreground' },
                           { label: 'Leads',      value: `${c.last_leads ?? '—'}`,                                         color: 'text-foreground' },
                         ].map(({ label, value, color }) => (
@@ -374,7 +381,7 @@ export default function ClientDetailPanel({
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Closed</span>
-                            <span className="font-semibold text-green-400">{closed}</span>
+                            <span className="font-semibold text-success">{closed}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Pipeline Value</span>
@@ -382,7 +389,7 @@ export default function ClientDetailPanel({
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Closed Value</span>
-                            <span className="font-semibold text-green-400">${closedValue.toLocaleString()}</span>
+                            <span className="font-semibold text-success">${closedValue.toLocaleString()}</span>
                           </div>
                         </div>
                       )}
@@ -397,7 +404,7 @@ export default function ClientDetailPanel({
                       <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                       <p className="text-xs text-muted-foreground">Last login</p>
                     </div>
-                    <p className={`text-sm font-semibold ${!isNaN(daysLogin) && daysLogin > 14 ? 'text-orange-400' : 'text-foreground'}`}>
+                    <p className={`text-sm font-semibold ${!isNaN(daysLogin) && daysLogin > 14 ? 'text-orange-600' : 'text-foreground'}`}>
                       {!isNaN(daysLogin) ? `${daysLogin} days ago` : 'No data'}
                     </p>
                   </div>
@@ -406,7 +413,7 @@ export default function ClientDetailPanel({
                       <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                       <p className="text-xs text-muted-foreground">Last submission</p>
                     </div>
-                    <p className={`text-sm font-semibold ${!isNaN(daysSub) && daysSub > 40 ? 'text-orange-400' : 'text-foreground'}`}>
+                    <p className={`text-sm font-semibold ${!isNaN(daysSub) && daysSub > 40 ? 'text-orange-600' : 'text-foreground'}`}>
                       {!isNaN(daysSub) ? `${daysSub} days ago` : 'Never'}
                     </p>
                   </div>
@@ -419,7 +426,7 @@ export default function ClientDetailPanel({
                       <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                       <p className="text-xs text-muted-foreground">Last login</p>
                     </div>
-                    <p className={`text-sm font-semibold ${!isNaN(daysLogin) && daysLogin > 14 ? 'text-orange-400' : 'text-foreground'}`}>
+                    <p className={`text-sm font-semibold ${!isNaN(daysLogin) && daysLogin > 14 ? 'text-orange-600' : 'text-foreground'}`}>
                       {!isNaN(daysLogin) ? `${daysLogin} days ago` : 'No data'}
                     </p>
                   </div>
@@ -428,7 +435,7 @@ export default function ClientDetailPanel({
                       <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                       <p className="text-xs text-muted-foreground">Last submission</p>
                     </div>
-                    <p className={`text-sm font-semibold ${!isNaN(daysSub) && daysSub > 40 ? 'text-orange-400' : 'text-foreground'}`}>
+                    <p className={`text-sm font-semibold ${!isNaN(daysSub) && daysSub > 40 ? 'text-orange-600' : 'text-foreground'}`}>
                       {!isNaN(daysSub) ? `${daysSub} days ago` : 'Never'}
                     </p>
                   </div>
@@ -451,7 +458,7 @@ export default function ClientDetailPanel({
                   {clientCompletions.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {clientCompletions.map(comp => (
-                        <span key={comp.task_key} className="px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded-full capitalize">
+                        <span key={comp.task_key} className="px-2 py-0.5 bg-green-500/10 text-success text-xs rounded-full capitalize">
                           {comp.task_key.replace(/-/g, ' ')}
                         </span>
                       ))}
@@ -610,7 +617,7 @@ export default function ClientDetailPanel({
                             </span>
                             <span className="text-foreground">${r.toLocaleString()} rev</span>
                             <span className="text-foreground">{row.content_posts ?? '—'} posts</span>
-                            <span className="text-green-400">{row.new_clients ?? '—'} clients</span>
+                            <span className="text-success">{row.new_clients ?? '—'} clients</span>
                           </div>
                         );
                       })}

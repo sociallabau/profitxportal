@@ -8,7 +8,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
 const SYSTEM_PROMPT = `You are a content writer for a videographer who runs a retainer-based content business.
 You write in a direct, plain, conversational tone — the way someone would talk to a client over coffee, not in a boardroom.
@@ -205,8 +204,8 @@ Generate ${which === "all" ? "the reel framework, carousel, and email" : `only t
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

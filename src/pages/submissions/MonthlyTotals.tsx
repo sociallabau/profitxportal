@@ -4,6 +4,58 @@ import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
+import { useProfile } from '@/hooks/useProfile';
+import { useGateBuild } from '@/hooks/usePlaybook';
+import { ROMAN, gateNumber, type TaskWithStatus } from '@/lib/playbook';
+
+type Tick = { checked: boolean; proof: string; note: string };
+
+/** "Your gate build list": tick what you built this month and drop the proof for Dan. */
+function BuildCheckIn({ tasks, gate, ticks, onChange }: {
+  tasks: TaskWithStatus[]; gate: number; ticks: Record<string, Tick>; onChange: (id: string, t: Tick) => void;
+}) {
+  if (!tasks.length) return null;
+  return (
+    <div className="bg-card border border-border rounded-xl p-5">
+      <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Your Gate {ROMAN[gate]} build list</h3>
+      <p className="text-xs text-muted-foreground mb-4">Tick what you built this month and drop the proof. Dan approves each one.</p>
+      <div className="space-y-3">
+        {tasks.map(task => {
+          const locked = task.status === 'approved' || task.kind === 'kickoff';
+          const t = ticks[task.id] ?? { checked: false, proof: task.progress?.proof_url ?? '', note: '' };
+          return (
+            <div key={task.id} className={`rounded-xl border border-border p-3.5 ${locked ? 'opacity-70' : ''}`}>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" disabled={locked} checked={locked ? task.status === 'approved' : t.checked}
+                  onChange={e => onChange(task.id, { ...t, checked: e.target.checked })} className="w-4 h-4 accent-primary mt-0.5" />
+                <div className="min-w-0">
+                  <span className="text-sm font-semibold text-foreground">{task.title}</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {task.status === 'approved' ? 'Approved by Dan ✓'
+                      : task.kind === 'kickoff' ? 'Dan ticks this off after your kickoff call'
+                      : task.status === 'submitted' ? 'Submitted, waiting on Dan. Tick again to update your proof.'
+                      : task.status === 'needs_changes' ? `Dan sent this back: ${task.progress?.review_note ?? 'take another look'}`
+                      : task.kind === 'monthly' ? 'Monthly' : 'Once'}
+                  </p>
+                </div>
+              </label>
+              {t.checked && !locked && (
+                <div className="grid sm:grid-cols-2 gap-2 mt-3 pl-7">
+                  <input value={t.proof} onChange={e => onChange(task.id, { ...t, proof: e.target.value })}
+                    placeholder={task.proof_hint || 'Link to your proof'}
+                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <input value={t.note} onChange={e => onChange(task.id, { ...t, note: e.target.value })}
+                    placeholder="Anything Dan should know (optional)"
+                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function ScoreSlider({ label, sublabel, value, onChange }: {
   label: string; sublabel?: string; value: string; onChange: (v: string) => void;
@@ -48,6 +100,10 @@ export default function MonthlyTotals() {
   });
   const [saved, setSaved] = useState(false);
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const { data: profile } = useProfile();
+  const gate = gateNumber(profile?.gate);
+  const { tasks } = useGateBuild(user?.id, gate, currentMonth);
+  const [ticks, setTicks] = useState<Record<string, Tick>>({});
 
   const { data: history } = useQuery({
     queryKey: ['monthly-totals-history', user?.id],
@@ -90,6 +146,16 @@ export default function MonthlyTotals() {
       }, { onConflict: 'user_id,month' });
       if (error) throw error;
 
+      // Build list ticks go in with the numbers. The DB trigger keeps them 'submitted' until Dan reviews.
+      const ticked = tasks.filter(t => ticks[t.id]?.checked && t.status !== 'approved' && t.kind !== 'kickoff');
+      if (ticked.length) {
+        const { error: buildError } = await supabase.from('member_task_progress').upsert(
+          ticked.map(t => ({ user_id: user!.id, task_id: t.id, period: t.period, status: 'submitted', proof_url: ticks[t.id].proof.trim() || null, member_note: ticks[t.id].note.trim() || null })),
+          { onConflict: 'user_id,task_id,period' },
+        );
+        if (buildError) throw buildError;
+      }
+
       if (form.biggest_win.trim()) {
         await supabase.from('weekly_wins').insert({
           user_id: user!.id,
@@ -107,6 +173,8 @@ export default function MonthlyTotals() {
       qc.invalidateQueries({ queryKey: ['monthly-totals-history'] });
       qc.invalidateQueries({ queryKey: ['monthly-history'] });
       qc.invalidateQueries({ queryKey: ['wins-wall'] });
+      qc.invalidateQueries({ queryKey: ['member-playbook', user?.id] });
+      setTicks({});
       setForm({
         oneoff_revenue: '', mrr_manual: '', total_revenue: '', expenses: '', expense_contractors: '', expense_software: '', expense_owner_pay: '', expense_other: '',
         ad_spend: '', content_posts: '', leads_generated: '', meetings: '',
@@ -256,6 +324,8 @@ export default function MonthlyTotals() {
           </div>
         </div>
 
+        {gate && <BuildCheckIn tasks={tasks} gate={gate} ticks={ticks} onChange={(id, t) => setTicks(prev => ({ ...prev, [id]: t }))} />}
+
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Wins & Focus</h3>
           <div>
@@ -275,7 +345,7 @@ export default function MonthlyTotals() {
 
         <div className="flex items-center justify-between">
           {saved
-            ? <span className="text-sm text-green-400 font-semibold">✓ Submitted! Dan can see this now. Your win has been posted to the Wins Wall.</span>
+            ? <span className="text-sm text-success font-semibold">✓ Submitted! Dan can see this now. Your win has been posted to the Wins Wall.</span>
             : <span className="text-xs text-muted-foreground">All fields are optional — fill in what you know.</span>}
           <button onClick={() => submit.mutate()} disabled={submit.isPending}
             className="px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg text-sm hover:bg-primary/90 transition disabled:opacity-50">
@@ -309,8 +379,8 @@ export default function MonthlyTotals() {
                       <td className="py-2.5 font-semibold text-primary pr-4">${mrr.toLocaleString()}</td>
                       <td className="py-2.5 text-foreground pr-4">${oneoffs.toLocaleString()}</td>
                       <td className="py-2.5 text-foreground pr-4">${revenue.toLocaleString()}</td>
-                      <td className="py-2.5 text-orange-400 pr-4">${expenses.toLocaleString()}</td>
-                      <td className={`py-2.5 font-semibold pr-4 ${profit >= 0 ? 'text-green-400' : 'text-destructive'}`}>${profit.toLocaleString()}</td>
+                      <td className="py-2.5 text-orange-600 pr-4">${expenses.toLocaleString()}</td>
+                      <td className={`py-2.5 font-semibold pr-4 ${profit >= 0 ? 'text-success' : 'text-destructive'}`}>${profit.toLocaleString()}</td>
                       <td className="py-2.5 text-foreground pr-4">{row.content_posts ?? '—'}</td>
                       <td className="py-2.5 text-foreground pr-4">{row.leads_generated ?? '—'}</td>
                       <td className="py-2.5 text-foreground pr-4">{row.meetings ?? '—'}</td>
