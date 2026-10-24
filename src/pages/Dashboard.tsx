@@ -319,13 +319,8 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {gate && (
-        <div className="mb-6">
-          <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={example ? undefined : user?.id} compact />
-        </div>
-      )}
-
-      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} keyTask={next?.title ?? dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up} />
+      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} keyTask={next?.title ?? dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up}
+        nextMove={gate ? <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact /> : undefined} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">

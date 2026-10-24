@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Flag, Crosshair, ArrowUpRight, Flame, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { REVENUE_STEPS, focusBullets, revenuePosition, submissionStreak } from '@/lib/dashboardProgress';
@@ -24,9 +25,10 @@ function FocusList({ items, fallback }: { items: string[]; fallback?: string }) 
   );
 }
 
-export default function DashboardProgress({ series, gate, keyTask, moveUp, example = false }: {
+/** `nextMove` (the Playbook's "Your next move" card) replaces the Focus card once the member has a gate. */
+export default function DashboardProgress({ series, gate, keyTask, moveUp, nextMove, example = false }: {
   series: RevenuePoint[]; gate?: string | null; keyTask?: string | null; moveUp?: string | null;
-  example?: boolean;
+  nextMove?: ReactNode; example?: boolean;
 }) {
   const navigate = useNavigate();
   const current = series.at(-1);
@@ -58,6 +60,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, examp
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-5">
         <div className="flex flex-col gap-5">
+          {nextMove ?? (
           <div className="dashboard-focus rounded-lg border border-primary/35 bg-card p-5 flex-1">
             <div className="flex items-center justify-between gap-2 mb-4">
               <h2 className="text-xs font-semibold text-primary flex items-center gap-2 flex-wrap"><Crosshair className="w-4 h-4" /> Your Focus <ExampleLabel show={example} /></h2>
@@ -72,6 +75,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, examp
               <FocusList items={focusBullets(moveUp)} />
             </div>}
           </div>
+          )}
           <div className="rounded-lg bg-card border border-border p-5">
             <h2 className="text-xs font-semibold text-muted-foreground flex items-center gap-2 flex-wrap">Monthly submission streak <ExampleLabel show={example} /> <Flame className="w-4 h-4 text-primary" /></h2>
             <p className="mt-3 flex items-baseline gap-2"><span className="text-3xl font-semibold">{streak}</span><span className="text-xs text-muted-foreground">months · longest {longest}</span></p>

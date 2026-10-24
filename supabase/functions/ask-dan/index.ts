@@ -12,9 +12,10 @@ import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
 import { loadExtras } from "./dossier.ts";
 import { bestRecording } from "./recordings.ts";
+import { loadBuildHelp } from "./buildHelp.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
-import { BRAIN_HEADER, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
+import { BRAIN_HEADER, BUILD_HELP_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
 const SONNET = "claude-sonnet-5-5";
@@ -349,9 +350,12 @@ async function answerPipeline(p: PipelineInput) {
   const catalogueLines = p.catalogue.split("\n").map(l => l.trim()).filter(Boolean);
   const shortAnswer = !!plan.is_boundary || !!plan.asks_about_other_member;
   const recording = shortAnswer ? null : bestRecording(passages, catalogueLines, p.vaultSources);
+  // "Help me do this" on a build task: the task, Dan's proof ask and its module content, walked through as steps.
+  const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null);
+  const buildText = buildHelp ? `${buildHelp}\n\n${BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${recording ? `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}\nUse this exact line as the resource unless another line fits the question clearly better.\n\n` : ""}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${recording ? `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}\nUse this exact line as the resource unless another line fits the question clearly better.\n\n` : ""}${buildText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
   let draft: Answer | null = null;
@@ -365,7 +369,7 @@ async function answerPipeline(p: PipelineInput) {
   // CHECK
   p.status?.("Checking with Dan's playbook…");
   const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT, cache_control: { type: "ephemeral" } }];
-  const checkBase = `RESOURCES\n${catalogue}\n\nPASSAGES\n${passageText}\n\n${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
+  const checkBase = `RESOURCES\n${catalogue}\n\nPASSAGES\n${passageText}\n\n${buildText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
     for (let i = 0; i < 2; i++) {
       try {
@@ -398,10 +402,10 @@ async function answerPipeline(p: PipelineInput) {
       if (wordCount(text) < 15 || wordCount(text) > 60) out.push("boundary/privacy reply must be 15–60 words");
       if (a.points.length || a.note) out.push("boundary/privacy reply must be 1–2 short lines, no points or note");
     } else {
-      if (a.points.length < 2 || a.points.length > 4) out.push("needs 2–4 dot points");
+      if (buildHelp ? a.points.length < 3 || a.points.length > 5 : a.points.length < 2 || a.points.length > 4) out.push(buildHelp ? "needs 3–5 build steps" : "needs 2–4 dot points");
       if (a.points.some(pt => !pt.why.trim())) out.push("each point needs one short reason");
       if (wordCount(a.answer) > 18) out.push("stance must be max ~15 words");
-      if (wordCount(text) > 130) out.push("cut to under ~110 words total");
+      if (wordCount(text) > (buildHelp ? 185 : 130)) out.push(buildHelp ? "cut to under ~160 words total" : "cut to under ~110 words total");
     }
     // Ads/scaling/pricing questions must use the member's cost per client — only when it was actually computed.
     const cpc = block.derived?.cost_per_client;
@@ -417,7 +421,7 @@ async function answerPipeline(p: PipelineInput) {
     return { out, names };
   };
   const shortReply = shortAnswer;
-  const maximum = shortReply ? 60 : 115;
+  const maximum = shortReply ? 60 : buildHelp ? 170 : 115;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = {
     ...final,

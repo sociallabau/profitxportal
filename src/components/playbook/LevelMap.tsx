@@ -70,7 +70,7 @@ export default function LevelMap({ gates, current }: { gates: PlaybookGate[]; cu
   const lit = xs[current - 1] / 100;
   return (
     <>
-      <div className="relative hidden md:block h-[360px]">
+      <div className="relative hidden md:block h-[380px] mt-10">
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
           <defs>
             <linearGradient id="pb-path" x1="0" x2="1">
