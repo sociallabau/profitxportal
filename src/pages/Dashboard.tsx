@@ -13,7 +13,8 @@ import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 import ExampleLabel from '@/components/ExampleLabel';
-import { FocusActions } from '@/components/growth-hub/GrowthHubCards';
+import { BuildList, NextMove } from '@/components/growth-hub/GrowthHubCards';
+import DanAiButton from '@/components/DanAiButton';
 import { useGateBuild } from '@/hooks/useGrowthHub';
 import { useDanBrief } from '@/hooks/useDanBrief';
 import { gateNumber, nextTask } from '@/lib/growthHub';
@@ -308,6 +309,8 @@ export default function Dashboard() {
           </h1>
           <p className="text-sm text-muted-foreground">Here’s where ProfitX is right now.</p>
         </div>
+        <div className="flex items-center gap-3">
+        {!example && <DanAiButton isAdmin={Boolean(profile?.is_admin)} />}
         <Button
           disabled={example}
           onClick={() => navigate('/submissions/monthly')}
@@ -317,12 +320,12 @@ export default function Dashboard() {
           Submit Monthly Report
           <ExampleLabel show={example} />
         </Button>
+        </div>
       </div>
 
-      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} moveUp={dashboardProfile?.gate_move_up}
-        keyTask={gate ? (next?.title ?? 'Build list clear for this month. Hold your numbers and Dan will move you up.') : dashboardProfile?.gate_key_task}
-        keyTaskNote={gate ? brief : null}
-        keyTaskActions={gate && next ? <FocusActions task={next} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} /> : undefined} />
+      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} moveUp={dashboardProfile?.gate_move_up} keyTask={dashboardProfile?.gate_key_task}
+        nextMove={gate ? <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact /> : undefined}
+        buildSteps={gate ? <BuildList tasks={buildTasks} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} /> : undefined} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">

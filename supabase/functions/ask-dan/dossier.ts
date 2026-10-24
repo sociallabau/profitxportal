@@ -37,6 +37,13 @@ export type MemberExtras = {
   memory: { summary: string; refreshed_at: string | null; stale: boolean } | null;
   instagram: { handle: string; posts: IgPost[]; fetched_at: string | null } | null;
   journey: { joined: string | null; starting_mrr: number | null; first_month: string | null; first_mrr: number | null };
+  modules_done: string[];
+  training_viewed: string[];
+  financial_audit: string | null;
+  prospects: { total: number; by_stage: Record<string, number> };
+  dm_campaign: { total: number; by_stage: Record<string, number>; qualified: number };
+  cash_menu_done: string[];
+  saved_ideas: number;
 };
 
 const GATE_NAMES: Record<string, number> = { fix: 1, fuel: 2, scale: 3, supercharge: 4 };
@@ -66,6 +73,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
   const [
     settings, tasks, progress, checkIns, clients, hot, weekly, monday, posts, ads,
     audit, scores, review, notes, health, questions, memory, joined, start, first,
+    checklist, views, finAudit, journeyRows, followers, cashMenu, ideas, chats,
   ] = await Promise.all([
     q(admin.from("member_playbook").select("fast_track_lead_gen, extra_modules").eq("user_id", memberId).maybeSingle()),
     g ? q(admin.from("playbook_tasks").select("id, title, kind, training_label, module_codes, position").eq("gate", g).eq("active", true).order("position")) : null,
@@ -87,6 +95,14 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     q(admin.from("profiles").select("created_at").eq("id", memberId).maybeSingle()),
     q(admin.from("goals").select("starting_mrr").eq("user_id", memberId).maybeSingle()),
     q(admin.from("monthly_totals").select("month, mrr, mrr_manual").eq("user_id", memberId).order("month", { ascending: true }).limit(1).maybeSingle()),
+    q(admin.from("checklist_progress").select("task_key").eq("user_id", memberId).eq("completed", true).limit(300)),
+    q(admin.from("page_views").select("page").eq("user_id", memberId).gte("viewed_at", since30).limit(1000)),
+    q(admin.from("financial_audits").select("kind, period, audit, created_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(1).maybeSingle()),
+    q(admin.from("client_journey").select("stage").eq("user_id", memberId).limit(500)),
+    q(admin.from("campaign_followers").select("stage, qualified").eq("user_id", memberId).limit(1000)),
+    q(admin.from("cash_menu_actions").select("action_key, completed_at").eq("user_id", memberId).not("completed_at", "is", null).limit(50)),
+    Promise.resolve(admin.from("saved_ideas").select("id", { count: "exact", head: true }).eq("user_id", memberId)).then((r: { count: number | null }) => r.count ?? 0).catch(() => 0),
+    q(admin.from("dan_ai_messages").select("content, created_at").eq("user_id", memberId).eq("role", "user").order("created_at", { ascending: false }).limit(8)),
   ]);
 
   // Build list: the current gate's tasks with this member's status for the right period.
@@ -143,7 +159,17 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     review_focus: review ? clip((review as { focus: string | null }).focus, 260) || null : null,
     coach_notes: ((notes ?? []) as { note: string }[]).map(n => clip(n.note, 200)),
     health: h ? clip([h.health_status, h.notes].filter(Boolean).join(" — "), 200) || null : null,
-    recent_questions: ((questions ?? []) as { question: string }[]).map(x => clip(x.question, 120)),
+    recent_questions: [...new Set([
+      ...((chats ?? []) as { content: string }[]).map(x => clip(x.content, 120)),
+      ...((questions ?? []) as { question: string }[]).map(x => clip(x.question, 120)),
+    ])].slice(0, 8),
+    modules_done: [...new Set(((checklist ?? []) as { task_key: string }[]).map(c => c.task_key.split(/[:/]/)[0]))].slice(0, 30),
+    training_viewed: topCounts(((views ?? []) as { page: string }[]).map(v => v.page), 8),
+    financial_audit: finAudit ? clip(`${(finAudit as { kind: string }).kind}${(finAudit as { period: string | null }).period ? ` (${(finAudit as { period: string }).period})` : ""}: ${(finAudit as { audit: string | null }).audit ?? ""}`, 400) : null,
+    prospects: stageCounts(((journeyRows ?? []) as { stage: string }[]).map(r => r.stage)),
+    dm_campaign: { ...stageCounts(((followers ?? []) as { stage: string }[]).map(r => r.stage)), qualified: ((followers ?? []) as { qualified: boolean | null }[]).filter(r => r.qualified).length },
+    cash_menu_done: ((cashMenu ?? []) as { action_key: string }[]).map(c => c.action_key).slice(0, 20),
+    saved_ideas: typeof ideas === "number" ? ideas : 0,
     instagram: mem?.instagram_handle && Array.isArray(mem.instagram) ? { handle: mem.instagram_handle, posts: mem.instagram, fetched_at: mem.instagram_fetched_at } : null,
     journey: {
       joined: (joined as { created_at: string } | null)?.created_at?.slice(0, 10) ?? null,
@@ -153,6 +179,18 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     },
     memory: mem?.summary ? { summary: mem.summary, refreshed_at: mem.refreshed_at, stale: !mem.refreshed_at || mem.dirty_at > mem.refreshed_at } : null,
   };
+}
+
+function stageCounts(stages: string[]) {
+  const by_stage: Record<string, number> = {};
+  for (const s of stages) by_stage[s || "unsorted"] = (by_stage[s || "unsorted"] ?? 0) + 1;
+  return { total: stages.length, by_stage };
+}
+
+function topCounts(items: string[], n: number): string[] {
+  const c = new Map<string, number>();
+  for (const i of items) c.set(i, (c.get(i) ?? 0) + 1);
+  return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => `${k} (${v})`);
 }
 
 /** The next build task to work on: needs-changes first, then the first open one. */

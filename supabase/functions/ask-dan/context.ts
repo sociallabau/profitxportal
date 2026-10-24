@@ -3,6 +3,7 @@
 import { contextSections, isFilled, type ContextAnswers } from "../_shared/contextRoom.ts";
 import { nextBuildTask, type MemberExtras } from "./dossier.ts";
 import { instagramLines } from "./instagram.ts";
+import { signalLines, signals } from "./signals.ts";
 
 export type Totals = {
   month: string; mrr?: number | null; mrr_manual?: number | null; total_revenue?: number | null;
@@ -11,6 +12,7 @@ export type Totals = {
   oneoff_revenue?: number | null; expenses?: number | null; calls_showed?: number | null;
   active_retainers?: number | null; retainers_lost?: number | null; retainer_convos?: number | null; ad_leads?: number | null;
   case_studies_posted?: number | null; ad_spend_awareness?: number | null; ad_spend_leadgen?: number | null;
+  meetings?: number | null; expense_contractors?: number | null;
 };
 export type Goal = {
   starting_mrr?: number | null; target_mrr?: number | null; target_date?: string | null;
@@ -167,6 +169,7 @@ export function buildMemberBlock(m: MemberInput, today = new Date()): { text: st
   else L.push("- Goal: none set");
   if (d.context_room_missing.length) L.push(`Missing from Context Room: ${d.context_room_missing.join(", ")}`);
   if (m.extras) L.push(...extrasLines(m.extras));
+  L.push(...signalLines(signals(m, d)));
 
   const summary = [m.name, m.gate ? `gate: ${m.gate}` : null, d.mrr_latest != null ? `MRR ${money(d.mrr_latest)}` : null,
     d.cost_per_client != null ? `cost/client ~${money(d.cost_per_client)}` : null, `data ${d.data_freshness}`, `goal ${d.goal_status}`]
@@ -219,6 +222,13 @@ export function extrasLines(x: MemberExtras): string[] {
     if (x.health) L.push(`- Health: ${x.health}`);
     for (const n of x.coach_notes) L.push(`- ${n}`);
   }
+  if (x.modules_done.length) L.push(`Roadmap modules they've completed: ${x.modules_done.join(", ")}`);
+  if (x.training_viewed.length) L.push(`Portal pages they've opened in the last 30 days (most first): ${x.training_viewed.join(", ")}`);
+  if (x.financial_audit) L.push(`Latest financial audit: ${x.financial_audit}`);
+  if (x.prospects.total) L.push(`Client journey (prospects): ${x.prospects.total} (${Object.entries(x.prospects.by_stage).map(([k, v]) => `${k} ${v}`).join(", ")})`);
+  if (x.dm_campaign.total) L.push(`DM campaign followers: ${x.dm_campaign.total} (${Object.entries(x.dm_campaign.by_stage).map(([k, v]) => `${k} ${v}`).join(", ")}; ${x.dm_campaign.qualified} qualified)`);
+  if (x.cash_menu_done.length) L.push(`Cash Menu actions they've done: ${x.cash_menu_done.join(", ")}`);
+  if (x.saved_ideas) L.push(`Content ideas saved: ${x.saved_ideas}`);
   if (x.recent_questions.length) L.push(`What they've asked Dan AI lately (newest first): ${x.recent_questions.map(q => `"${q}"`).join("; ")}`);
   return L;
 }

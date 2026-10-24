@@ -16,6 +16,8 @@ import { loadBuildHelp } from "./buildHelp.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
 import { gateFromLabel, missingRules, mustSay } from "./mustSay.ts";
+import { signals } from "./signals.ts";
+import { prescribe, workshopGuideText } from "./workshops.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
@@ -158,7 +160,7 @@ async function loadMemberInput(admin: DB, memberId: string): Promise<MemberInput
     profileQuery,
     admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
     admin.from("monthly_totals")
-      .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts, active_retainers, retainers_lost, retainer_convos, ad_leads, case_studies_posted, ad_spend_awareness, ad_spend_leadgen")
+      .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts, active_retainers, retainers_lost, retainer_convos, ad_leads, case_studies_posted, ad_spend_awareness, ad_spend_leadgen, meetings, expense_contractors")
       .eq("user_id", memberId).order("month", { ascending: false }).limit(6),
     admin.from("goals").select("starting_mrr, target_mrr, target_date, retainer_tier_1, retainer_tier_2, retainer_tier_3").eq("user_id", memberId).maybeSingle(),
     extrasPromise,
@@ -327,6 +329,7 @@ type PipelineInput = {
   admin: DB; question: string; history: Turn[]; catalogue: string; vaultSources: Record<string, string>;
   mode: "member" | "admin" | "test"; member: MemberInput | null | Promise<MemberInput | null>; memberId: string | null;
   clock: ReturnType<typeof timing>; status?: (status: string) => void;
+  extraRules?: string; // self-test only: extra rules appended to the draft and checker prompts
 };
 async function answerPipeline(p: PipelineInput) {
   const issues: { type: string; note: string }[] = [];
@@ -345,12 +348,24 @@ async function answerPipeline(p: PipelineInput) {
   const block = member ? buildMemberBlock(member) : { text: "ABOUT THIS MEMBER: none (general answer, no member selected).", derived: null, hasContext: false, summary: "no member" };
   const { plan, fallback: planFallback } = await planned;
   const passages = await clock.measure("retrieval", () => retrieve(p.admin, p.question, plan, { privacy, askerName, otherTokens: tokens }));
-  const passageText = passages.map(c => `[${SOURCE_TAGS[c.source_type] ?? c.source_type}] ${c.title}\n${c.content}`).join("\n\n---\n\n");
+  // Dan's own saved answers to similar questions go first: they're his exact words.
+  const { data: saved } = await p.admin.rpc("search_saved_answers", { q: p.question, limit_n: 3 }).then((r: { data: unknown }) => r, () => ({ data: [] }));
+  const savedText = ((saved ?? []) as { question: string; answer: string }[]).map(a => `[Dan's saved answer] Q: ${a.question}\n${a.answer}`).join("\n\n---\n\n");
+  const passageText = [savedText, passages.map(c => `[${SOURCE_TAGS[c.source_type] ?? c.source_type}] ${c.title}\n${c.content}`).join("\n\n---\n\n")].filter(Boolean).join("\n\n---\n\n");
 
   const brainBlock: Block[] = brain.text ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }] : [];
   const catalogueLines = p.catalogue.split("\n").map(l => l.trim()).filter(Boolean);
   const shortAnswer = !!plan.is_boundary || !!plan.asks_about_other_member;
   const recording = shortAnswer ? null : bestRecording(passages, catalogueLines, p.vaultSources);
+  // The workshop for the member's real problem: their question plus what looks off in their numbers.
+  const memberSignals = member && block.derived ? signals(member, block.derived) : [];
+  const prescription = shortAnswer ? null : prescribe(`${p.question} ${memberSignals.map(x => `${x.problem} ${x.fix}`).join(" ")}`, catalogueLines);
+  const guideText = shortAnswer ? "" : workshopGuideText(catalogueLines);
+  const workshopText = shortAnswer ? "" : [
+    guideText && `WORKSHOP GUIDE — what each recording fixes (pick the one that fixes the problem you diagnose):\n${guideText}`,
+    recording && `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}`,
+    prescription && prescription !== recording && `PRESCRIBED FOR THEIR PROBLEM (from their question and what looks off): ${prescription}`,
+  ].filter(Boolean).join("\n\n");
   // "Help me do this" on a build task: the task, Dan's proof ask and its module content, walked through as steps.
   const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null);
   const buildText = buildHelp ? `${buildHelp}\n\n${BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
@@ -362,9 +377,9 @@ async function answerPipeline(p: PipelineInput) {
     costPerClient: block.derived?.cost_per_client ?? null, lowestPrice: block.derived?.lowest_retainer_price ?? null,
   });
   const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}\n\n=====\n\n` : "";
-  const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], ""), cache_control: { type: "ephemeral" } }];
+  const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], "") + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${recording ? `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}\nUse this exact line as the resource unless another line fits the question clearly better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
   let draft: Answer | null = null;
@@ -372,13 +387,13 @@ async function answerPipeline(p: PipelineInput) {
   if (!draft) {
     issues.push({ type: "guardrail", note: "Draft JSON invalid twice — flagged to Dan" });
     const final: Answer = { answer: FLAG_REPLY, points: [], note: null, resource: null };
-    return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish() };
+    return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short) };
   }
 
   // CHECK
   p.status?.("Checking with Dan's Growth Hub…");
-  const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT, cache_control: { type: "ephemeral" } }];
-  const checkBase = `RESOURCES\n${catalogue}\n\nPASSAGES\n${passageText}\n\n${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
+  const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
+  const checkBase = `RESOURCES\n${catalogue}\n\n${workshopText ? `${workshopText}\n\n` : ""}PASSAGES\n${passageText}\n\n${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
     for (let i = 0; i < 2; i++) {
       try {
@@ -534,9 +549,10 @@ async function answerPipeline(p: PipelineInput) {
   if (final.resource && !matched) issues.push({ type: "guardrail", note: `Resource "${final.resource}" not in catalogue — removed` });
   final = { ...final, resource: matched };
   // Every real answer ends on the recording that covers it, when Drive gave us one.
-  if (!final.resource && recording && final.answer !== FLAG_REPLY && final.answer !== NAME_FALLBACK) final = { ...final, resource: recording };
+  const fallback = recording ?? prescription;
+  if (!final.resource && fallback && final.answer !== FLAG_REPLY && final.answer !== NAME_FALLBACK) final = { ...final, resource: fallback };
 
-  return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish() };
+  return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short) };
 }
 
 function buildDebug(mode: string, memberId: string | null, member: MemberInput | null, r: Awaited<ReturnType<typeof answerPipeline>>) {
@@ -553,6 +569,7 @@ function buildDebug(mode: string, memberId: string | null, member: MemberInput |
     passages: r.passages.map(c => ({ title: c.title, source_type: c.source_type, score: Math.round(c.score * 10) / 10 })),
     checker_issues: r.issues.filter(i => i.type !== "guardrail"),
     guardrails: r.issues.filter(i => i.type === "guardrail"),
+    signals: r.signals ?? [], recording: r.recording ?? null, prescription: r.prescription ?? null, must_say: r.must ?? [],
   };
 }
 
@@ -579,6 +596,117 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
   return checks;
 }
 
+// ---------- self-test ----------
+const VERSION = "2026-10-24.4";
+
+async function sameSecret(a: string, b: string): Promise<boolean> {
+  const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
+  const [x, y] = await Promise.all([h(a), h(b)]);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+/** Read-only checks for Claude's test loop: version, data coverage, answers for real members or personas, graded tests. Writes nothing. */
+// deno-lint-ignore no-explicit-any
+async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) {
+  const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 20000) : "(none available)";
+  const catalogueLines = catalogue.split("\n").map((l: string) => l.trim()).filter(Boolean);
+  const vaultSources: Record<string, string> = body.vault_sources && typeof body.vault_sources === "object" ? body.vault_sources : {};
+  const extraRules = typeof body.extra_rules === "string" ? body.extra_rules.slice(0, 4000) : undefined;
+  const action = body.action ?? "version";
+
+  if (action === "version") return { version: VERSION };
+
+  if (action === "coverage") {
+    const { data: profiles } = await admin.from("profiles").select("id, full_name, is_admin, archived_at, gate");
+    const members = ((profiles ?? []) as { id: string; full_name: string | null; is_admin: boolean | null; archived_at: string | null; gate: string | null }[])
+      .filter(p => !p.is_admin && !p.archived_at);
+    const rows = [];
+    for (const m of members) {
+      const input = await loadMemberInput(admin, m.id);
+      const x = input.extras;
+      const block = buildMemberBlock(input);
+      rows.push({
+        id: m.id, name: m.full_name, gate: m.gate,
+        context_room_fields: Object.values(input.answers).filter(v => Array.isArray(v) ? v.length : v != null && String(v).trim()).length,
+        monthly_totals: input.totals.length, goal: !!input.goal,
+        build_tasks: x?.build.length ?? 0, check_ins: x?.check_ins.length ?? 0, clients: x?.clients.count ?? 0, hot_list: x?.pipeline.total ?? 0,
+        wins: x?.wins.length ?? 0, content_30d: x?.content_30d.posts ?? 0, ads: x?.ads.length ?? 0, audit: !!x?.audit, weak_modules: x?.weak_modules.length ?? 0,
+        review: !!x?.review_focus, coach_notes: x?.coach_notes.length ?? 0, health: !!x?.health, questions: x?.recent_questions.length ?? 0,
+        memory: !!x?.memory, instagram_posts: x?.instagram?.posts.length ?? 0, modules_done: x?.modules_done.length ?? 0,
+        pages_viewed: x?.training_viewed.length ?? 0, financial_audit: !!x?.financial_audit, prospects: x?.prospects.total ?? 0,
+        dm_campaign: x?.dm_campaign.total ?? 0, cash_menu: x?.cash_menu_done.length ?? 0, saved_ideas: x?.saved_ideas ?? 0,
+        signals: block.derived ? signals(input, block.derived).map(s => s.problem) : [],
+        block_words: block.text.split(/\s+/).length,
+      });
+    }
+    const { data: docs } = await admin.from("knowledge_docs").select("source_type, created_at, source_id");
+    const byType: Record<string, number> = {};
+    let drive = 0, latest = "";
+    for (const d of (docs ?? []) as { source_type: string; created_at: string; source_id: string | null }[]) {
+      byType[d.source_type] = (byType[d.source_type] ?? 0) + 1;
+      if (d.source_id) drive++;
+      if (d.created_at > latest) latest = d.created_at;
+    }
+    const { count: chunks } = await admin.from("knowledge_chunks").select("id", { count: "exact", head: true });
+    const { count: saved } = await admin.from("saved_answers").select("id", { count: "exact", head: true });
+    const { data: sync } = await admin.from("drive_sync_state").select("*").limit(5);
+    const vaultLines = catalogueLines.filter((l: string) => l.startsWith("Vault · "));
+    const linked = new Set(Object.values(vaultSources));
+    const driveIds = new Set(((docs ?? []) as { source_id: string | null }[]).map(d => d.source_id).filter(Boolean));
+    return {
+      version: VERSION, members: rows.length, rows,
+      knowledge: { docs: (docs ?? []).length, by_type: byType, from_drive: drive, chunks, saved_answers: saved, latest_doc: latest, drive_sync: sync },
+      vault: {
+        recordings: vaultLines.length,
+        with_guide: vaultLines.filter((l: string) => workshopGuideText([l])).length,
+        transcript_in_knowledge: Object.entries(vaultSources).filter(([id]) => driveIds.has(id)).map(([, l]) => l),
+        recording_not_in_knowledge: Object.entries(vaultSources).filter(([id]) => !driveIds.has(id)).map(([, l]) => l),
+        lines_without_drive_id: vaultLines.filter((l: string) => !linked.has(l)),
+      },
+    };
+  }
+
+  if (action === "ask") {
+    const question = String(body.question ?? "").slice(0, 4000);
+    const memberId = typeof body.member_id === "string" ? body.member_id : null;
+    const member = body.persona ? persona(String(body.persona)) : memberId ? await loadMemberInput(admin, memberId) : null;
+    const mode = body.persona ? "test" : body.mode === "admin" ? "admin" : "member";
+    const r = await answerPipeline({ admin, question, history: [], catalogue, vaultSources, mode, member, memberId, clock, extraRules });
+    const short = wordCount(fullText(r.final)) <= 60 && !r.final.points.length;
+    return { version: VERSION, final: r.final, words: wordCount(fullText(r.final)), code_checks: codeChecks(r.final, catalogueLines, [], short), debug: buildDebug(mode, memberId, r.member, r), draft: r.draft };
+  }
+
+  if (action === "test") {
+    const { data: test } = await admin.from("dan_ai_tests").select("*").eq("name", String(body.test_name ?? "")).maybeSingle();
+    if (!test) return { error: "unknown test" };
+    const member = persona(test.persona_key);
+    const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, vaultSources, mode: "test", member, memberId: null, clock, extraRules });
+    const { data: allProfiles } = await admin.from("profiles").select("full_name");
+    const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
+    const short = !!r.plan.is_boundary || !!r.plan.asks_about_other_member;
+    const checks = codeChecks(r.final, catalogueLines, tokens, short);
+    let compare = "";
+    if (test.name === "ADS_5_DAYS_SCALE" && typeof body.compare_answer === "string") compare = `\n\n=====\n\nTEST 9 ANSWER (for comparison)\n${body.compare_answer}`;
+    const brain = await loadBrain(admin);
+    const criteria = [...(test.must_include as string[]).map(c => `include: ${c}`), ...(test.must_not as string[]).map(c => `must_not: ${c}`)].join("\n");
+    const sys: Block[] = [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }, { type: "text", text: GRADER_PROMPT }];
+    const msg = `${buildMemberBlock(member!).text}\n\nTOTAL WORD COUNT (computed in code, use for length criteria): ${wordCount(fullText(r.final))} across stance + points + note. Do not count resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(r.final)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
+    let graded: Record<string, unknown> | null = null;
+    for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
+    const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];
+    const pass = crit.length > 0 && crit.every(c => c.pass === true) && checks.every(c => c.pass);
+    return { version: VERSION, name: test.name, question: test.question, pass, criteria: crit, code_checks: checks, final: r.final, debug: buildDebug("test", null, member, r) };
+  }
+
+  if (action === "list_tests") {
+    const { data } = await admin.from("dan_ai_tests").select("name, category, persona_key, question, must_include, must_not, position").order("position");
+    return { tests: data ?? [] };
+  }
+  return { error: "unknown action" };
+}
+
 // ---------- handler ----------
 Deno.serve(async (req) => {
   const clock = timing();
@@ -599,6 +727,15 @@ Deno.serve(async (req) => {
       const results = [];
       for (const r of due) results.push({ user_id: r.user_id, ...(await refreshMemory(admin, r.user_id)) });
       return json({ refreshed: results.length, results });
+    }
+
+    // Self-test (Claude's verification loop), authenticated by the DAN_AI_TEST_KEY secret. Off when the secret isn't set.
+    const testKey = Deno.env.get("DAN_AI_TEST_KEY");
+    const givenKey = req.headers.get("x-dan-ai-test-key");
+    if (testKey && givenKey && await sameSecret(testKey, givenKey)) {
+      const admin = cronAdmin;
+      const body = await req.json().catch(() => ({}));
+      return json(await selfTest(admin, body, clock));
     }
 
     const authHeader = req.headers.get("Authorization");
