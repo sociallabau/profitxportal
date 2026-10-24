@@ -219,9 +219,12 @@ export default function DanAI() {
               <DanAiOrb state={orbState} intro />
             </div>
             {pending && (
-              <p className="text-center text-xs text-[hsl(var(--dan-muted))] mt-1">
-                {status}
-              </p>
+              <div className="w-full max-w-[680px] mx-auto mt-3 px-1">
+                <div className="dan-prism"><div className="dan-prism-fill" /></div>
+                <p className="text-center text-xs text-[hsl(var(--dan-muted))] mt-2">
+                  {status}
+                </p>
+              </div>
             )}
 
             {!convo ? (
