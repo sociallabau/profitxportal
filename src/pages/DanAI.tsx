@@ -73,7 +73,6 @@ export default function DanAI() {
   useEffect(() => {
     if (!user) return;
     loadThreads();
-      .then(({ data }) => { if (data?.length) setExamples(data.map(q => q.question)); });
   }, [user]);
 
   useEffect(() => {
