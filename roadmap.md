@@ -15,3 +15,6 @@
 - [x] Run the final Dan AI version twice, verify cache hits and report speed and scores; stable 17/17 quality was not reached (repeat failed FREE_CLIENT_TRAP and ADS_5_DAYS_EARLY).
 - [x] Carry prior member settings/context into Context Rooms without overwriting newer answers.
 - [x] Keep basic details visible and deeper questions collapsed; verify saving and layout.
+- [ ] Re-run only the final cron block and verify all three schedules.
+- [ ] Check persistent cron settings and configure the public URL and anon key; report any missing cron secret.
+- [x] Deploy the eight requested edge functions and remove the deployed legacy dan-ai function.
