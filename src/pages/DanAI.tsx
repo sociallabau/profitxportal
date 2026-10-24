@@ -37,11 +37,6 @@ function resourceTitle(r: string) {
 }
 interface Thread { id: string; title: string; at: string }
 
-  'How much should I charge for a monthly retainer?',
-  'A client wants to drop their price — do I hold or move?',
-  "My ads are getting leads but nobody's booking calls",
-  'How do I find and pay my first editor?',
-];
 
 function parseAnswer(content: string): Answer {
   try {
@@ -65,7 +60,6 @@ export default function DanAI() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
-  const [pending, setPending] = useState<null | 'thinking' | 'checking'>(null);
   const [status, setStatus] = useState('Reading your numbers…');
   const [examples, setExamples] = useState<string[]>(FALLBACK_EXAMPLES);
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
@@ -79,7 +73,6 @@ export default function DanAI() {
   useEffect(() => {
     if (!user) return;
     loadThreads();
-    supabase.from('suggested_questions').select('question').order('position', { ascending: true })
       .then(({ data }) => { if (data?.length) setExamples(data.map(q => q.question)); });
   }, [user]);
 
