@@ -25,10 +25,10 @@ function FocusList({ items, fallback }: { items: string[]; fallback?: string }) 
   );
 }
 
-/** `nextMove` (the Growth Hub "Your next move" card) replaces the Focus card once the member has a gate. */
-export default function DashboardProgress({ series, gate, keyTask, moveUp, nextMove, example = false }: {
+/** `keyTask` is the member's next Growth Hub task once they have a gate; `keyTaskNote` is Dan AI's brief and `keyTaskActions` its buttons. */
+export default function DashboardProgress({ series, gate, keyTask, keyTaskNote, keyTaskActions, moveUp, example = false }: {
   series: RevenuePoint[]; gate?: string | null; keyTask?: string | null; moveUp?: string | null;
-  nextMove?: ReactNode; example?: boolean;
+  keyTaskNote?: string | null; keyTaskActions?: ReactNode; example?: boolean;
 }) {
   const navigate = useNavigate();
   const current = series.at(-1);
@@ -60,7 +60,6 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-5">
         <div className="flex flex-col gap-5">
-          {nextMove ?? (
           <div className="dashboard-focus rounded-lg border border-primary/35 bg-card p-5 flex-1">
             <div className="flex items-center justify-between gap-2 mb-4">
               <h2 className="text-xs font-semibold text-primary flex items-center gap-2 flex-wrap"><Crosshair className="w-4 h-4" /> Your Focus <ExampleLabel show={example} /></h2>
@@ -69,13 +68,14 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
             <p className="text-base font-semibold text-primary mb-4">{gate || 'Your next step'} <ExampleLabel show={example} /></p>
             <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-2">Key next task <ExampleLabel show={example} /></p>
             <FocusList items={focusBullets(keyTask)} fallback="Complete your monthly report" />
+            {keyTaskNote && <p className="text-xs text-muted-foreground mt-2">{keyTaskNote}</p>}
+            {keyTaskActions}
             <Button variant="link" size="sm" className="px-0 mt-2" disabled={example} onClick={() => navigate('/growth-hub')}>Open your Growth Hub <ArrowUpRight /></Button>
             {moveUp && <div className="mt-4 pt-4 border-t border-primary/20">
               <p className="text-[10px] uppercase font-semibold text-primary flex items-center gap-1 mb-2 flex-wrap"><ArrowUpRight className="w-3 h-3" /> To move up a gate <ExampleLabel show={example} /></p>
               <FocusList items={focusBullets(moveUp)} />
             </div>}
           </div>
-          )}
           <div className="rounded-lg bg-card border border-border p-5">
             <h2 className="text-xs font-semibold text-muted-foreground flex items-center gap-2 flex-wrap">Monthly submission streak <ExampleLabel show={example} /> <Flame className="w-4 h-4 text-primary" /></h2>
             <p className="mt-3 flex items-baseline gap-2"><span className="text-3xl font-semibold">{streak}</span><span className="text-xs text-muted-foreground">months · longest {longest}</span></p>

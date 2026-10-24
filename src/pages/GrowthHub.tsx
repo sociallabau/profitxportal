@@ -59,7 +59,7 @@ export default function GrowthHub() {
   const { data: months } = useQuery({
     queryKey: ['growth-hub-months', memberId],
     enabled: !!memberId,
-    queryFn: async () => (await supabase.from('monthly_totals').select('month, content_posts, leads_generated, new_clients, mrr, mrr_manual')
+    queryFn: async () => (await supabase.from('monthly_totals').select('month, content_posts, leads_generated, new_clients, total_revenue, mrr, mrr_manual, oneoff_revenue')
       .eq('user_id', memberId!).order('month', { ascending: false }).limit(6)).data ?? [],
   });
   const { unlocked, dismiss } = useUnlock(viewed ? undefined : user?.id, gate);
@@ -68,7 +68,8 @@ export default function GrowthHub() {
   const g = gates[current - 1];
   const progress = buildProgress(tasks);
   const next = nextTask(tasks);
-  const mrr = months?.[0] ? (months[0].mrr ?? months[0].mrr_manual) : null;
+  const latest = months?.[0];
+  const revenue = latest ? (latest.total_revenue || (Number(latest.mrr_manual ?? latest.mrr) || 0) + (Number(latest.oneoff_revenue) || 0)) : null;
 
   return (
     <PageLayout>
@@ -92,7 +93,7 @@ export default function GrowthHub() {
           }} />
         <div className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex flex-wrap gap-2">
-            {mrr != null && <span className="glass-tile mono-label text-[10.5px] font-bold rounded-full px-3.5 py-2">MRR <span className="text-primary">{money(mrr)}</span></span>}
+            {revenue != null && <span className="glass-tile mono-label text-[10.5px] font-bold rounded-full px-3.5 py-2">Revenue <span className="text-primary">{money(revenue)}</span></span>}
             <span className="glass-tile mono-label text-[10.5px] font-bold rounded-full px-3.5 py-2">Build <span className="text-primary">{progress.done}/{progress.total}</span></span>
             <Link to="/submissions/monthly" className="violet-grad text-white mono-label text-[10.5px] font-bold rounded-full px-3.5 py-2 shadow-[0_10px_24px_-10px_rgb(133_54_245/0.8)]">
               Check-in · {daysToCheckIn()} days →

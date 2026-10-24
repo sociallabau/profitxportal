@@ -51,6 +51,24 @@ function useTicking(userId?: string) {
   };
 }
 
+/** The next task's buttons, for the Dashboard's Focus card. */
+export function FocusActions({ task, isAdmin, userId }: { task: TaskWithStatus; isAdmin: boolean; userId?: string }) {
+  const training = trainingLink(task);
+  const ticking = useTicking(userId);
+  const btn = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold';
+  return (
+    <div className="flex flex-wrap gap-2 mt-3">
+      {training?.href && (training.external
+        ? <a href={training.href} target="_blank" rel="noreferrer" className={`${btn} bg-primary text-primary-foreground`}><Play className="w-3 h-3 fill-current" />Watch {training.label}</a>
+        : <Link to={training.href} className={`${btn} bg-primary text-primary-foreground`}><Play className="w-3 h-3 fill-current" />Watch {training.label}</Link>)}
+      {canUseDanAi(isAdmin) && <Link to={askHref(task)} className={`${btn} bg-primary/10 text-primary`}><Sparkles className="w-3 h-3" />Help me do this</Link>}
+      {userId && canTickTask(task) && (
+        <button type="button" disabled={ticking.busy} onClick={() => ticking.tick(task)} className={`${btn} bg-primary/10 text-primary disabled:opacity-60`}><Check className="w-3 h-3" strokeWidth={3} />Tick it off</button>
+      )}
+    </div>
+  );
+}
+
 /** The one thing to do next. Dan AI's brief when there is one, the task either way. */
 export function NextMove({ task, brief, isAdmin, userId, compact = false }: { task: TaskWithStatus | null; brief: string | null; isAdmin: boolean; userId?: string; compact?: boolean }) {
   const training = task ? trainingLink(task) : null;

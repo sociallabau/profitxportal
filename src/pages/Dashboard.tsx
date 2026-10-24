@@ -13,7 +13,7 @@ import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 import ExampleLabel from '@/components/ExampleLabel';
-import { NextMove } from '@/components/growth-hub/GrowthHubCards';
+import { FocusActions } from '@/components/growth-hub/GrowthHubCards';
 import { useGateBuild } from '@/hooks/useGrowthHub';
 import { useDanBrief } from '@/hooks/useDanBrief';
 import { gateNumber, nextTask } from '@/lib/growthHub';
@@ -319,8 +319,10 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} keyTask={next?.title ?? dashboardProfile?.gate_key_task} moveUp={dashboardProfile?.gate_move_up}
-        nextMove={gate ? <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact /> : undefined} />
+      <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} moveUp={dashboardProfile?.gate_move_up}
+        keyTask={gate ? (next?.title ?? 'Build list clear for this month. Hold your numbers and Dan will move you up.') : dashboardProfile?.gate_key_task}
+        keyTaskNote={gate ? brief : null}
+        keyTaskActions={gate && next ? <FocusActions task={next} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} /> : undefined} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">
