@@ -4,7 +4,6 @@ import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen, ChevronDown, Chevro
 import OnboardingNoticeModal from '@/components/OnboardingNoticeModal';
 import RevenueLadder from '@/components/RevenueLadder';
 import RoadmapAudit from '@/components/RoadmapAudit';
-import ProfitXModel from '@/components/roadmap/ProfitXModel';
 
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
@@ -222,12 +221,6 @@ export default function Roadmap() {
       ) : (
         <GateModuleList gate={gate ?? 1} extra={memberGrowthHub?.settings.extra_modules ?? []} completionMap={completionMap} hasPage={hasPage} onOpen={(code) => navigate(`/module/${code}`)} />
       )}
-
-      <section className="bg-card border border-border rounded-xl p-4 sm:p-6 mt-8">
-        <h2 className="text-sm font-semibold">The ProfitX model</h2>
-        <p className="text-xs text-muted-foreground mt-0.5 mb-4">A sharp offer, consistent sales and simplified delivery. Tap any module to open it.</p>
-        <ProfitXModel gate={gate} />
-      </section>
 
       <LegacyModulesSection>
         <PillarRoadmap

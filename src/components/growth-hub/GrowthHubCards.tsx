@@ -33,7 +33,7 @@ const askHref = (task: TaskWithStatus) => `/dan-ai?q=${encodeURIComponent(helpPr
 const pill = 'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold';
 
 /** Proof goes to Dan on WhatsApp, not into the portal. */
-const proofPrompt = (task: TaskWithStatus) => `Send Dan your proof in WhatsApp${task.proof_hint ? `: ${task.proof_hint.charAt(0).toLowerCase()}${task.proof_hint.slice(1)}` : ''}.`;
+const proofPrompt = (task: TaskWithStatus) => `Send Dan your proof on WhatsApp${task.proof_hint ? `: ${task.proof_hint}` : ''}.`;
 const canTickTask = (task: TaskWithStatus) => task.kind !== 'kickoff' && task.status !== 'approved';
 
 /** Tick or untick a build task, with the WhatsApp proof nudge on tick. */
