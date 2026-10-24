@@ -113,6 +113,13 @@
       "when": 1792821255752,
       "tag": "0015_database_held_cron_token",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792822559104,
+      "tag": "0016_member_task_progress_own_untick",
+      "breakpoints": true
     }
   ]
 }
