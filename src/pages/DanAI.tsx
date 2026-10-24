@@ -62,7 +62,6 @@ export default function DanAI() {
   const [input, setInput] = useState('');
   const [pending, setPending] = useState<null | 'thinking' | 'checking'>(null);
   const [status, setStatus] = useState('Reading your numbers…');
-  const [examples, setExamples] = useState<string[]>(FALLBACK_EXAMPLES);
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [memberId, setMemberId] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
