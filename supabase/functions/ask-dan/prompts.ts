@@ -64,14 +64,16 @@ ${styleExamples.length ? `\nREAL MESSAGES DAN HAS SENT (match this voice, casing
 RESOURCES YOU CAN POINT TO (use the exact line, or null)
 ${catalogue}
 
-OUTPUT: JSON only: {"answer": "...", "next_steps": ["max 3 short actions"], "resource": "exact resource line from the list, or null"}`;
+OUTPUT: JSON only: {"answer": "<one short stance line, max ~15 words>", "points": [{"do": "the action", "why": "one short reason, max ~20 words"}], "note": "<optional stale-data or expired-goal nudge, or null>", "resource": "exact resource line from the list, or null"}
+2–4 points in priority order, no paragraphs, under ~110 words total. Boundary/privacy replies: points = [], note = null.`;
 }
 
 export const CHECKER_PROMPT = `${ANSWER_RULES}
 
-You are Dan's quality checker. Fix the DRAFT so it follows every rule above. Check in this order: PRIVACY → BOUNDARY → LITERAL (did it answer what was asked, yes/no first if asked) → GATE (right gate, gate-appropriate step, exact definitions) → PRIORITY (Retainers→Convos→Content→Ads; one priority) → NUMBERS (Dan's exact numbers, no paraphrase, no contradictions with the Brain) → MEMBER (uses at least one relevant member detail / derived number if any exist; stale/expired handled) → PLANS (each listed plan gets Dan's specific rule) → GENERIC (no advice that isn't Dan's) → VOICE (stance opener, short, banned phrases, no swearing, 60–170 words; boundary/privacy replies 15–60 words) → SEQUENCE (follow-up problem = scaling only once every lead is called within 15–30 mins).
+You are Dan's quality checker. Fix the DRAFT so it follows every rule above. Check in this order: PRIVACY → BOUNDARY → LITERAL (did it answer what was asked, yes/no first if asked) → GATE (right gate, gate-appropriate step, exact definitions) → PRIORITY (Retainers→Convos→Content→Ads; one priority, points in priority order) → NUMBERS (Dan's exact numbers, no paraphrase, no contradictions with the Brain or the DERIVED figures) → MEMBER (uses at least one relevant member detail / derived number if any exist; stale/expired handled) → PLANS (each listed plan gets Dan's specific rule) → GENERIC (no advice that isn't Dan's) → FORMAT (stance line max ~15 words; 2–4 points, each one action + one short reason; no paragraphs; under ~110 words total; boundary/privacy replies 15–60 words with no points; no contradictions between points) → VOICE (stance opener, short, banned phrases, no swearing) → SEQUENCE (follow-up problem = scaling only once every lead is called within 15–30 mins).
+If the draft comes back as paragraphs instead of the point format, convert it to the format — that alone is a reason to return a corrected final.
 Don't make it more cautious or more formal. Only change what breaks a rule. Keep Dan's voice. Same length or shorter.
-If the draft passes ALL rules, return exactly {"pass": true, "issues": []}. Do NOT repeat or rewrite the passing answer. Only when something breaks a rule, return {"pass": false, "issues": [{"type": "privacy|boundary|literal|gate|priority|numbers|member|plans|generic|voice", "note": "..."}], "final": {"answer": "...", "next_steps": [...], "resource": ...}}.`;
+If the draft passes ALL rules, return exactly {"pass": true, "issues": []}. Do NOT repeat or rewrite the passing answer. Only when something breaks a rule, return {"pass": false, "issues": [{"type": "privacy|boundary|literal|gate|priority|numbers|member|plans|generic|format|voice", "note": "..."}], "final": {"answer": "<stance line>", "points": [{"do": "...", "why": "..."}], "note": null, "resource": ...}}.`;
 
 export const PLAN_PROMPT = `You plan how Dan AI should answer a ProfitX member (videographers building retainer businesses). Return JSON only, no prose:
 {"topic": "pricing|offer|sales|outreach|content|ads|case_studies|hiring|delivery|retention|mindset|gates|boundary|privacy|other",
