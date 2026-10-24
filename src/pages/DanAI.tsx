@@ -43,10 +43,15 @@ function parseAnswer(content: string): Answer {
   try {
     const o = JSON.parse(content);
     if (o && typeof o.answer === 'string') {
-      return { answer: o.answer, next_steps: Array.isArray(o.next_steps) ? o.next_steps : [], resource: o.resource ?? null, context_used: typeof o.context_used === 'boolean' ? o.context_used : undefined };
+      const points: Point[] = Array.isArray(o.points)
+        ? o.points.map((p: unknown) => typeof p === 'object' && p !== null
+            ? { do: String((p as Point).do ?? ''), why: String((p as Point).why ?? '') }
+            : { do: String(p), why: '' }).filter((p: Point) => p.do)
+        : Array.isArray(o.next_steps) ? o.next_steps.map((s: unknown) => ({ do: String(s), why: '' })) : [];
+      return { answer: o.answer, points, note: typeof o.note === 'string' ? o.note : null, resource: o.resource ?? null, context_used: typeof o.context_used === 'boolean' ? o.context_used : undefined };
     }
   } catch { /* plain text */ }
-  return { answer: content, next_steps: [], resource: null };
+  return { answer: content, points: [], note: null, resource: null };
 }
 
 type Tab = 'chat' | 'knowledge' | 'checks' | 'tests';
@@ -121,7 +126,13 @@ export default function DanAI() {
     const data = await askDanStream({ question: asked, thread_id: threadId, catalogue: resourceCatalogue(), member_id: isAdmin && memberId ? memberId : undefined }, next => {
       setStatus(next); setPending(next.startsWith('Checking') ? 'checking' : 'thinking');
     });
-    const parsed: Answer = { answer: String(data.answer ?? ''), next_steps: Array.isArray(data.next_steps) ? data.next_steps.map(String) : [], resource: typeof data.resource === 'string' ? data.resource : null, context_used: data.context_used === true };
+    const parsed: Answer = {
+      answer: String(data.answer ?? ''),
+      points: Array.isArray(data.points) ? data.points.map((p: unknown) => typeof p === 'object' && p !== null ? { do: String((p as Point).do ?? ''), why: String((p as Point).why ?? '') } : { do: String(p), why: '' }).filter((p: Point) => p.do) : [],
+      note: typeof data.note === 'string' ? data.note : null,
+      resource: typeof data.resource === 'string' ? data.resource : null,
+      context_used: data.context_used === true,
+    };
     setThreadId(typeof data.thread_id === 'string' ? data.thread_id : null);
     setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, debug: isAdmin ? data.debug as Debug : undefined }]);
     loadThreads();
@@ -243,11 +254,19 @@ export default function DanAI() {
                     </div>
                   ) : (
                     <div key={m.id} className="group space-y-3 dan-msg-in">
-                      <p className="text-[15px] whitespace-pre-wrap break-words leading-7">{m.parsed?.answer}</p>
-                      {!!m.parsed?.next_steps.length && (
-                        <ul className="list-disc pl-5 space-y-1 text-[15px] leading-7">
-                          {m.parsed.next_steps.map((s, i) => <li key={i}>{s}</li>)}
+                      <p className="text-[15px] whitespace-pre-wrap break-words leading-7 font-medium">{m.parsed?.answer}</p>
+                      {!!m.parsed?.points.length && (
+                        <ul className="space-y-2 text-[15px] leading-7">
+                          {m.parsed.points.map((pt, i) => (
+                            <li key={i} className="flex gap-2.5">
+                              <span className="mt-[11px] w-1.5 h-1.5 rounded-full shrink-0 bg-[hsl(var(--dan-violet))]" />
+                              <span>{pt.do}{pt.why && <span className="text-[hsl(var(--dan-muted))]"> — {pt.why}</span>}</span>
+                            </li>
+                          ))}
                         </ul>
+                      )}
+                      {m.parsed?.note && (
+                        <p className="text-xs text-[hsl(var(--dan-muted))]">{m.parsed.note}</p>
                       )}
                       {m.parsed?.resource && (
                         <p className="text-sm" style={{ color: violet }}>Watch: {resourceTitle(m.parsed.resource)}</p>
