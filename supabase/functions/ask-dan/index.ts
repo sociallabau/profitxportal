@@ -505,8 +505,8 @@ Deno.serve(async (req) => {
           ...(test.must_not as string[]).map(c => `must_not: ${c}`),
         ].join("\n");
         const sys: Block[] = [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }, { type: "text", text: GRADER_PROMPT }];
-        const counted = wordCount(res.answer?.answer ?? "");
-        const msg = `${buildMemberBlock(member).text}\n\nANSWER FIELD WORD COUNT (computed in code, use for length criteria): ${counted}. Do not count next_steps or resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
+const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
+        const msg = `${buildMemberBlock(member).text}\n\nTOTAL WORD COUNT (computed in code, use for length criteria): ${counted} across stance + points + note. Do not count resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
         let graded: Record<string, unknown> | null = null;
         for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
         const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];
@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false }).limit(10);
     const history: Turn[] = (past ?? []).reverse().map((m: Turn) => {
       const a = m.role === "assistant" ? toAnswer(parseJson(m.content)) : null;
-      return { role: m.role, content: a ? a.answer : m.content };
+      return { role: m.role, content: a ? fullText(a) : m.content };
     });
     const r = await answerPipeline({ admin, question, history, catalogue, mode, member: memberPromise, memberId, clock, status });
     const member = r.member;
