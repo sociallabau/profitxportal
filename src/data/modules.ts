@@ -10,3 +10,9 @@ export const PROFITX_MODULES: Record<string, string> = {
 };
 
 export const moduleName = (code: string) => PROFITX_MODULES[code] ?? code;
+
+// Modules Dan covers in onboarding: tagged on the tile instead of needing module content.
+export const ONBOARDING_COVERED_CODES = new Set(['O1', 'O2', 'O3', 'C3']);
+
+// Opens a WhatsApp chat with Dan so members can book a call to cover a module with no training yet.
+export const DAN_WHATSAPP_URL = 'https://wa.me/61429662984?text=' + encodeURIComponent("Hey Dan — can we book a call to cover this module?");

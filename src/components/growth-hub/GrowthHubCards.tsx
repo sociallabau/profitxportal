@@ -7,7 +7,7 @@ import {
   GATE_GOALS, goalStatus, helpPrompt, trainingLink,
   type GateNumber, type TaskStatus, type TaskWithStatus,
 } from '@/lib/growthHub';
-import { useTickTask, useUntickTask, type GateModule } from '@/hooks/useGrowthHub';
+import { useModulePages, useTickTask, useUntickTask, type GateModule } from '@/hooks/useGrowthHub';
 
 const STATUS: Record<TaskStatus, { label: string; cls: string }> = {
   approved: { label: 'Approved', cls: 'violet-grad text-white' },
@@ -18,10 +18,10 @@ const STATUS: Record<TaskStatus, { label: string; cls: string }> = {
 const KIND: Record<TaskWithStatus['kind'], string> = { kickoff: 'With Dan', once: 'Once', monthly: 'Monthly' };
 
 function TrainingChip({ task }: { task: TaskWithStatus }) {
-  const t = trainingLink(task);
+  const t = trainingLink(task, useModulePages());
   if (!t) return null;
   const cls = 'inline-flex items-center gap-1 text-[11.5px] font-bold rounded-full px-2.5 py-1 bg-primary/10 text-primary hover:bg-primary/15 transition-colors';
-  const label = task.module_codes.length ? `${t.label} · ${moduleName(task.module_codes[0])}` : t.label;
+  const label = task.module_codes.length ? (t.status ? `${task.module_codes.join(' + ')} · ${t.label}` : `${t.label} · ${moduleName(task.module_codes[0])}`) : t.label;
   const icon = <Play className="w-3 h-3 fill-current" />;
   if (!t.href) return <span className={cls}>{icon}{label}</span>;
   return t.external
@@ -53,13 +53,13 @@ function useTicking(userId?: string) {
 
 /** The next task's buttons, for the Dashboard's Focus card. */
 export function FocusActions({ task, isAdmin, userId }: { task: TaskWithStatus; isAdmin: boolean; userId?: string }) {
-  const training = trainingLink(task);
+  const training = trainingLink(task, useModulePages());
   const ticking = useTicking(userId);
   const btn = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold';
   return (
     <div className="flex flex-wrap gap-2 mt-3">
       {training?.href && (training.external
-        ? <a href={training.href} target="_blank" rel="noreferrer" className={`${btn} bg-primary text-primary-foreground`}><Play className="w-3 h-3 fill-current" />Watch {training.label}</a>
+        ? <a href={training.href} target="_blank" rel="noreferrer" className={`${btn} bg-primary text-primary-foreground`}><Play className="w-3 h-3 fill-current" />{training.status ? training.label : `Watch ${training.label}`}</a>
         : <Link to={training.href} className={`${btn} bg-primary text-primary-foreground`}><Play className="w-3 h-3 fill-current" />Watch {training.label}</Link>)}
       {canUseDanAi(isAdmin) && <Link to={askHref(task)} className={`${btn} bg-primary/10 text-primary`}><Sparkles className="w-3 h-3" />Help me do this</Link>}
       {userId && canTickTask(task) && (
@@ -71,7 +71,8 @@ export function FocusActions({ task, isAdmin, userId }: { task: TaskWithStatus; 
 
 /** The one thing to do next. Dan AI's brief when there is one, the task either way. */
 export function NextMove({ task, brief, isAdmin, userId, compact = false }: { task: TaskWithStatus | null; brief: string | null; isAdmin: boolean; userId?: string; compact?: boolean }) {
-  const training = task ? trainingLink(task) : null;
+  const hasPage = useModulePages();
+  const training = task ? trainingLink(task, hasPage) : null;
   const ticking = useTicking(userId);
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 text-white violet-grad shadow-[0_30px_60px_-20px_rgb(133_54_245/0.7)]">
@@ -88,7 +89,7 @@ export function NextMove({ task, brief, isAdmin, userId, compact = false }: { ta
           )}
           <div className="relative flex flex-wrap gap-2 mt-4">
             {training?.href && (training.external
-              ? <a href={training.href} target="_blank" rel="noreferrer" className={`${pill} bg-white text-primary`}><Play className="w-3.5 h-3.5 fill-current" />Watch {training.label}</a>
+              ? <a href={training.href} target="_blank" rel="noreferrer" className={`${pill} bg-white text-primary`}><Play className="w-3.5 h-3.5 fill-current" />{training.status ? training.label : `Watch ${training.label}`}</a>
               : <Link to={training.href} className={`${pill} bg-white text-primary`}><Play className="w-3.5 h-3.5 fill-current" />Watch {training.label}</Link>)}
             {canUseDanAi(isAdmin) && (
               <Link to={askHref(task)} className={`${pill} bg-white/15 border border-white/40`}><Sparkles className="w-3.5 h-3.5" />Help me do this</Link>

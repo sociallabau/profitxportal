@@ -91,3 +91,13 @@ describe('helpPrompt', () => {
     expect(helpPrompt(task({ title: 'Post 8 times', module_codes: ['C1'] }))).toBe('Help me do this build task step by step: "Post 8 times" (training: C1)');
   });
 });
+
+describe('trainingLink matches the Roadmap tiles', () => {
+  const t = (codes: string[]) => ({ module_codes: codes, training_url: null, training_label: null });
+  it('links modules with training, flags onboarding ones and books a call for the rest', () => {
+    const hasPage = (c: string) => c === 'C1';
+    expect(trainingLink(t(['C1']), hasPage)?.href).toBe('/module/C1');
+    expect(trainingLink(t(['O1']), hasPage)).toMatchObject({ label: 'Covered in onboarding with Dan', href: null, status: 'onboarding' });
+    expect(trainingLink(t(['D4']), hasPage)).toMatchObject({ label: 'Book a call with Dan', external: true, status: 'book' });
+  });
+});

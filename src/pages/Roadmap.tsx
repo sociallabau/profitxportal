@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
-import { PROFITX_MODULES } from '@/data/modules';
+import { DAN_WHATSAPP_URL, ONBOARDING_COVERED_CODES, PROFITX_MODULES } from '@/data/modules';
 import { MODULE_GATE, ROMAN } from '@/lib/growthHub';
 
 const PILLARS = [
@@ -245,11 +245,7 @@ const PROFITX_COLUMNS = [
   { key: 'D', label: 'DELIVERY' },
 ];
 
-// Modules covered during onboarding — tagged instead of needing module content.
-const ONBOARDING_COVERED_CODES = new Set(['O1', 'O2', 'O3', 'C3']);
 
-// Opens a WhatsApp chat with Dan so members can book a call to cover the module.
-const DAN_WHATSAPP_URL = 'https://wa.me/61429662984?text=' + encodeURIComponent("Hey Dan — can we book a call to cover this module?");
 
 /** Which gate a module first opens at, matching the Growth Hub page. */
 function GateBadge({ code }: { code: string }) {

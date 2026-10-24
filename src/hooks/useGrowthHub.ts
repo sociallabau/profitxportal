@@ -9,6 +9,15 @@ export type GateModule = { gate: GateNumber; module_code: string; note: string |
 export type MemberGrowthHub = { fast_track_lead_gen: boolean; fast_track_since: string | null; extra_modules: string[] };
 
 /** Gate copy, every task and every gate→module link. Same for all members, so cached long. */
+/** Which modules have training content, same list the Roadmap tiles use. */
+export function useModulePages() {
+  const { data = [], isSuccess } = useQuery({
+    queryKey: ['module-pages-list'],
+    queryFn: async () => (await supabase.from('module_pages').select('module_id')).data?.map(d => d.module_id) ?? [],
+  });
+  return isSuccess ? (code: string) => data.includes(code) : undefined;
+}
+
 export function useGrowthHubContent() {
   return useQuery({
     queryKey: ['growth-hub-content'],

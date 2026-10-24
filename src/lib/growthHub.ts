@@ -1,3 +1,5 @@
+import { DAN_WHATSAPP_URL, ONBOARDING_COVERED_CODES } from '@/data/modules';
+
 /**
  * Growth Hub: the four gates, each gate's build list, and a member's progress.
  *
@@ -95,10 +97,21 @@ export function buildProgress(tasks: TaskWithStatus[]): { done: number; approved
   return { done, approved, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
-/** Where the "training" chip points: a URL/Loom, the module page, or nothing. */
-export function trainingLink(task: Pick<GrowthHubTask, 'module_codes' | 'training_url' | 'training_label'>): { label: string; href: string | null; external: boolean } | null {
+export type TrainingLink = { label: string; href: string | null; external: boolean; status?: 'onboarding' | 'book' };
+
+/**
+ * Where the "training" chip points: a URL/Loom, the module page, or nothing.
+ * With `hasPage`, a module with no training yet reads the same as its Roadmap
+ * tile: covered in onboarding with Dan, or book a call with Dan.
+ */
+export function trainingLink(task: Pick<GrowthHubTask, 'module_codes' | 'training_url' | 'training_label'>, hasPage?: (code: string) => boolean): TrainingLink | null {
   if (task.training_url) return { label: task.training_label || task.module_codes[0] || 'Training', href: task.training_url, external: /^https?:/i.test(task.training_url) };
-  if (task.module_codes.length) return { label: task.module_codes.join(' + '), href: `/module/${task.module_codes[0]}`, external: false };
+  if (task.module_codes.length) {
+    const code = task.module_codes.find(c => hasPage?.(c) ?? true);
+    if (code) return { label: task.module_codes.join(' + '), href: `/module/${code}`, external: false };
+    if (task.module_codes.every(c => ONBOARDING_COVERED_CODES.has(c))) return { label: 'Covered in onboarding with Dan', href: null, external: false, status: 'onboarding' };
+    return { label: 'Book a call with Dan', href: DAN_WHATSAPP_URL, external: true, status: 'book' };
+  }
   if (task.training_label) return { label: task.training_label, href: null, external: false };
   return null;
 }
