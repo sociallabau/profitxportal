@@ -38,7 +38,7 @@ function useUnlock(userId: string | undefined, gate: GateNumber | null) {
 
 export default function Playbooks() {
   const { user } = useRequireAuth();
-  usePageTracking('playbooks');
+  usePageTracking('growth-hub');
   const { data: profile } = useProfile();
   const isAdmin = Boolean(profile?.is_admin);
 
@@ -91,7 +91,7 @@ export default function Playbooks() {
             maskImage: 'linear-gradient(transparent, #000 25%, #000 55%, transparent)',
           }} />
         <div className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <h1 className="text-5xl sm:text-7xl font-black italic tracking-tighter leading-[1.15] pb-2 pr-4 -mb-2 bg-gradient-to-b from-foreground from-40% to-[#6a2ad8] bg-clip-text text-transparent">Playbooks</h1>
+          <h1 className="text-5xl sm:text-7xl font-black italic tracking-tighter leading-[1.15] pb-2 pr-4 -mb-2 bg-gradient-to-b from-foreground from-40% to-[#6a2ad8] bg-clip-text text-transparent">Growth Hub</h1>
           <div className="flex flex-wrap gap-2">
             {mrr != null && <span className="glass-tile mono-label text-[10.5px] font-bold rounded-full px-3.5 py-2">MRR <span className="text-primary">{money(mrr)}</span></span>}
             <span className="glass-tile mono-label text-[10.5px] font-bold rounded-full px-3.5 py-2">Build <span className="text-primary">{progress.done}/{progress.total}</span></span>

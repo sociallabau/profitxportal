@@ -18,7 +18,7 @@ export const CIRCLE_URLS = {
 
 const mainNavItems = [
   { label: 'Dashboard', path: '/dashboard', icon: Gauge },
-  { label: 'Playbooks', path: '/playbooks', icon: Swords },
+  { label: 'Growth Hub', path: '/growth-hub', icon: Swords },
   ...(DAN_AI_MEMBERS_LIVE ? [{ label: 'Dan AI', path: '/dan-ai', icon: Sparkle }] : []),
   { label: 'Hot List', path: '/hot-list', icon: Flame },
   { label: 'Cash Menu', path: '/cash-menu', icon: Banknote },
@@ -34,7 +34,7 @@ const adminItems = [
   { label: 'Client Health', path: '/client-health', icon: HeartPulse },
   { label: 'Client Journey', path: '/client-journey', icon: Compass },
   ...(DAN_AI_MEMBERS_LIVE ? [] : [{ label: 'Dan AI', path: '/dan-ai', icon: Sparkle }]),
-  { label: 'Playbook Editor', path: '/admin/playbooks', icon: ListChecks },
+  { label: 'Growth Hub Editor', path: '/admin/growth-hub', icon: ListChecks },
 ];
 
 const ownerItems = [
