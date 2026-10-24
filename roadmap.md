@@ -21,3 +21,5 @@
 - [x] Restore guardrail fixes on top of ab61ea4 and run regression tests.
 - [x] Run the Drive sync command once; response timed out at the migration's default 5 seconds, with null status and content.
 - [x] Deploy the eight requested edge functions and remove the deployed legacy dan-ai function.
+- [ ] Obtain a valid full-suite score — blocked: deployed Anthropic model rejects thinking.type=disabled; 16 graders returned HTTP 500 and FREE_CLIENT_TRAP generation timed out (504). All 16 recorded answers pass code checks; no content grades completed.
+- [x] Set five-minute timeouts on all three cron commands and verify one manual Drive sync response (HTTP 200).
