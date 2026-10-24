@@ -38,24 +38,22 @@ export function mustSay(i: MustSayInput): Rule[] {
   const path = /\bgate\b|next step|what (should|do) i (focus|do)|where (am i|do i start)|path|roadmap|what'?s next|level up|move up/.test(q);
   const scale = /\bscal|increase (the )?budget|raise (the )?budget|spend more|double|bump/.test(q);
   const weakCreative = /ctr\s*(of\s*)?0?\.[0-9]|0\.[0-9]+\s*%\s*ctr|one (video|creative|ad)\b|single (video|creative|ad)|low ctr|ctr (is )?(low|bad|poor)/.test(q);
-  // "running lead gen 5 days", "3 days in": judged before Dan's 7-day hands-off window is up.
-  const days = q.match(/\b(\d|one|two|three|four|five|six)\s+days?\b/);
-  const tooEarly = adsMoney && !!days && (WORDS[days[1]] ?? Number(days[1])) < 7 && /\brun|\blive|\bin\b|been/.test(q);
   const revenueNote = i.revenue != null && i.revenue > 0 ? `, against their ~${money(i.revenue)}/mo now` : "";
   const retainers = statedRetainers(i.question);
 
   if (path && i.gate == null && retainers != null && retainers < 3) {
     out.push({ say: `They have ${retainers} paying retainers, so say plainly they're not at Gate 1 yet (Gate 1 = 3 paying retainers held 2 months).`, short: "you're not at Gate 1 yet (that's 3 paying retainers held 2 months)", test: /not (at |in )?gate (1|i)\b|not (at |in )?gate (1|i) yet|below gate (1|i)\b/i });
   }
-  if (workload || freeWork) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
-  if (freeWork || caseStudy) out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
-  if (freeWork) {
+  if (freeWork && (path || /\bcount|retainers?\b/.test(q))) out.push({ say: "A free (or case-study) client doesn't count toward the gate: only PAYING monthly retainers count.", short: "free clients don't count, only paying retainers", test: /(doesn'?t|don'?t|does not|do not|won'?t|isn'?t|not) count/i });
+  if (workload) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
+  if (caseStudy) out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
+  if (/ad spend|ads? budget/.test(q) && /bundle|include|inside|\binto\b|\bin (my|the) (retainer|price|package|fee)/.test(q)) {
     out.push({ say: "Ad spend sits on top of the fee, through the client's own ad account.", short: "ad spend sits on top of the fee, through the client's own ad account", test: /on top of (the |your )?(fee|retainer|price)/i });
   }
-  if (freeWork || (adsMoney && /save|cut|cash|switch off|turn off|skip|stop/.test(q))) {
+  if (adsMoney && /save|cut|cash|switch off|turn off|stop/.test(q)) {
     out.push({ say: "Never switch off awareness/lead gen to save cash; keep awareness running.", short: "never switch off awareness", test: /(never|don'?t|do not)\s+(switch|turn|shut)\s+(off|it off)|(switch|turn)ing off|keep (your )?(awareness|it|boosting)\s+(running|on|going)/i });
   }
-  if ((i.gate == null || i.gate <= 1) && (adsMoney || /\bgate\b/.test(q)) && (path || adsMoney)) {
+  if ((i.gate == null || i.gate <= 1) && adsMoney) {
     out.push({ say: "Below or at Gate 1: put a ~$50 profile-visit boost behind their best posts; awareness ads come at Gate 2.", short: "for now it's a ~$50 profile-visit boost behind your best posts; awareness comes at Gate 2", test: /\$\s?50(?![\d,])(?!\s*\/\s*(day|d)\b)[^.]{0,80}\b(profile|pv|boost)|\b(profile[- ]visit|pv) boost[^.]{0,40}\$\s?50(?![\d,])(?!\s*\/)/i });
   }
   const cpc = i.costPerClient, price = i.lowestPrice;
@@ -63,11 +61,11 @@ export function mustSay(i: MustSayInput): Rule[] {
   if (adsMoney && (i.gate != null && i.gate >= 3 || i.fastTrack) && typeof cpc === "number" && Number.isFinite(cpc) && typeof price === "number" && price > 0) {
     const under = cpc < price / 2;
     out.push({ say: `Say their ~${money(cpc)} a client is ${under ? "UNDER" : "NOT under"} half their ${money(price)} first month's fee, in those words.`, short: `~${money(cpc)} a client is ${under ? "under" : "not under"} half your ${money(price)} first month`, test: under ? /under half/i : /not under half|over half|more than half/i });
-    if (scale) out.push({ say: "Scaling only works if every lead and follow-up is tracked in their Growth Hub.", short: "track every lead and follow-up in your Growth Hub", test: /growth hub|\bhub\b/i });
+    // At Gate 3 they log every lead daily in their own growth hub (built with Dan, outside the portal); cost per client comes off the CPA column on their lead tracking sheet.
+    if (scale) out.push({ say: "Point them to the CPA column on their lead tracking sheet, and say scaling only works if every lead and follow-up is logged daily in their growth hub.", short: "check the CPA column on your lead tracking sheet", test: /tracking sheet|\bcpa\b/i });
     // Under half at Gate 3 means the answer is a yes-with-a-condition, not the early-stage "hold".
     if (scale && under) out.push({ say: "Stance is YES: bump the budget, as soon as every lead is called within 15–30 mins. Don't tell them to hold or wait out the week.", short: "bump it once every lead is called within 15–30 mins", test: /\b(bump|scale|raise|increase)\b[^.]{0,60}(once|as soon as|when|after)\b/i });
   }
-  if (tooEarly && !(i.gate != null && i.gate >= 3)) out.push({ say: "It's too early to judge: stay hands-off for 7 days, then judge it over 1–2 months.", short: "stay hands-off for 7 days before judging it", test: /\b7 days\b|\bday 7\b|seven days|a week\b/i });
   if (weakCreative) out.push({ say: "Weak CTR (~0.4–0.6% is the kill zone) or one creative: add 3–4 creatives to the SAME campaign; don't start a new one.", short: "add 3–4 creatives to the same campaign", test: /3\s*[–-]\s*4 (new )?(creatives|ads|videos)/i });
   if (i.hasMember && !i.hasContext) out.push({ say: "Their Context Room is empty: give Dan's defaults and end with one line asking them to fill in their Context Room.", short: "fill in your Context Room so I can make this specific", test: /context room/i });
   return out;

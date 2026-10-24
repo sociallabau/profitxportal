@@ -617,7 +617,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.10";
+const VERSION = "2026-10-24.11";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -785,7 +785,7 @@ async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) 
   }
 
   if (action === "list_tests") {
-    const { data } = await admin.from("dan_ai_tests").select("name, category, persona_key, question, must_include, must_not, position").order("position");
+    const { data } = await admin.from("dan_ai_tests").select("name, category, persona_key, question, must_include, must_not, position").eq("active", true).order("position");
     return { tests: data ?? [] };
   }
   return { error: "unknown action" };

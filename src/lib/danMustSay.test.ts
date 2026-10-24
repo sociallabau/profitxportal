@@ -18,26 +18,30 @@ describe('mustSay', () => {
     expect(says(r)).toContain('$50');
     expect(missingRules(r, "You're not at Gate 1 yet. Put a ~$50 profile-visit boost behind your best posts.")).toEqual([]);
   });
-  it('FREE_CLIENT_TRAP: all the free-client rules', () => {
-    const r = mustSay({ ...base, question: "I've got 3 retainers, one free as a case study. I want to skip boosting and bundle ad spend into a package." });
-    expect(says(r)).toContain('$15–20k');
-    expect(says(r)).toContain('OWN account');
-    expect(says(r)).toContain('on top of the fee');
-    expect(says(r)).toContain('switch off awareness');
-    expect(missingRules(r, 'Post case studies on your own account. Ad spend sits on top of the fee. Never switch off awareness. Editor at ~$15–20k. Put a ~$50 profile-visit boost behind your best posts.')).toEqual([]);
+  it('FREE_CLIENT_GATE: a free client does not count, and no unrelated ad rules', () => {
+    const r = mustSay({ ...base, question: "I've got 3 retainers, two at $1,800 and one I'm doing free as a case study. So I'm at Gate 1, right?" });
+    expect(r.map(x => x.short)).toContain("free clients don't count, only paying retainers");
+    expect(says(r)).not.toContain('on top of the fee');
+    expect(says(r)).not.toContain('$15–20k');
+    expect(says(r)).not.toContain('$50');
+    expect(missingRules(r, "Not yet. The free client doesn't count. Post case studies on your own account.")).toEqual([]);
   });
-  it('ADS_5_DAYS_SCALE: under half and the Growth Hub', () => {
+  it('AD_SPEND_INSIDE and SKIP_BOOST: on top of the fee, and the $50 boost', () => {
+    expect(says(mustSay({ ...base, question: 'Should I include the ad spend in my retainer price to keep it simple?' }))).toContain('on top of the fee');
+    const r = mustSay({ ...base, question: 'Can I skip the boost and go straight to lead gen at $50/day?' });
+    expect(says(r)).toContain('$50 profile-visit boost');
+    expect(missingRules(r, 'Lead gen at $50/day comes later.')).toHaveLength(1);
+  });
+  it('ADS_5_DAYS_SCALE: under half and the CPA column on the lead tracking sheet', () => {
     const r = mustSay({ ...base, gate: 3, costPerClient: 363, lowestPrice: 2000, question: 'Ads have run 5 days, can I scale?' });
     expect(missingRules(r, '~$363 a client vs $2,000.').map(x => x.short)).toHaveLength(3);
-    expect(missingRules(r, '~$363 a client is under half your $2,000. Bump it once every lead is called within 15–30 mins, tracked in your Growth Hub.')).toEqual([]);
-    expect(r.map(x => x.short).join(' ')).not.toContain('hands-off');
+    expect(missingRules(r, '~$363 a client vs $2,000. Log every lead daily in your growth hub.').map(x => x.short)).toContain('check the CPA column on your lead tracking sheet');
+    expect(missingRules(r, '~$363 a client is under half your $2,000. Bump it once every lead is called within 15–30 mins; check the CPA column on your lead tracking sheet.')).toEqual([]);
   });
-  it('ADS_5_DAYS_EARLY: 7 days hands-off, not a bump', () => {
-    const r = mustSay({ ...base, question: 'Been running lead gen 5 days at $20/day, 4 leads. Kill it or bump to $40/day?' });
-    expect(r.map(x => x.short)).toContain('stay hands-off for 7 days before judging it');
+  it('ADS_5_DAYS_EARLY: no Gate 3 bump or cost-per-client rules below Gate 3', () => {
+    const r = mustSay({ ...base, costPerClient: 600, lowestPrice: 2950, question: 'Been running lead gen 5 days at $20/day, 4 leads. Kill it or bump to $40/day?' });
     expect(r.map(x => x.short).join(' ')).not.toContain('bump it once');
-    expect(missingRules(r, 'Stay hands-off for 7 days. A ~$50 profile-visit boost behind your best posts.')).toEqual([]);
-    expect(mustSay({ ...base, question: 'Ran ads for 10 days, kill it?' }).map(x => x.short)).not.toContain('stay hands-off for 7 days before judging it');
+    expect(r.map(x => x.short).join(' ')).not.toContain('half your');
   });
   it('asks for the Context Room when it is empty', () => {
     expect(says(mustSay({ ...base, hasContext: false, question: 'What should I charge?' }))).toContain('Context Room');
