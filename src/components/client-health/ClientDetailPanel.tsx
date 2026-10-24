@@ -229,7 +229,7 @@ export default function ClientDetailPanel({
               <div className="p-6 space-y-5">
                 <Accordion type="single" collapsible defaultValue="playbook" className="space-y-2">
                   <AccordionItem value="playbook" className="border border-border rounded-lg px-4">
-                    <AccordionTrigger className="text-sm hover:no-underline">Playbook &amp; Dan AI memory</AccordionTrigger>
+                    <AccordionTrigger className="text-sm hover:no-underline">Growth Hub &amp; Dan AI memory</AccordionTrigger>
                     <AccordionContent>
                       <PlaybookPanel key={client.id} memberId={client.id} gate={client.gate ?? null} />
                     </AccordionContent>

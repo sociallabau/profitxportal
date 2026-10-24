@@ -68,7 +68,7 @@ export default function PlaybookEditor() {
   const tasks = (data?.tasks ?? []).filter(t => t.gate === gate);
   return (
     <PageLayout>
-      <h1 className="text-4xl mb-1">Playbook Editor</h1>
+      <h1 className="text-4xl mb-1">Growth Hub Editor</h1>
       <p className="text-sm text-muted-foreground mb-6">The build list members see for each gate. Changes show straight away, and Dan AI uses them in its answers.</p>
       <div className="flex flex-wrap gap-2 mb-5">
         {(data?.gates ?? []).map(g => (

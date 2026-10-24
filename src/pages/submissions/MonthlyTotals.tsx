@@ -265,9 +265,9 @@ export default function MonthlyTotals() {
         </div>
 
         {gate && build.total > 0 && (
-          <Link to="/playbooks" className="block bg-card border border-border rounded-xl p-5 hover:border-primary/40 transition-colors">
+          <Link to="/growth-hub" className="block bg-card border border-border rounded-xl p-5 hover:border-primary/40 transition-colors">
             <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Your Gate {ROMAN[gate]} build list</h3>
-            <p className="text-sm"><span className="font-semibold">{build.done}/{build.total} ticked.</span> Tick off what you've built on your Playbook →</p>
+            <p className="text-sm"><span className="font-semibold">{build.done}/{build.total} ticked.</span> Tick off what you've built on your Growth Hub →</p>
           </Link>
         )}
 

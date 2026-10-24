@@ -367,7 +367,7 @@ async function answerPipeline(p: PipelineInput) {
   }
 
   // CHECK
-  p.status?.("Checking with Dan's playbook…");
+  p.status?.("Checking with Dan's Growth Hub…");
   const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT, cache_control: { type: "ephemeral" } }];
   const checkBase = `RESOURCES\n${catalogue}\n\nPASSAGES\n${passageText}\n\n${buildText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
