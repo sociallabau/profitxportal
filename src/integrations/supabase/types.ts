@@ -906,39 +906,6 @@ export type Database = {
         }
         Relationships: []
       }
-      module_pages: {
-        Row: {
-          created_at: string | null
-          id: string
-          module_id: string
-          pillar: string
-          sections: Json
-          subtitle: string | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          module_id: string
-          pillar: string
-          sections?: Json
-          subtitle?: string | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          module_id?: string
-          pillar?: string
-          sections?: Json
-          subtitle?: string | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       member_memory: {
         Row: {
           brief: string | null
@@ -979,7 +946,22 @@ export type Database = {
           summary?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "member_memory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_memory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       member_playbook: {
         Row: {
@@ -1006,7 +988,22 @@ export type Database = {
           updated_by?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "member_playbook_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_playbook_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       member_task_progress: {
         Row: {
@@ -1047,6 +1044,61 @@ export type Database = {
           submitted_at?: string
           task_id?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_task_progress_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_task_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_task_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_pages: {
+        Row: {
+          created_at: string | null
+          id: string
+          module_id: string
+          pillar: string
+          sections: Json
+          subtitle: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          module_id: string
+          pillar: string
+          sections?: Json
+          subtitle?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          module_id?: string
+          pillar?: string
+          sections?: Json
+          subtitle?: string | null
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1321,7 +1373,15 @@ export type Database = {
           note?: string | null
           position?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "playbook_gate_modules_gate_fkey"
+            columns: ["gate"]
+            isOneToOne: false
+            referencedRelation: "playbook_gates"
+            referencedColumns: ["gate"]
+          },
+        ]
       }
       playbook_gates: {
         Row: {
@@ -1396,7 +1456,15 @@ export type Database = {
           updated_at?: string
           why?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "playbook_tasks_gate_fkey"
+            columns: ["gate"]
+            isOneToOne: false
+            referencedRelation: "playbook_gates"
+            referencedColumns: ["gate"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1854,11 +1922,14 @@ export type Database = {
       }
     }
     Functions: {
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       my_dan_brief: {
         Args: never
-        Returns: { brief: string | null; refreshed_at: string | null }[]
+        Returns: {
+          brief: string
+          refreshed_at: string
+        }[]
       }
-      is_admin: { Args: { _user_id: string }; Returns: boolean }
       my_monthly_reviews: {
         Args: never
         Returns: {
