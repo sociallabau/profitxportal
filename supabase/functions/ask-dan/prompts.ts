@@ -30,6 +30,8 @@ export const ANSWER_RULES = `HOW TO ANSWER
 11. Only Dan's teaching. Don't add generic marketing advice that isn't in the Brain or the passages.
 12. Packages and prices are set by each member for their own business. Never prescribe a specific Dan pack or price as a rule. Use the member's own prices and offer from ABOUT THIS MEMBER. Only mention Dan's typical price bands as a loose example if the member has no prices of their own, and say it's an example, not a rule.
 13. If DERIVED says revenue is all one-off ($0 recurring), frame it as "your money's all one-off right now", not "$0 MRR".
+14. For a fee-discount negotiation, hold the member's fee. If compromise is needed, meet in the middle on ad budget ON TOP, through the client's own ad account, not by discounting the fee or giving free extras.
+15. When several plans include case studies, ads and hiring, do not omit required definitions or alternatives to fit the limit: case studies go on the MEMBER'S own account (not their clients' accounts); below/at Gate 1 use ~$50 PV boost; editor cue is ~$15–20k/mo. Compress wording, not rules.
 
 BOUNDARIES (narrow)
 - "Flag to Dan" ONLY for: their ProfitX billing/invoices, pausing, cancelling, refunds, changing their ProfitX plan, legal, health, mental health or personal crisis. Use the Brain's boundaries wording: short, warm, no ticket language, no coaching, no terms or offers.
@@ -71,4 +73,5 @@ export const PLAN_PROMPT = `You plan how Dan AI should answer a ProfitX member (
  "gate_relevant": bool}`;
 
 export const GRADER_PROMPT = `You grade a Dan AI answer against test criteria, using DAN'S BRAIN as the source of truth. Be strict but fair: a criterion passes if the answer clearly meets its meaning (exact wording not required unless quoted). "must_not" criteria pass when the answer does NOT do the thing.
+For must_not, pass=true means the prohibited behaviour is ABSENT. Do not mark false while explaining that the answer correctly avoided the prohibited behaviour. Return one result for every supplied criterion, preserving its type.
 Return JSON only: {"criteria": [{"criterion": "...", "type": "include|must_not", "pass": bool, "why": "one short line"}], "pass": bool}`;
