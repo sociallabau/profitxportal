@@ -238,14 +238,6 @@ export default function DanAI() {
                 <h1 className="text-2xl italic font-extrabold tracking-tight">Dan AI</h1>
                 <p className="text-sm text-[hsl(var(--dan-muted))] mt-1 mb-6">Ask me anything about your business.</p>
                 {box}
-                <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-[680px]">
-                  {examples.slice(0, 3).map(ex => (
-                    <button key={ex} onClick={() => { setInput(ex); inputRef.current?.focus(); }}
-                      className="text-xs px-3 py-1.5 rounded-full border border-[hsl(var(--dan-ink)/0.12)] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] transition-colors">
-                      {ex}
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : (
               <>
