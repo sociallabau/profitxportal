@@ -15,3 +15,7 @@
 - [x] Run the final Dan AI version twice, verify cache hits and report speed and scores; stable 17/17 quality was not reached (repeat failed FREE_CLIENT_TRAP and ADS_5_DAYS_EARLY).
 - [x] Carry prior member settings/context into Context Rooms without overwriting newer answers.
 - [x] Keep basic details visible and deeper questions collapsed; verify saving and layout.
+- [x] Re-run only the final cron block and verify all three schedules.
+- [x] Check persistent cron settings; database-setting permission denied, so configure public URL/key fallbacks in job commands.
+- [ ] Enable successful cron execution — blocked: app.settings.cron_secret is missing; no secret fabricated or security bypassed.
+- [x] Deploy the eight requested edge functions and remove the deployed legacy dan-ai function.
