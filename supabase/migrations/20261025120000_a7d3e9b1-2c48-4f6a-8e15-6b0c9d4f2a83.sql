@@ -1,0 +1,9 @@
+-- A brain-dump question about a sales process (from a real member). Dan AI should find the real problem
+-- (the proposal goes out with no next meeting booked, so deals go cold) and give that one fix, not 4 program steps.
+insert into public.dan_ai_tests (name, category, persona_key, question, must_include, must_not, position, active)
+select 'SALES_STALL_ONE_FIX', 'understanding', 'P_EMPTY',
+  'I currently have ads running for our marketing agency. It''s a simple book a call landing page. However I am finding two problems. One is that I am getting people that aren''t qualified for me (so they don''t have the money to spend) which is just wasting the link click cost and Two is when I do have a good lead we hop on a call I qualify them I then book in a call with the director of the ecosystem they hop on a call (that call is to then go over the packages and the system) everything sounds good but then we are then sending the proposal after that, I''m finding that there is too much communication and too much time given to the lead that they then either forget about us or that because they are busy they just can''t be bothered as it''s gone over 4 days? How can I make it so we can get a easy yes faster on these calls and not wasting as much time',
+  '["identifies the real problem: the proposal goes out after the call with no next step booked, so it goes cold", "the fix: present the offer/proposal on the director call (or straight after) and book the next meeting or decision time before hanging up", "one main fix, not a list of four separate action items"]'::jsonb,
+  '["adds an unrelated gate or ad-ladder step (e.g. a $50 profile-visit boost, awareness at Gate 2)"]'::jsonb,
+  24, true
+where not exists (select 1 from public.dan_ai_tests where name = 'SALES_STALL_ONE_FIX');

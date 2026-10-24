@@ -36,7 +36,15 @@ type Point = { do: string; why: string };
 type Answer = { answer: string; points: Point[]; note: string | null; resource: string | null; resource_why?: string | null };
 type Turn = { role: "user" | "assistant"; content: string };
 type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
-type Plan = { topic?: string; is_boundary?: boolean; asks_about_other_member?: boolean; search_terms?: string[]; member_facts_needed?: string[]; gate_relevant?: boolean };
+type Plan = {
+  topic?: string; is_boundary?: boolean; asks_about_other_member?: boolean; search_terms?: string[]; member_facts_needed?: string[]; gate_relevant?: boolean;
+  /** What they actually need, read past the brain dump. */
+  core_problem?: string;
+  /** "one": a single fix answers it; "steps": it genuinely needs ordered steps. */
+  shape?: "one" | "steps";
+  /** False for a general business question that isn't about Dan's gates, roadmap or build tasks. */
+  program_related?: boolean;
+};
 // deno-lint-ignore no-explicit-any
 type DB = any;
 
@@ -253,13 +261,14 @@ function keywordTerms(q: string) {
 async function runPlan(question: string, history: Turn[], metrics: Timing): Promise<{ plan: Plan; fallback: boolean }> {
   const convo = history.slice(-4).map(t => `${t.role}: ${t.content.slice(0, 500)}`).join("\n");
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4000);
+  // Sonnet reads the question first: what they really need and how big the answer should be.
+  const timeout = setTimeout(() => controller.abort(), 9000);
   try {
-    const parsed = parseJson(await callAnthropic(HAIKU, [{ type: "text", text: PLAN_PROMPT, cache_control: { type: "ephemeral" } }],
+    const parsed = parseJson(await callAnthropic(SONNET, [{ type: "text", text: PLAN_PROMPT, cache_control: { type: "ephemeral" } }],
       [{ role: "user", content: `RECENT CONVERSATION: ${convo}\nQUESTION: ${question}` }], false, metrics, "plan", controller.signal)) as Plan | null;
     if (parsed && Array.isArray(parsed.search_terms)) return { plan: parsed, fallback: false };
   } catch {
-    metrics.calls.push({ stage: "plan", model: HAIKU, ms: 4000, input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0, retry: false, error: controller.signal.aborted ? "4s deadline; keyword fallback" : "plan failed; keyword fallback" });
+    metrics.calls.push({ stage: "plan", model: SONNET, ms: 9000, input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0, retry: false, error: controller.signal.aborted ? "9s deadline; keyword fallback" : "plan failed; keyword fallback" });
   } finally { clearTimeout(timeout); }
   // Classification remains conservative; the full draft/checker still adjudicates boundaries from the question.
   const boundary = /(?:ProfitX.*(?:bill|paus|cancel|refund|invoice)|(?:paus|cancel|refund|invoice).*ProfitX|mental health|legal|personal crisis)/i.test(question);
@@ -382,9 +391,12 @@ async function answerPipeline(p: PipelineInput) {
   const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null, member?.extras?.build ?? []);
   const focus = !!buildHelp && !buildTaskTitle(p.question);
   const buildText = buildHelp ? `${buildHelp}\n\n${focus ? FOCUS_FORMAT : BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
+  // The shape comes from what they actually asked: one problem gets one fix, and a general business
+  // question isn't forced through Dan's gates, roadmap or keyword rules.
+  const general = !shortAnswer && !buildHelp && plan.program_related === false;
   // Dan's own answer and reasoning for the stuck point this question is about (playbook.ts).
   const situation = shortAnswer ? { text: "", keys: [] as string[] } : situationBlock(p.question);
-  const must = shortAnswer ? [] : mustSay({
+  const must = shortAnswer || general ? [] : mustSay({
     question: p.question,
     gate: member?.extras?.gate_number ?? gateFromLabel(member?.gate),
     revenue: block.derived?.total_revenue_latest ?? block.derived?.mrr_latest ?? null,
@@ -393,9 +405,12 @@ async function answerPipeline(p: PipelineInput) {
     fastTrack: !!member?.extras?.fast_track_lead_gen,
   });
   const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}${must.length >= 4 ? "\nThere are more rules than points: pair related rules in one point (e.g. a gate step plus the ad rule), keeping each rule's exact numbers." : ""}\n\n=====\n\n` : "";
+  // One point only when a single fix answers it and it doesn't carry several of Dan's rules.
+  const oneShot = !shortAnswer && !buildHelp && plan.shape === "one" && must.length <= 1;
+  const shapeText = shortAnswer || !plan.core_problem ? "" : `WHAT THEY'RE REALLY ASKING (read past the brain dump): ${plan.core_problem}\n${oneShot ? "ANSWER SHAPE: ONE. This is one problem with one fix. Stance line + exactly ONE point that is the fix, said plainly with the how. No extra points, no padding, no note unless their numbers are stale.\n" : ""}${general ? "This is a general business question, not about the gates, roadmap or build list. Answer the problem itself with Dan's own opinion. Don't bolt on gate steps, ad rules or trainings that don't fix it.\n" : ""}\n=====\n\n`;
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], "") + voiceText + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${situation.text}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${shapeText}${situation.text}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
   p.status?.(memberSignals.length ? `Spotted ${memberSignals.length} thing${memberSignals.length === 1 ? "" : "s"} in your numbers. Writing your answer…` : "Writing your answer in Dan's words…");
@@ -410,7 +425,7 @@ async function answerPipeline(p: PipelineInput) {
   // CHECK
   p.status?.(`Checking it like Dan would: privacy, your gate, his exact numbers${must.length ? ` and ${must.length} of his rules` : ""}…`);
   const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
-  const checkBase = `RESOURCES\n${catalogue}\n\n${workshopText ? `${workshopText}\n\n` : ""}PASSAGES\n${passageText}\n\n${situation.text}${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
+  const checkBase = `RESOURCES\n${catalogue}\n\n${workshopText ? `${workshopText}\n\n` : ""}PASSAGES\n${passageText}\n\n${shapeText}${situation.text}${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
     for (let i = 0; i < 2; i++) {
       try {
@@ -444,7 +459,9 @@ async function answerPipeline(p: PipelineInput) {
       if (wordCount(text) < 15 || wordCount(text) > 60) out.push("boundary/privacy reply must be 15–60 words");
       if (a.points.length || a.note) out.push("boundary/privacy reply must be 1–2 short lines, no points or note");
     } else {
-      if (buildHelp ? a.points.length < 3 || a.points.length > 5 : a.points.length < 2 || a.points.length > 4) out.push(buildHelp ? "needs 3–5 build steps" : "needs 2–4 dot points");
+      if (buildHelp ? a.points.length < 3 || a.points.length > 5 : oneShot ? a.points.length > 1 : a.points.length < 1 || a.points.length > 4) {
+        out.push(buildHelp ? "needs 3–5 build steps" : oneShot ? "one problem, one fix: keep only the single point that answers what they asked" : "needs 1–4 dot points");
+      }
       if (a.points.some(pt => !pt.why.trim())) out.push("each point needs one short reason");
       if (wordCount(a.answer) > 18) out.push("stance must be max ~15 words");
       if (wordCount(text) > (buildHelp ? 185 : 130)) out.push(buildHelp ? "cut to under ~160 words total" : "cut to under ~110 words total");
@@ -569,6 +586,8 @@ async function answerPipeline(p: PipelineInput) {
     if (words.length <= 6) break;
     final = { ...final, points: [...final.points.slice(0, -1), { ...last, why: words.slice(0, words.length - (wordCount(fullText(final)) - cap)).join(" ").replace(/[,;:]$/, "") + "." }] };
   }
+  // One problem, one fix: the first point is the fix, so anything after it is padding.
+  if (oneShot && final.points.length > 1) final = { ...final, points: final.points.slice(0, 1) };
   // "bro" stays occasional: at most one, and none if either of Dan's last two answers in this thread used it.
   final = limitBro(final, !p.history.filter(t => t.role === "assistant").slice(-2).some(t => /\bbro\b/i.test(t.content)));
   // Length is fixed by trimming above, so only real problems (privacy, voice, a cut-off, a missing number) withhold the answer.
@@ -660,7 +679,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
       : { check: "total under ~110 words", pass: wc <= 120, why: `${wc} words` },
     ...(short ? [] : [
       { check: "stance line max ~15 words", pass: wordCount(a.answer) <= 18, why: `${wordCount(a.answer)} words` },
-      { check: "2–4 dot points", pass: a.points.length >= 2 && a.points.length <= 4, why: `${a.points.length} points` },
+      { check: "1–4 dot points", pass: a.points.length >= 1 && a.points.length <= 4, why: `${a.points.length} points` },
       { check: "every point has one reason", pass: a.points.every(pt => pt.why.trim().length > 0), why: a.points.every(pt => pt.why.trim()) ? "all have why" : "missing why" },
     ]),
     { check: "ends cleanly", pass: !looksTruncated(a.points.length ? (a.note ?? (a.points[a.points.length - 1].why || a.points[a.points.length - 1].do)) : a.answer), why: a.answer.trim().slice(-30) },
@@ -671,7 +690,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.20";
+const VERSION = "2026-10-24.21";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
