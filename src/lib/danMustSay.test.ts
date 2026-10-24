@@ -28,6 +28,12 @@ describe('mustSay', () => {
     expect(missingRules(r, "Not yet. The free client doesn't count. Land your next paying retainer. Post case studies on your own account.")).toEqual([]);
     expect(missingRules(r, "Not yet. The free client doesn't count. Post case studies on your own account.").map(x => x.short)).toEqual(['your priority is landing the next paying retainer']);
   });
+  it('VOICE_GENERAL and TOO_BUSY: free extras are not a free client; too busy gets the easy documenting format', () => {
+    expect(says(mustSay({ ...base, question: 'client keeps asking for extra videos for free, what do i do' }))).not.toContain('PAYING');
+    const r = mustSay({ ...base, question: "I'm too busy shooting and editing for clients to post my own content." });
+    expect(r.map(x => x.short)).toContain('quick intro on camera at the shoot plus clips, or a friend filming BTS for ~$100');
+    expect(says(mustSay({ ...base, question: "I'm too busy, should I hire an editor?" }))).not.toContain('quick intro');
+  });
   it('AD_SPEND_INSIDE and SKIP_BOOST: on top of the fee, and the $50 boost', () => {
     expect(says(mustSay({ ...base, question: 'Should I include the ad spend in my retainer price to keep it simple?' }))).toContain('on top of the fee');
     const r = mustSay({ ...base, question: 'Can I skip the boost and go straight to lead gen at $50/day?' });

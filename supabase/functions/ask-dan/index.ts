@@ -639,6 +639,12 @@ function buildDebug(mode: string, memberId: string | null, member: MemberInput |
   };
 }
 
+/** A grade is usable only when it covers every criterion with a true/false pass (Sonnet sometimes drops the flag). */
+function gradedOk(g: Record<string, unknown> | null, count: number): boolean {
+  const c = g?.criteria;
+  return Array.isArray(c) && c.length >= count && c.every(x => typeof (x as { pass?: unknown })?.pass === "boolean");
+}
+
 function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short = false) {
   const text = fullText(a);
   const wc = wordCount(text);
@@ -663,7 +669,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.17";
+const VERSION = "2026-10-24.18";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -761,7 +767,7 @@ async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) 
     const sys: Block[] = [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }, { type: "text", text: GRADER_PROMPT }];
     const msg = `${buildMemberBlock(member!).text}\n\nTOTAL WORD COUNT (computed in code, use for length criteria): ${wordCount(fullText(r.final))} across stance + points + note. Do not count resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(r.final)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
     let graded: Record<string, unknown> | null = null;
-    for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
+    for (let i = 0; i < 3 && !gradedOk(graded, criteria.split("\n").length); i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
     const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];
     const pass = crit.length > 0 && crit.every(c => c.pass === true) && checks.every(c => c.pass);
     return { version: VERSION, name: test.name, question: test.question, pass, criteria: crit, code_checks: checks, final: r.final, debug: buildDebug("test", null, member, r) };
@@ -941,7 +947,7 @@ Deno.serve(async (req) => {
 const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
         const msg = `${buildMemberBlock(member).text}\n\nTOTAL WORD COUNT (computed in code, use for length criteria): ${counted} across stance + points + note. Do not count resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
         let graded: Record<string, unknown> | null = null;
-        for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
+        for (let i = 0; i < 3 && !gradedOk(graded, criteria.split("\n").length); i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
         const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];
         const codeOk = (res.code_checks as { pass: boolean }[]).every(c => c.pass);
         const pass = crit.length > 0 && crit.every(c => c.pass === true) && codeOk;

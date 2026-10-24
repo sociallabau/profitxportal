@@ -31,7 +31,8 @@ export function statedRetainers(question: string): number | null {
 export function mustSay(i: MustSayInput): Rule[] {
   const q = i.question.toLowerCase();
   const out: Rule[] = [];
-  const freeWork = /\bfree\b|for nothing|unpaid|trial (month|client)|no charge/.test(q);
+  // A client they serve for free; "extra videos for free" is scope creep, not a free client.
+  const freeWork = /\bfree\b|for nothing|unpaid|trial (month|client)|no charge/.test(q) && !/extra|outside|on top|more (videos|content|shoots)/.test(q);
   const caseStudy = /case stud|testimonial/.test(q);
   const workload = /hire|hiring|editor|outsourc|\bva\b|assistant|overwhelm|burn(ed|t)? ?out|too busy|no time|drowning|workload|weekend|capacity/.test(q);
   const adsMoney = /\bads?\b|ad spend|budget|boost|awareness|lead gen|campaign|save (money|cash)|cut (back|costs)|switch off|turn off|pause/.test(q);
@@ -49,6 +50,9 @@ export function mustSay(i: MustSayInput): Rule[] {
     out.push({ say: "Make point 1 their priority: landing the next PAYING retainer (case studies support that, they don't replace it).", short: "your priority is landing the next paying retainer", test: /(next|another|one more|3rd|third) paying (retainer|client)|land(ing)? (your |the |a |one more |another )?(next |3rd |third )?paying/i });
   }
   if (workload) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
+  if (/too busy|no time|don'?t have (the )?time|can'?t find (the )?time|flat out|swamped/.test(q) && /post|content|own (stuff|marketing|socials|page)|film (myself|me)/.test(q)) {
+    out.push({ say: "Give the easy way to document while they shoot: a quick intro on camera at the client's shoot ('here at x, shooting y today because it'll get them z') then cut in clips they already have, or pay a friend ~$100 to film BTS. Their own content isn't optional.", short: "quick intro on camera at the shoot plus clips, or a friend filming BTS for ~$100", test: /intro|\$100|friend/i });
+  }
   if (caseStudy) out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
   if (/ad spend|ads? budget/.test(q) && /bundle|include|inside|\binto\b|\bin (my|the) (retainer|price|package|fee)/.test(q)) {
     out.push({ say: "Ad spend sits on top of the fee, through the client's own ad account.", short: "ad spend sits on top of the fee, through the client's own ad account", test: /on top of (the |your )?(fee|retainer|price)/i });

@@ -83,7 +83,7 @@ export const SITUATIONS: Situation[] = [
     key: "scope_creep", label: "Client keeps asking for extras",
     match: /extra (video|shoot|stuff|work|day|edit)s?|outside (the|my|our) (retainer|scope|agreement|package)|scope creep|keeps? asking for (more|extra)|more than (we|i) agreed/i,
     dan: "That's fine, just track whether it's every single time or a random thing. If it's random, sometimes just do it: what's an extra video here or there in the grand scheme of the relationship? The less transactional the better. If it's every time, or more shoot days outside the agreement, you're well within your rights to say 'hey, we agreed on x and you're getting y; if you want to keep the extra shoot day I'd have to charge a one-off fee'. You can also set this expectation at the start in the strategy session.",
-    logic: "Random or pattern? Random: just do it, the relationship is worth more than one video. Every time or extra shoot days: give them the exact line (we agreed on x, you're getting y, extra shoot days are a one-off fee). Prevent it next time by setting scope in the strategy session.",
+    logic: "Random or pattern? Random: just do it, the relationship is worth more than one video. Every time or extra shoot days: retainer is retainer, so point to the tier they're on using the member's real tiers (that tier is $x and gets y) and give the exact line (we agreed on x, you're getting y; extras are a one-off fee, or move up to the next tier if they want more every month). Prevent it next time by setting scope in the strategy session.",
   },
 ];
 
