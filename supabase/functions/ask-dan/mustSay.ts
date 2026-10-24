@@ -38,6 +38,9 @@ export function mustSay(i: MustSayInput): Rule[] {
   const path = /\bgate\b|next step|what (should|do) i (focus|do)|where (am i|do i start)|path|roadmap|what'?s next|level up|move up/.test(q);
   const scale = /\bscal|increase (the )?budget|raise (the )?budget|spend more|double|bump/.test(q);
   const weakCreative = /ctr\s*(of\s*)?0?\.[0-9]|0\.[0-9]+\s*%\s*ctr|one (video|creative|ad)\b|single (video|creative|ad)|low ctr|ctr (is )?(low|bad|poor)/.test(q);
+  // "running lead gen 5 days", "3 days in": judged before Dan's 7-day hands-off window is up.
+  const days = q.match(/\b(\d|one|two|three|four|five|six)\s+days?\b/);
+  const tooEarly = adsMoney && !!days && (WORDS[days[1]] ?? Number(days[1])) < 7 && /\brun|\blive|\bin\b|been/.test(q);
   const revenueNote = i.revenue != null && i.revenue > 0 ? `, against their ~${money(i.revenue)}/mo now` : "";
   const retainers = statedRetainers(i.question);
 
@@ -61,7 +64,10 @@ export function mustSay(i: MustSayInput): Rule[] {
     const under = cpc < price / 2;
     out.push({ say: `Say their ~${money(cpc)} a client is ${under ? "UNDER" : "NOT under"} half their ${money(price)} first month's fee, in those words.`, short: `~${money(cpc)} a client is ${under ? "under" : "not under"} half your ${money(price)} first month`, test: under ? /under half/i : /not under half|over half|more than half/i });
     if (scale) out.push({ say: "Scaling only works if every lead and follow-up is tracked in their Growth Hub.", short: "track every lead and follow-up in your Growth Hub", test: /growth hub|\bhub\b/i });
+    // Under half at Gate 3 means the answer is a yes-with-a-condition, not the early-stage "hold".
+    if (scale && under) out.push({ say: "Stance is YES: bump the budget, as soon as every lead is called within 15–30 mins. Don't tell them to hold or wait out the week.", short: "bump it once every lead is called within 15–30 mins", test: /\b(bump|scale|raise|increase)\b[^.]{0,60}(once|as soon as|when|after)\b/i });
   }
+  if (tooEarly && !(i.gate != null && i.gate >= 3)) out.push({ say: "It's too early to judge: stay hands-off for 7 days, then judge it over 1–2 months.", short: "stay hands-off for 7 days before judging it", test: /\b7 days\b|\bday 7\b|seven days|a week\b/i });
   if (weakCreative) out.push({ say: "Weak CTR (~0.4–0.6% is the kill zone) or one creative: add 3–4 creatives to the SAME campaign; don't start a new one.", short: "add 3–4 creatives to the same campaign", test: /3\s*[–-]\s*4 (new )?(creatives|ads|videos)/i });
   if (i.hasMember && !i.hasContext) out.push({ say: "Their Context Room is empty: give Dan's defaults and end with one line asking them to fill in their Context Room.", short: "fill in your Context Room so I can make this specific", test: /context room/i });
   return out;

@@ -28,8 +28,16 @@ describe('mustSay', () => {
   });
   it('ADS_5_DAYS_SCALE: under half and the Growth Hub', () => {
     const r = mustSay({ ...base, gate: 3, costPerClient: 363, lowestPrice: 2000, question: 'Ads have run 5 days, can I scale?' });
-    expect(missingRules(r, '~$363 a client vs $2,000.').map(x => x.short)).toHaveLength(2);
-    expect(missingRules(r, '~$363 a client is under half your $2,000. Track every lead in your Growth Hub.')).toEqual([]);
+    expect(missingRules(r, '~$363 a client vs $2,000.').map(x => x.short)).toHaveLength(3);
+    expect(missingRules(r, '~$363 a client is under half your $2,000. Bump it once every lead is called within 15–30 mins, tracked in your Growth Hub.')).toEqual([]);
+    expect(r.map(x => x.short).join(' ')).not.toContain('hands-off');
+  });
+  it('ADS_5_DAYS_EARLY: 7 days hands-off, not a bump', () => {
+    const r = mustSay({ ...base, question: 'Been running lead gen 5 days at $20/day, 4 leads. Kill it or bump to $40/day?' });
+    expect(r.map(x => x.short)).toContain('stay hands-off for 7 days before judging it');
+    expect(r.map(x => x.short).join(' ')).not.toContain('bump it once');
+    expect(missingRules(r, 'Stay hands-off for 7 days. A ~$50 profile-visit boost behind your best posts.')).toEqual([]);
+    expect(mustSay({ ...base, question: 'Ran ads for 10 days, kill it?' }).map(x => x.short)).not.toContain('stay hands-off for 7 days before judging it');
   });
   it('asks for the Context Room when it is empty', () => {
     expect(says(mustSay({ ...base, hasContext: false, question: 'What should I charge?' }))).toContain('Context Room');

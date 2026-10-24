@@ -379,7 +379,7 @@ async function answerPipeline(p: PipelineInput) {
     costPerClient: block.derived?.cost_per_client ?? null, lowestPrice: block.derived?.lowest_retainer_price ?? null,
     fastTrack: !!member?.extras?.fast_track_lead_gen,
   });
-  const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}\n\n=====\n\n` : "";
+  const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}${must.length >= 4 ? "\nThere are more rules than points: pair related rules in one point (e.g. a gate step plus the ad rule), keeping each rule's exact numbers." : ""}\n\n=====\n\n` : "";
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], "") + voiceText + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
   const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
@@ -490,8 +490,11 @@ async function answerPipeline(p: PipelineInput) {
         const dataNudge = !!note && /context room|latest totals|submit|90-day goal|also bro:/i.test(note);
         while (note && !dataNudge && over()) note = null;
         const carriesCost = (pt: Point) => typeof cpc === "number" && Number.isFinite(cpc) && hasCostPerClient(`${pt.do} ${pt.why}`, cpc);
+        const carriesRule = (pt: Point) => must.some(r => r.test.test(`${pt.do} ${pt.why}`));
         while (pts.length > 2 && over()) {
-          const drop = pts.map((pt, i) => ({ pt, i })).reverse().find(x => !carriesCost(x.pt))?.i ?? pts.length - 1;
+          // Drop the lowest point carrying neither the cost per client nor a MUST SAY rule; if every point carries one, stop and let the hard cap shorten them.
+          const drop = pts.map((pt, i) => ({ pt, i })).reverse().find(x => !carriesCost(x.pt) && !carriesRule(x.pt))?.i;
+          if (drop == null) break;
           pts = pts.filter((_, i) => i !== drop);
         }
         final = { ...final, points: pts, note };
@@ -539,7 +542,11 @@ async function answerPipeline(p: PipelineInput) {
   }
   // Hard cap so every answer stays inside the format: shorten the note to its first sentence, then drop it, then trim the last point's reason.
   const cap = shortReply ? 60 : buildHelp ? 185 : 118;
-  if (wordCount(fullText(final)) > cap && final.note) final = { ...final, note: final.note.split(/(?<=[.!?])\s+/)[0] };
+  // An "Also bro:" note carries Dan's rules, so shortening it drops the lead-in sentence, never the rules.
+  if (wordCount(fullText(final)) > cap && final.note) {
+    const bro = final.note.search(/also bro:/i);
+    final = { ...final, note: bro > 0 ? final.note.slice(bro) : bro === 0 ? final.note : final.note.split(/(?<=[.!?])\s+/)[0] };
+  }
   if (wordCount(fullText(final)) > cap && final.note && !/also bro:/i.test(final.note)) final = { ...final, note: null };
   while (wordCount(fullText(final)) > cap && final.points.length) {
     const last = final.points[final.points.length - 1];
@@ -610,7 +617,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.9";
+const VERSION = "2026-10-24.10";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
