@@ -277,7 +277,7 @@ async function answerPipeline(p: PipelineInput) {
   for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(draftSystem, [{ role: "user", content: userTurn }], clock.data, "draft"))));
   if (!draft) {
     issues.push({ type: "guardrail", note: "Draft JSON invalid twice — flagged to Dan" });
-    const final = { answer: FLAG_REPLY, next_steps: [], resource: null };
+    const final: Answer = { answer: FLAG_REPLY, points: [], note: null, resource: null };
     return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish() };
   }
 
@@ -299,7 +299,7 @@ async function answerPipeline(p: PipelineInput) {
   let final: Answer = draft;
   const checked = await runCheck(draft);
   if (checked) { final = checked.final; pass = checked.pass; issues.push(...checked.issues); }
-  else { issues.push({ type: "guardrail", note: "Checker unavailable — safe fallback; unchecked draft withheld" }); final = { answer: FLAG_REPLY, next_steps: [], resource: null }; }
+  else { issues.push({ type: "guardrail", note: "Checker unavailable — safe fallback; unchecked draft withheld" }); final = { answer: FLAG_REPLY, points: [], note: null, resource: null }; }
 
   const guardStarted = performance.now();
   const retryBefore = clock.data.steps.check_retry ?? 0;
