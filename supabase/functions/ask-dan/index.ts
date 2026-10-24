@@ -19,6 +19,7 @@ import { gateFromLabel, missingRules, mustSay } from "./mustSay.ts";
 import { signals } from "./signals.ts";
 import { guideFor, prescribe, workshopGuideText } from "./workshops.ts";
 import { loadRoster, ROSTER_PROMPT } from "./roster.ts";
+import { situationBlock } from "./playbook.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
@@ -381,6 +382,8 @@ async function answerPipeline(p: PipelineInput) {
   const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null, member?.extras?.build ?? []);
   const focus = !!buildHelp && !buildTaskTitle(p.question);
   const buildText = buildHelp ? `${buildHelp}\n\n${focus ? FOCUS_FORMAT : BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
+  // Dan's own answer and reasoning for the stuck point this question is about (playbook.ts).
+  const situation = shortAnswer ? { text: "", keys: [] as string[] } : situationBlock(p.question);
   const must = shortAnswer ? [] : mustSay({
     question: p.question,
     gate: member?.extras?.gate_number ?? gateFromLabel(member?.gate),
@@ -392,7 +395,7 @@ async function answerPipeline(p: PipelineInput) {
   const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}${must.length >= 4 ? "\nThere are more rules than points: pair related rules in one point (e.g. a gate step plus the ad rule), keeping each rule's exact numbers." : ""}\n\n=====\n\n` : "";
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], "") + voiceText + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${situation.text}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
   p.status?.(memberSignals.length ? `Spotted ${memberSignals.length} thing${memberSignals.length === 1 ? "" : "s"} in your numbers. Writing your answer…` : "Writing your answer in Dan's words…");
@@ -407,7 +410,7 @@ async function answerPipeline(p: PipelineInput) {
   // CHECK
   p.status?.(`Checking it like Dan would: privacy, your gate, his exact numbers${must.length ? ` and ${must.length} of his rules` : ""}…`);
   const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
-  const checkBase = `RESOURCES\n${catalogue}\n\n${workshopText ? `${workshopText}\n\n` : ""}PASSAGES\n${passageText}\n\n${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
+  const checkBase = `RESOURCES\n${catalogue}\n\n${workshopText ? `${workshopText}\n\n` : ""}PASSAGES\n${passageText}\n\n${situation.text}${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
     for (let i = 0; i < 2; i++) {
       try {
@@ -660,7 +663,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.16";
+const VERSION = "2026-10-24.17";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));

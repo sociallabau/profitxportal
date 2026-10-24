@@ -33,7 +33,7 @@ export function mustSay(i: MustSayInput): Rule[] {
   const out: Rule[] = [];
   const freeWork = /\bfree\b|for nothing|unpaid|trial (month|client)|no charge/.test(q);
   const caseStudy = /case stud|testimonial/.test(q);
-  const workload = /hire|hiring|editor|outsourc|\bva\b|assistant|overwhelm|burn(ed|t)? ?out|too busy|no time|drowning|workload|boundar|scope|extra|weekend|capacity/.test(q);
+  const workload = /hire|hiring|editor|outsourc|\bva\b|assistant|overwhelm|burn(ed|t)? ?out|too busy|no time|drowning|workload|weekend|capacity/.test(q);
   const adsMoney = /\bads?\b|ad spend|budget|boost|awareness|lead gen|campaign|save (money|cash)|cut (back|costs)|switch off|turn off|pause/.test(q);
   const path = /\bgate\b|next step|what (should|do) i (focus|do)|where (am i|do i start)|path|roadmap|what'?s next|level up|move up/.test(q);
   const scale = /\bscal|increase (the )?budget|raise (the )?budget|spend more|double|bump/.test(q);
@@ -43,13 +43,6 @@ export function mustSay(i: MustSayInput): Rule[] {
 
   if (path && i.gate == null && retainers != null && retainers < 3) {
     out.push({ say: `They have ${retainers} paying retainers, so say plainly they're not at Gate 1 yet (Gate 1 = 3 paying retainers held 2 months).`, short: "you're not at Gate 1 yet (that's 3 paying retainers held 2 months)", test: /not (at |in )?gate (1|i)\b|not (at |in )?gate (1|i) yet|below gate (1|i)\b/i });
-  }
-  if (/conversations?|convos?|enquir|inquir|more (leads|clients|dms)|get (more )?clients|find clients|outreach|warm (dm|people|leads)/.test(q)) {
-    out.push({ say: "More conversations comes from content: plan and film BTS posts and post them to hit the monthly posting goal.", short: "plan, film and post BTS content to hit your posting goal", test: /\bbts\b|behind.the.scenes/i });
-    out.push(i.gate != null && i.gate >= 2
-      ? { say: "Add each new post into their ongoing awareness profile-visit campaign.", short: "add your posts into the ongoing awareness profile-visit campaign", test: /awareness|ongoing (pv|profile.visit)/i }
-      : { say: "Put a $50–100 profile-visit boost behind each post.", short: "$50–100 profile-visit boost on each post", test: /\$?50\s*[–-]\s*\$?100|profile.visit boost|pv boost/i });
-    out.push({ say: "DM anyone who interacts with those posts (likes, comments, follows, story replies).", short: "DM anyone who interacts with your posts", test: /\bdm\b[^.]{0,60}(interact|engag|lik|comment|follow|repl)|(interact|engag|lik|comment|follow|repl)[^.]{0,60}\bdm/i });
   }
   if (freeWork && (path || /\bcount|retainers?\b/.test(q))) {
     out.push({ say: "A free (or case-study) client doesn't count toward the gate: only PAYING monthly retainers count.", short: "free clients don't count, only paying retainers", test: /(doesn'?t|don'?t|does not|do not|won'?t|isn'?t|not) count/i });
