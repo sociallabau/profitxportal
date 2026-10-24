@@ -21,7 +21,7 @@ import { guideFor, prescribe, workshopGuideText } from "./workshops.ts";
 import { loadRoster, ROSTER_PROMPT } from "./roster.ts";
 import { situationBlock } from "./playbook.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
-import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
+import { findBanned, findNames, limitBro, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
 const SONNET = "claude-sonnet-5-5";
 const HAIKU = "claude-haiku-5-5";
@@ -502,7 +502,7 @@ async function answerPipeline(p: PipelineInput) {
         let pts = [...final.points];
         let note = final.note;
         const over = () => wordCount(fullText({ ...final, points: pts, note })) > maximum;
-        const dataNudge = !!note && /context room|latest totals|submit|90-day goal|also bro:/i.test(note);
+        const dataNudge = !!note && /context room|latest totals|submit|90-day goal|also:/i.test(note);
         while (note && !dataNudge && over()) note = null;
         const carriesCost = (pt: Point) => typeof cpc === "number" && Number.isFinite(cpc) && hasCostPerClient(`${pt.do} ${pt.why}`, cpc);
         const carriesRule = (pt: Point) => must.some(r => r.test.test(`${pt.do} ${pt.why}`));
@@ -551,24 +551,26 @@ async function answerPipeline(p: PipelineInput) {
   if (leftOut.length && final.answer !== FLAG_REPLY) {
     const line = leftOut.map(r => r.short).join("; ");
     const keep = final.note && /context room|latest totals|submit|90-day goal/i.test(final.note) ? `${final.note} ` : "";
-    final = trim({ ...final, note: `${keep}Also bro: ${line}.` });
+    final = trim({ ...final, note: `${keep}Also: ${line}.` });
     issues.push({ type: "guardrail", note: `Added missing rules: ${leftOut.map(r => r.short).join("; ")}` });
     probs = problems(final);
   }
   // Hard cap so every answer stays inside the format: shorten the note to its first sentence, then drop it, then trim the last point's reason.
   const cap = shortReply ? 60 : buildHelp ? 185 : 118;
-  // An "Also bro:" note carries Dan's rules, so shortening it drops the lead-in sentence, never the rules.
+  // An "Also:" note carries Dan's rules, so shortening it drops the lead-in sentence, never the rules.
   if (wordCount(fullText(final)) > cap && final.note) {
-    const bro = final.note.search(/also bro:/i);
-    final = { ...final, note: bro > 0 ? final.note.slice(bro) : bro === 0 ? final.note : final.note.split(/(?<=[.!?])\s+/)[0] };
+    const rules = final.note.search(/also:/i);
+    final = { ...final, note: rules > 0 ? final.note.slice(rules) : rules === 0 ? final.note : final.note.split(/(?<=[.!?])\s+/)[0] };
   }
-  if (wordCount(fullText(final)) > cap && final.note && !/also bro:/i.test(final.note)) final = { ...final, note: null };
+  if (wordCount(fullText(final)) > cap && final.note && !/(^|\. )also:/i.test(final.note)) final = { ...final, note: null };
   while (wordCount(fullText(final)) > cap && final.points.length) {
     const last = final.points[final.points.length - 1];
     const words = last.why.split(/\s+/);
     if (words.length <= 6) break;
     final = { ...final, points: [...final.points.slice(0, -1), { ...last, why: words.slice(0, words.length - (wordCount(fullText(final)) - cap)).join(" ").replace(/[,;:]$/, "") + "." }] };
   }
+  // "bro" stays occasional: at most one, and none if either of Dan's last two answers in this thread used it.
+  final = limitBro(final, !p.history.filter(t => t.role === "assistant").slice(-2).some(t => /\bbro\b/i.test(t.content)));
   // Length is fixed by trimming above, so only real problems (privacy, voice, a cut-off, a missing number) withhold the answer.
   probs = { ...probs, out: probs.out.filter(o => !/^cut to under/.test(o)) };
   if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 15 : 30)) {
@@ -669,7 +671,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.18";
+const VERSION = "2026-10-24.19";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -1040,8 +1042,8 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
         const month = new Date(Date.UTC(y, mo - 1, 15)).toLocaleDateString("en-AU", { month: "long", timeZone: "UTC" });
         const final: Answer = {
           answer: d.data_freshness === "none"
-            ? "Submit your first Monthly Check-In bro, then come back and I'll map out your next move off your real numbers."
-            : `Your latest numbers are from ${month} bro. Submit your Monthly Check-In, then come back and I'll build your next move off where you're really at.`,
+            ? "Submit your first Monthly Check-In, then come back and I'll map out your next move off your real numbers."
+            : `Your latest numbers are from ${month}. Submit your Monthly Check-In, then come back and I'll build your next move off where you're really at.`,
           points: [], note: null, resource: null,
         };
         const cta = { label: "Submit your Monthly Check-In", href: "/submissions/monthly" };

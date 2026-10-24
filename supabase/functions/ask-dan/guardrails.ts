@@ -40,6 +40,27 @@ export function findBanned(text: string): string[] {
 
 export const wordCount = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
+/** Drop "bro" from a line, keeping the punctuation around it tidy ("Nah bro, at" -> "Nah, at"; "Bro, do" -> "Do"). */
+function stripBro(s: string): string {
+  const out = s.replace(/^\s*bro\b[,!.]?\s*/i, "").replace(/\s+bro\b/gi, "").replace(/\s{2,}/g, " ");
+  return out && /^\s*bro\b/i.test(s) ? out[0].toUpperCase() + out.slice(1) : out;
+}
+
+/** Dan doesn't say "bro" every time: keep at most the first one, and none when `allow` is false (a recent answer already used it). */
+export function limitBro<T extends { answer: string; points: { do: string; why: string }[]; note: string | null }>(a: T, allow: boolean): T {
+  let used = !allow;
+  const pass = (s: string) => {
+    if (!/\bbro\b/i.test(s)) return s;
+    if (used) return stripBro(s);
+    used = true;
+    const end = s.search(/\bbro\b/i) + 3;
+    return s.slice(0, end) + stripBro(s.slice(end));
+  };
+  const answer = pass(a.answer);
+  const points = a.points.map(pt => ({ ...pt, do: pass(pt.do), why: pass(pt.why) }));
+  return { ...a, answer, points, note: a.note == null ? null : pass(a.note) };
+}
+
 export function looksTruncated(text: string): boolean {
   const t = text.trim();
   return !/[.!?:)"'’”…]$/.test(t);

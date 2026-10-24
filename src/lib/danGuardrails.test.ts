@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { hasCostPerClient, looksTruncated, repairCostPerClient, wordCount } from '../../supabase/functions/ask-dan/guardrails';
+import { hasCostPerClient, limitBro, looksTruncated, repairCostPerClient, wordCount } from '../../supabase/functions/ask-dan/guardrails';
 import { FLAG_REPLY } from '../../supabase/functions/ask-dan/prompts';
+
+describe('limitBro', () => {
+  const a = { answer: "Nah bro, at $3,000/mo that's not a hiring problem.", points: [{ do: 'Bro, film a quick intro.', why: 'Easy win bro.' }], note: 'Also bro: post more.' };
+  it('keeps only the first bro when allowed', () => {
+    const r = limitBro(a, true);
+    expect(r.answer).toBe("Nah bro, at $3,000/mo that's not a hiring problem.");
+    expect(r.points[0]).toEqual({ do: 'Film a quick intro.', why: 'Easy win.' });
+    expect(r.note).toBe('Also: post more.');
+  });
+  it('drops every bro when a recent answer already used one', () => {
+    expect(limitBro(a, false).answer).toBe("Nah, at $3,000/mo that's not a hiring problem.");
+  });
+});
 
 describe('Dan AI guardrail repairs', () => {
   it('accepts a colon before dot points but rejects an unfinished stance', () => {
