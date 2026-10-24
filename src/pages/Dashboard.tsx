@@ -321,7 +321,7 @@ export default function Dashboard() {
 
       {gate && (
         <div className="mb-6">
-          <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} compact />
+          <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={example ? undefined : user?.id} compact />
         </div>
       )}
 

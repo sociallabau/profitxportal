@@ -59,9 +59,10 @@ describe('nextTask', () => {
 });
 
 describe('buildProgress', () => {
-  it('counts only Dan-approved tasks as built', () => {
-    const rows = withStatus([task({ id: 'a' }), task({ id: 'b' }), task({ id: 'c' })], [done('a', 'once', 'approved'), done('b', 'once', 'submitted')]);
-    expect(buildProgress(rows)).toEqual({ done: 1, total: 3, pct: 33 });
+  it('counts the member\'s ticks and Dan\'s approvals, not work sent back', () => {
+    const rows = withStatus([task({ id: 'a' }), task({ id: 'b' }), task({ id: 'c' }), task({ id: 'd' })],
+      [done('a', 'once', 'approved'), done('b', 'once', 'submitted'), done('c', 'once', 'needs_changes')]);
+    expect(buildProgress(rows)).toEqual({ done: 2, approved: 1, total: 4, pct: 50 });
   });
 });
 

@@ -1,19 +1,15 @@
+import { VAULT_ITEMS, driveFileId } from './vault';
+
 /**
- * What Dan can point a client at: the recorded sessions in the Vault and the
+ * What Dan can point a member at: the recorded sessions in the Vault and the
  * modules on the Roadmap.
  *
- * Sent with each Ask Dan question so answers can end with "watch X in the
- * Vault" rather than leaving the client to go hunting.
+ * Sent with each Ask Dan question so answers can end with a link to the
+ * session that covers it, rather than leaving the member to go hunting.
  *
- * Kept in step with Vault.tsx and Roadmap.tsx by hand — add new entries here
- * when you add them there.
+ * Vault entries come from src/data/vault.ts. Roadmap entries are kept in step
+ * with Roadmap.tsx by hand.
  */
-
-export type VaultResource = {
-  title: string;
-  category: string;
-  date?: string | null;
-};
 
 export type RoadmapResource = {
   id: string;
@@ -21,134 +17,6 @@ export type RoadmapResource = {
   desc: string;
   tier: string;
 };
-
-export const VAULT_RESOURCES: VaultResource[] = [
-  {
-    "title": "Workshop — Ad Metrics & Tracking 101™",
-    "category": "Workshop",
-    "date": "Oct 14"
-  },
-  {
-    "title": "Momentum Call - Paid Ads, Offers",
-    "category": "Momentum Call",
-    "date": "Oct 13"
-  },
-  {
-    "title": "Workshop — The System™",
-    "category": "Workshop",
-    "date": "Sep 30"
-  },
-  {
-    "title": "Hot Seat — Colby Shaw (Cognition Media)",
-    "category": "Hot Seat",
-    "date": "Sep 29"
-  },
-  {
-    "title": "Momentum Call - Setting Up Lead Generation Ads, Ad Creatives etc...",
-    "category": "Momentum Call",
-    "date": "Sep 15"
-  },
-  {
-    "title": "Momentum Call",
-    "category": "Momentum Call",
-    "date": "Aug 31"
-  },
-  {
-    "title": "Momentum Call - Editing Team Building",
-    "category": "Momentum Call",
-    "date": null
-  },
-  {
-    "title": "Momentum Call - Agreements, Paid Ads, Hiring Editors",
-    "category": "Momentum Call",
-    "date": null
-  },
-  {
-    "title": "Momentum Call - Paid Ads Help",
-    "category": "Momentum Call",
-    "date": null
-  },
-  {
-    "title": "Hot Seat \u2014 Elijah Arnold (Director @ Social Lab)",
-    "category": "Hot Seat",
-    "date": "Jul 8"
-  },
-  {
-    "title": "Momentum Call \u2014 Team Building, Hiring, Accountability & Expectations",
-    "category": "Momentum Call",
-    "date": null
-  },
-  {
-    "title": "Momentum Call \u2014 Paid Ads, Ad Creatives & Metrics",
-    "category": "Momentum Call",
-    "date": "Jun 23"
-  },
-  {
-    "title": "Q&A \u2014 June 10th",
-    "category": "Q&A",
-    "date": "Jun 10"
-  },
-  {
-    "title": "Workshop \u2014 Pay To Play\u2122",
-    "category": "Workshop",
-    "date": "Jul 22"
-  },
-  {
-    "title": "Workshop \u2014 Paid Ad Powerup\u2122",
-    "category": "Workshop",
-    "date": "Aug 5"
-  },
-  {
-    "title": "Workshop \u2014 Organic Content Snowball\u2122",
-    "category": "Workshop",
-    "date": "Aug 19"
-  },
-  {
-    "title": "Workshop \u2014 Delivery Magic\u2122",
-    "category": "Workshop",
-    "date": "Sep 16"
-  },
-  {
-    "title": "Workshop \u2014 Spring Planning\u2122 + Editing Flow",
-    "category": "Workshop",
-    "date": "Sep 2"
-  },
-  {
-    "title": "Workshop \u2014 Smooth Operator\u2122",
-    "category": "Workshop",
-    "date": null
-  },
-  {
-    "title": "Workshop \u2014 Profit By Design\u2122",
-    "category": "Workshop",
-    "date": "May 27"
-  },
-  {
-    "title": "Q&A \u2014 May 13th",
-    "category": "Q&A",
-    "date": "May 13"
-  },
-  {
-    "title": "Lesson \u2014 Paid Advertising (Meta Ads)",
-    "category": "Lesson",
-    "date": null
-  },
-  {
-    "title": "Q&A \u2014 April 14th",
-    "category": "Q&A",
-    "date": "Apr 14"
-  },
-  {
-    "title": "Lesson \u2014 Organic Content Flow",
-    "category": "Lesson",
-    "date": null
-  },
-  {
-    "title": "Q&A \u2014 March 18th",
-    "category": "Q&A",
-    "date": "Mar 18"
-  }
-];
 
 export const ROADMAP_RESOURCES: RoadmapResource[] = [
   {
@@ -267,13 +135,37 @@ export const ROADMAP_RESOURCES: RoadmapResource[] = [
   }
 ];
 
+const vaultLine = (r: { category: string; title: string; date?: string | null }) =>
+  `Vault · ${r.category} · ${r.title}${r.date ? ` (${r.date})` : ''}`;
+
 /** A compact list for the model to choose from. */
 export function resourceCatalogue(): string {
-  const vault = VAULT_RESOURCES.map(
-    r => `Vault · ${r.category} · ${r.title}${r.date ? ` (${r.date})` : ''}`,
-  );
+  const vault = VAULT_ITEMS.map(vaultLine);
   const roadmap = ROADMAP_RESOURCES.map(
     r => `Roadmap · ${r.tier} · ${r.name} — ${r.desc}`,
   );
   return [...vault, ...roadmap].join('\n');
+}
+
+/** Drive file id -> catalogue line, so Dan AI can tie a Drive transcript back to its recording. */
+export function vaultSources(): Record<string, string> {
+  return Object.fromEntries(VAULT_ITEMS.flatMap(r => {
+    const id = driveFileId(r.url);
+    return id ? [[id, vaultLine(r)]] : [];
+  }));
+}
+
+/** Where a resource line Dan AI picked should take the member. */
+export function resourceLink(line: string): { title: string; href: string | null; external: boolean; extras: { label: string; url: string }[] } {
+  const item = VAULT_ITEMS.find(r => vaultLine(r) === line);
+  if (item) {
+    const extras = [
+      ...(item.workbookUrl ? [{ label: item.workbookLabel ?? 'Workbook', url: item.workbookUrl }] : []),
+      ...(item.templates ?? []),
+    ];
+    return { title: item.title, href: item.url ?? '/vault', external: !!item.url, extras };
+  }
+  const module = ROADMAP_RESOURCES.find(r => line.startsWith(`Roadmap · ${r.tier} · ${r.name} — `));
+  if (module) return { title: module.name, href: '/roadmap', external: false, extras: [] };
+  return { title: line.split(' · ').pop() ?? line, href: null, external: false, extras: [] };
 }

@@ -107,7 +107,7 @@ export default function Playbooks() {
         {!gate && <p className="relative text-sm text-muted-foreground mt-4">Dan sets your gate after your kickoff call. Until then, here's where everyone starts.</p>}
         <div className="relative mt-6 md:mt-0 max-w-sm">
           <p className="mono-label text-[10.5px] font-bold text-primary">Gate {ROMAN[current]} · build progress</p>
-          <p className="text-3xl font-extrabold mt-1">{progress.done}<span className="text-base text-muted-foreground font-bold"> / {progress.total} built</span></p>
+          <p className="text-3xl font-extrabold mt-1">{progress.done}<span className="text-base text-muted-foreground font-bold"> / {progress.total} ticked</span></p>
           <div className="h-2.5 rounded-full bg-primary/10 mt-2 overflow-hidden">
             <div className="h-full rounded-full violet-grad shadow-[0_0_14px_rgb(155_92_255/0.8)] transition-[width] duration-700" style={{ width: `${progress.pct}%` }} />
           </div>
@@ -119,13 +119,13 @@ export default function Playbooks() {
           <section className="glass rounded-[1.75rem] p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="mono-label text-[12px] font-bold text-primary">Your build list</h2>
-              <span className="text-xs text-muted-foreground text-right">Tick in your check-in · Dan approves</span>
+              <span className="text-xs text-muted-foreground text-right">{viewed ? `${progress.approved} approved` : 'Tap to tick · proof to Dan on WhatsApp'}</span>
             </div>
-            {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : <BuildList tasks={tasks} isAdmin={isAdmin} />}
+            {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : <BuildList tasks={tasks} isAdmin={isAdmin} userId={viewed ? undefined : user?.id} />}
           </section>
         </div>
         <div className="order-1 lg:order-2 space-y-5">
-          <NextMove task={next} brief={brief} isAdmin={isAdmin} />
+          <NextMove task={next} brief={brief} isAdmin={isAdmin} userId={viewed ? undefined : user?.id} />
           <section className="glass rounded-[1.75rem] p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="mono-label text-[12px] font-bold text-primary">Gate goals</h2>

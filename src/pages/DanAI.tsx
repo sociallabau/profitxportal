@@ -5,8 +5,8 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { resourceCatalogue } from '@/data/resourceCatalogue';
-import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History } from 'lucide-react';
+import { resourceCatalogue, resourceLink, vaultSources } from '@/data/resourceCatalogue';
+import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History, PlayCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import DanAiOrb, { type OrbState } from '@/components/DanAiOrb';
 import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
@@ -31,10 +31,23 @@ interface Debug {
 }
 interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer; debug?: Debug }
 
-// "Vault · Workshop · Pay To Play™ (Jul 22)" -> "Pay To Play™ (Jul 22)"; drops roadmap descriptions.
-function resourceTitle(r: string) {
-  const last = r.split(' · ').pop() ?? r;
-  return last.split(' — ')[0].trim();
+/** The session at the bottom of an answer: a link to the recording, plus its workbook and templates. */
+function ResourceLink({ line }: { line: string }) {
+  const r = resourceLink(line);
+  const cls = 'inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--dan-violet))] hover:underline';
+  const label = <><PlayCircle className="w-4 h-4 shrink-0" />Watch: {r.title}</>;
+  return (
+    <div className="space-y-1">
+      {!r.href ? <p className={cls}>{label}</p>
+        : r.external ? <a href={r.href} target="_blank" rel="noreferrer" className={cls}>{label}</a>
+        : <Link to={r.href} className={cls}>{label}</Link>}
+      {r.extras.length > 0 && (
+        <p className="text-xs text-[hsl(var(--dan-muted))] pl-[22px]">
+          {r.extras.map((x, i) => <span key={x.url}>{i > 0 && ' · '}<a href={x.url} target="_blank" rel="noreferrer" className="hover:underline">{x.label}</a></span>)}
+        </p>
+      )}
+    </div>
+  );
 }
 interface Thread { id: string; title: string; at: string }
 
@@ -133,7 +146,7 @@ export default function DanAI() {
     setPending('thinking');
     setStatus('Reading your numbers…');
     try {
-    const data = await askDanStream({ question: asked, thread_id: threadId, catalogue: resourceCatalogue(), member_id: isAdmin && memberId ? memberId : undefined }, next => {
+    const data = await askDanStream({ question: asked, thread_id: threadId, catalogue: resourceCatalogue(), vault_sources: vaultSources(), member_id: isAdmin && memberId ? memberId : undefined }, next => {
       setStatus(next); setPending(next.startsWith('Checking') ? 'checking' : 'thinking');
     });
     const parsed: Answer = {
@@ -279,7 +292,7 @@ export default function DanAI() {
                         <p className="text-xs text-[hsl(var(--dan-muted))]">{m.parsed.note}</p>
                       )}
                       {m.parsed?.resource && (
-                        <p className="text-sm" style={{ color: violet }}>Watch: {resourceTitle(m.parsed.resource)}</p>
+                        <ResourceLink line={m.parsed.resource} />
                       )}
                       {isAdmin && m.debug && (
                         <details className="text-[11px] text-[hsl(var(--dan-muted))] rounded-lg border border-[hsl(var(--dan-ink)/0.1)] px-3 py-2">

@@ -87,10 +87,12 @@ export function nextTask(tasks: TaskWithStatus[]): TaskWithStatus | null {
     ?? null;
 }
 
-export function buildProgress(tasks: TaskWithStatus[]): { done: number; total: number; pct: number } {
+/** Ticked (by the member, or approved by Dan) out of the whole list. Dan can still send a tick back. */
+export function buildProgress(tasks: TaskWithStatus[]): { done: number; approved: number; total: number; pct: number } {
   const total = tasks.length;
-  const done = tasks.filter(t => t.status === 'approved').length;
-  return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+  const done = tasks.filter(t => t.status === 'submitted' || t.status === 'approved').length;
+  const approved = tasks.filter(t => t.status === 'approved').length;
+  return { done, approved, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
 /** Where the "training" chip points: a URL/Loom, the module page, or nothing. */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { resourceCatalogue } from '@/data/resourceCatalogue';
+import { resourceCatalogue, vaultSources } from '@/data/resourceCatalogue';
 import { toast } from 'sonner';
 import { Loader2, Play, RotateCw } from 'lucide-react';
 
@@ -11,7 +11,7 @@ interface Result { id: string; test_id: string; answer: { answer?: string } | nu
 interface Run { id: string; run_at: string; round: number; summary: { tests_passed?: number; tests_total?: number; criteria_passed?: number; criteria_total?: number; privacy_boundary_pass?: boolean } }
 
 const invoke = (body: Record<string, unknown>) =>
-  supabase.functions.invoke('ask-dan', { body: { catalogue: resourceCatalogue(), ...body } });
+  supabase.functions.invoke('ask-dan', { body: { catalogue: resourceCatalogue(), vault_sources: vaultSources(), ...body } });
 
 export default function TestsAdmin() {
   const [tests, setTests] = useState<Test[]>([]);

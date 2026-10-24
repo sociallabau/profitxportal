@@ -57,18 +57,28 @@ export function useGateBuild(userId: string | null | undefined, gate: GateNumber
   return { tasks, content: content.data, member: member.data, isLoading: content.isLoading || member.isLoading };
 }
 
-export type SubmitTask = { task_id: string; period: string; proof_url: string | null; member_note: string | null };
+export type TickTask = { task_id: string; period: string; proof_url: string | null; member_note: string | null };
 
-/** Member submits proof (the DB trigger forces status back to 'submitted'). */
-export function useSubmitTasks(userId?: string | null) {
+/** Member ticks a task off (the DB trigger keeps it 'submitted' until Dan reviews). */
+export function useTickTask(userId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (rows: SubmitTask[]) => {
-      if (!rows.length) return;
-      const { error } = await supabase.from('member_task_progress').upsert(
-        rows.map(r => ({ ...r, user_id: userId!, status: 'submitted' })),
-        { onConflict: 'user_id,task_id,period' },
-      );
+    mutationFn: async (t: TickTask) => {
+      const { error } = await supabase.from('member_task_progress')
+        .upsert({ ...t, user_id: userId!, status: 'submitted' }, { onConflict: 'user_id,task_id,period' });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-playbook', userId] }),
+  });
+}
+
+/** Member unticks a task Dan hasn't approved yet. */
+export function useUntickTask(userId?: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (t: { task_id: string; period: string }) => {
+      const { error } = await supabase.from('member_task_progress').delete()
+        .eq('user_id', userId!).eq('task_id', t.task_id).eq('period', t.period);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['member-playbook', userId] }),

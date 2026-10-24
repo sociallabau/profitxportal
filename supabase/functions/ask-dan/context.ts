@@ -166,7 +166,7 @@ export function buildMemberBlock(m: MemberInput, today = new Date()): { text: st
   return { text: L.join("\n"), derived: d, hasContext, summary };
 }
 
-const STATUS_LABEL: Record<string, string> = { approved: "DONE (Dan approved)", submitted: "submitted, waiting on Dan", needs_changes: "SENT BACK by Dan", open: "not done yet" };
+const STATUS_LABEL: Record<string, string> = { approved: "DONE (Dan approved)", submitted: "ticked by them, proof goes to Dan on WhatsApp", needs_changes: "SENT BACK by Dan", open: "not done yet" };
 
 /** The rest of the portal, as plain lines the model can use. */
 export function extrasLines(x: MemberExtras): string[] {

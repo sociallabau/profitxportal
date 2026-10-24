@@ -69,6 +69,7 @@ ${ANSWER_RULES}
 ${styleExamples.length ? `\nREAL MESSAGES DAN HAS SENT (match this voice, casing and rhythm):\n${styleExamples.map(l => `- ${l}`).join("\n")}\n` : ""}
 RESOURCES YOU CAN POINT TO (use the exact line, or null)
 ${catalogue}
+For any how-to or "help me do this" question, end on the Vault workshop or lesson that teaches it (the best-matching recording when one is given). Use null only for boundary and privacy replies.
 
 OUTPUT: JSON only: {"answer": "<one short stance line, max ~15 words>", "points": [{"do": "the action", "why": "one short reason, max ~20 words"}], "note": "<optional stale-data or expired-goal nudge, or null>", "resource": "exact resource line from the list, or null"}
 2–4 points in priority order, no paragraphs, under ~110 words total. Boundary/privacy replies: points = [], note = null.`;

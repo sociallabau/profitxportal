@@ -77,7 +77,7 @@ export default function PlaybookPanel({ memberId, gate: gateRaw }: { memberId: s
 
       {gate && (
         <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Build list · {progress.done}/{progress.total} approved</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Build list · {progress.done}/{progress.total} ticked · {progress.approved} approved</p>
           <div className="space-y-2">
             {tasks.map(t => (
               <div key={t.id} className="rounded-xl border border-border p-3">

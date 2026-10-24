@@ -11,6 +11,7 @@ import { isCronCall } from "../_shared/cron.ts";
 import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
 import { loadExtras } from "./dossier.ts";
+import { bestRecording } from "./recordings.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
 import { BRAIN_HEADER, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
@@ -260,7 +261,7 @@ async function runPlan(question: string, history: Turn[], metrics: Timing): Prom
 }
 
 // ---------- retrieval ----------
-type Chunk = { chunk_id: string; doc_id: string; title: string; source_type: string; content: string; rank: number };
+type Chunk = { chunk_id: string; doc_id: string; title: string; source_type: string; content: string; rank: number; source_id?: string | null };
 type Scored = Chunk & { score: number };
 async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy: boolean; askerName: string | null; otherTokens: string[] }) {
   const search = async (q: string, n: number): Promise<Chunk[]> => q.trim() ? ((await admin.rpc("search_knowledge", { q, limit_n: n })).data ?? []) : [];
@@ -282,9 +283,11 @@ async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy
   }
 
   const { data: docs } = cands.length
-    ? await admin.from("knowledge_docs").select("id, created_at").in("id", [...new Set(cands.map(c => c.doc_id))])
+    ? await admin.from("knowledge_docs").select("id, created_at, source_id").in("id", [...new Set(cands.map(c => c.doc_id))])
     : { data: [] };
-  const age = new Map<string, number>((docs ?? []).map((d: { id: string; created_at: string }) => [d.id, (Date.now() - Date.parse(d.created_at)) / 86400000]));
+  const docRows = (docs ?? []) as { id: string; created_at: string; source_id: string | null }[];
+  const age = new Map<string, number>(docRows.map(d => [d.id, (Date.now() - Date.parse(d.created_at)) / 86400000]));
+  const sourceId = new Map<string, string | null>(docRows.map(d => [d.id, d.source_id]));
   const typeBoost: Record<string, number> = { teaching: 4, transcript: 4, note: 2, whatsapp: 2, call: 0 };
   const lowerTerms = [...new Set([...terms, ...keywordTerms(question)].map(t => t.toLowerCase()))];
   const askerFull = opts.askerName?.trim().toLowerCase() || null;
@@ -314,12 +317,12 @@ async function retrieve(admin: DB, question: string, plan: Plan, opts: { privacy
     perDoc.set(c.doc_id, (perDoc.get(c.doc_id) ?? 0) + 1);
     picked.push(c);
   }
-  return picked.map(c => ({ ...c, content: relevantExcerpt(c.content, lowerTerms) }));
+  return picked.map(c => ({ ...c, source_id: sourceId.get(c.doc_id) ?? null, content: relevantExcerpt(c.content, lowerTerms) }));
 }
 
 // ---------- the pipeline ----------
 type PipelineInput = {
-  admin: DB; question: string; history: Turn[]; catalogue: string;
+  admin: DB; question: string; history: Turn[]; catalogue: string; vaultSources: Record<string, string>;
   mode: "member" | "admin" | "test"; member: MemberInput | null | Promise<MemberInput | null>; memberId: string | null;
   clock: ReturnType<typeof timing>; status?: (status: string) => void;
 };
@@ -344,9 +347,11 @@ async function answerPipeline(p: PipelineInput) {
 
   const brainBlock: Block[] = brain.text ? [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }] : [];
   const catalogueLines = p.catalogue.split("\n").map(l => l.trim()).filter(Boolean);
+  const shortAnswer = !!plan.is_boundary || !!plan.asks_about_other_member;
+  const recording = shortAnswer ? null : bestRecording(passages, catalogueLines, p.vaultSources);
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${recording ? `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}\nUse this exact line as the resource unless another line fits the question clearly better.\n\n` : ""}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
   let draft: Answer | null = null;
@@ -388,7 +393,7 @@ async function answerPipeline(p: PipelineInput) {
     const banned = findBanned(text);
     if (banned.length) out.push(`rewrite the lines containing banned phrases/swearing: ${banned.join(", ")}`);
     if (looksTruncated(a.answer)) out.push("the answer is cut off — finish it cleanly");
-    const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
+    const shortReply = shortAnswer;
     if (shortReply) {
       if (wordCount(text) < 15 || wordCount(text) > 60) out.push("boundary/privacy reply must be 15–60 words");
       if (a.points.length || a.note) out.push("boundary/privacy reply must be 1–2 short lines, no points or note");
@@ -411,7 +416,7 @@ async function answerPipeline(p: PipelineInput) {
     }
     return { out, names };
   };
-  const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
+  const shortReply = shortAnswer;
   const maximum = shortReply ? 60 : 115;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = {
@@ -472,6 +477,8 @@ async function answerPipeline(p: PipelineInput) {
   const matched = matchResource(final.resource, catalogueLines);
   if (final.resource && !matched) issues.push({ type: "guardrail", note: `Resource "${final.resource}" not in catalogue — removed` });
   final = { ...final, resource: matched };
+  // Every real answer ends on the recording that covers it, when Drive gave us one.
+  if (!final.resource && recording && final.answer !== FLAG_REPLY && final.answer !== NAME_FALLBACK) final = { ...final, resource: recording };
 
   return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish() };
 }
@@ -553,6 +560,10 @@ Deno.serve(async (req) => {
     const uuidRe = /^[0-9a-f-]{36}$/i;
     const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 20000) : "(none available)";
     const catalogueLines = catalogue.split("\n").map((l: string) => l.trim()).filter(Boolean);
+    // Drive file id -> Vault catalogue line, so transcripts can point back at their recording.
+    const vaultSources: Record<string, string> = body.vault_sources && typeof body.vault_sources === "object"
+      ? Object.fromEntries(Object.entries(body.vault_sources as Record<string, unknown>).filter(([k, v]) => /^[\w-]{10,100}$/.test(k) && typeof v === "string").slice(0, 300) as [string, string][])
+      : {};
 
     // ----- TEST actions (admin only) -----
     if (body.action) {
@@ -576,7 +587,7 @@ Deno.serve(async (req) => {
         const { data: test } = await admin.from("dan_ai_tests").select("*").eq("id", body.test_id).single();
         const member = persona(test.persona_key);
         if (!member) return json({ error: `Unknown persona ${test.persona_key}` }, 400);
-        const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, mode: "test", member, memberId: null, clock });
+        const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, vaultSources, mode: "test", member, memberId: null, clock });
         const { data: allProfiles } = await admin.from("profiles").select("full_name");
         const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
         const short = !!r.plan.is_boundary || !!r.plan.asks_about_other_member;
@@ -655,7 +666,7 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
       const a = m.role === "assistant" ? toAnswer(parseJson(m.content)) : null;
       return { role: m.role, content: a ? fullText(a) : m.content };
     });
-    const r = await answerPipeline({ admin, question, history, catalogue, mode, member: memberPromise, memberId, clock, status });
+    const r = await answerPipeline({ admin, question, history, catalogue, vaultSources, mode, member: memberPromise, memberId, clock, status });
     const member = r.member;
     await Promise.all([
       admin.from("dan_ai_checks").insert({ user_id: userId, question, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues, timing: r.timing }),
