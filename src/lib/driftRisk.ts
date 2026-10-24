@@ -18,7 +18,7 @@
  * without touching the page.
  */
 
-import { gateNumber as parseGate } from './playbook';
+import { gateNumber as parseGate } from './growthHub';
 
 export type DriftBand = 'green' | 'amber' | 'red';
 

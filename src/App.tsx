@@ -15,8 +15,8 @@ import Auth from "./pages/Auth";
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Roadmap = lazy(() => import("./pages/Roadmap"));
-const Playbooks = lazy(() => import("./pages/Playbooks"));
-const PlaybookEditor = lazy(() => import("./pages/admin/PlaybookEditor"));
+const GrowthHub = lazy(() => import("./pages/GrowthHub"));
+const GrowthHubEditor = lazy(() => import("./pages/admin/GrowthHubEditor"));
 const NewClients = lazy(() => import("./pages/submissions/NewClients"));
 const MonthlyTotals = lazy(() => import("./pages/submissions/MonthlyTotals"));
 const Financials = lazy(() => import("./pages/Financials"));
@@ -80,7 +80,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
-          <Route path="/growth-hub" element={<ProtectedRoute><Playbooks /></ProtectedRoute>} />
+          <Route path="/growth-hub" element={<ProtectedRoute><GrowthHub /></ProtectedRoute>} />
           <Route path="/playbooks" element={<Navigate to="/growth-hub" replace />} />
           <Route path="/content-studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
           <Route path="/content-generator" element={<ProtectedRoute><ContentGenerator /></ProtectedRoute>} />
@@ -102,7 +102,7 @@ const App = () => (
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/dan-ai" element={DAN_AI_MEMBERS_LIVE ? <ProtectedRoute><DanAI /></ProtectedRoute> : <AdminRoute><DanAI /></AdminRoute>} />
-          <Route path="/admin/growth-hub" element={<AdminRoute><PlaybookEditor /></AdminRoute>} />
+          <Route path="/admin/growth-hub" element={<AdminRoute><GrowthHubEditor /></AdminRoute>} />
           <Route path="/admin/playbooks" element={<Navigate to="/admin/growth-hub" replace />} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />

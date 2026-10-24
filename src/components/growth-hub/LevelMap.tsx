@@ -1,5 +1,5 @@
 import { Check, Lock } from 'lucide-react';
-import { ROMAN, type GateNumber, type PlaybookGate } from '@/lib/playbook';
+import { ROMAN, type GateNumber, type GrowthHubGate } from '@/lib/growthHub';
 
 type State = 'done' | 'current' | 'locked';
 const stateOf = (gate: number, current: number): State => gate < current ? 'done' : gate === current ? 'current' : 'locked';
@@ -49,7 +49,7 @@ function Orb({ gate, state, size }: { gate: GateNumber; state: State; size: 'lg'
   );
 }
 
-function Label({ g, state, align = 'center' }: { g: PlaybookGate; state: State; align?: 'center' | 'left' }) {
+function Label({ g, state, align = 'center' }: { g: GrowthHubGate; state: State; align?: 'center' | 'left' }) {
   return (
     <div className={align === 'center' ? 'text-center' : 'text-left'}>
       <p className={`mono-label text-[10px] font-bold ${state === 'locked' ? 'text-muted-foreground/60' : 'text-primary'}`}>
@@ -64,7 +64,7 @@ function Label({ g, state, align = 'center' }: { g: PlaybookGate; state: State; 
 }
 
 /** The level-select map: a winding path on desktop, a vertical trail on mobile. */
-export default function LevelMap({ gates, current }: { gates: PlaybookGate[]; current: GateNumber }) {
+export default function LevelMap({ gates, current }: { gates: GrowthHubGate[]; current: GateNumber }) {
   const xs = [9, 37, 65, 90];
   const ys = [60, 46, 60, 42];
   const lit = xs[current - 1] / 100;

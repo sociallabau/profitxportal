@@ -13,10 +13,10 @@ import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 import ExampleLabel from '@/components/ExampleLabel';
-import { NextMove } from '@/components/playbook/PlaybookCards';
-import { useGateBuild } from '@/hooks/usePlaybook';
+import { NextMove } from '@/components/growth-hub/GrowthHubCards';
+import { useGateBuild } from '@/hooks/useGrowthHub';
 import { useDanBrief } from '@/hooks/useDanBrief';
-import { gateNumber, nextTask } from '@/lib/playbook';
+import { gateNumber, nextTask } from '@/lib/growthHub';
 import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------
@@ -251,7 +251,7 @@ export default function Dashboard() {
   const dataUserId = user?.id;
   const example = isExampleDashboard(dataUserId);
   const dashboardProfile = example ? EXAMPLE_PROFILE : profile;
-  // The build list drives "what to do next" everywhere, so Dashboard and Playbooks always agree.
+  // The build list drives "what to do next" everywhere, so Dashboard and Growth Hub always agree.
   const gate = example ? null : gateNumber(profile?.gate);
   const { tasks: buildTasks } = useGateBuild(example ? null : user?.id, gate);
   const next = nextTask(buildTasks);

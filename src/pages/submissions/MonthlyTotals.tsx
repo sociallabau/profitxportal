@@ -6,8 +6,8 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import { useProfile } from '@/hooks/useProfile';
 import { Link } from 'react-router-dom';
-import { useGateBuild } from '@/hooks/usePlaybook';
-import { ROMAN, buildProgress, gateNumber } from '@/lib/playbook';
+import { useGateBuild } from '@/hooks/useGrowthHub';
+import { ROMAN, buildProgress, gateNumber } from '@/lib/growthHub';
 
 function ScoreSlider({ label, sublabel, value, onChange }: {
   label: string; sublabel?: string; value: string; onChange: (v: string) => void;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bestRecording, recordingName, titleDate } from '../../supabase/functions/ask-dan/recordings';
 import { buildTaskTitle, sectionsText } from '../../supabase/functions/ask-dan/buildHelp';
-import { helpPrompt } from '@/lib/playbook';
+import { helpPrompt } from '@/lib/growthHub';
 import { resourceCatalogue, resourceLink, vaultSources } from '@/data/resourceCatalogue';
 
 const lines = resourceCatalogue().split('\n');
@@ -37,7 +37,7 @@ describe('Dan AI recording links', () => {
 
 
 describe('Dan AI build-task help', () => {
-  it('recognises the Playbook "Help me do this" question', () => {
+  it('recognises the Growth Hub "Help me do this" question', () => {
     const q = helpPrompt({ title: 'Post 8 times on your own Instagram', module_codes: ['C1'], training_label: null });
     expect(buildTaskTitle(q)).toBe('Post 8 times on your own Instagram');
     expect(buildTaskTitle('How do I get more leads?')).toBeNull();

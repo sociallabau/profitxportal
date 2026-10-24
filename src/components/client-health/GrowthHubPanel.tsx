@@ -5,15 +5,15 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
-import { useGateBuild, useReviewTask } from '@/hooks/usePlaybook';
+import { useGateBuild, useReviewTask } from '@/hooks/useGrowthHub';
 import { PROFITX_MODULES } from '@/data/modules';
-import { GATES, ROMAN, buildProgress, gateLabel, gateNumber, type GateNumber } from '@/lib/playbook';
+import { GATES, ROMAN, buildProgress, gateLabel, gateNumber, type GateNumber } from '@/lib/growthHub';
 
 /**
  * Dan's controls for one member: set their gate, approve or send back build
  * proof, lead gen fast-track, extra modules, and what Dan AI currently knows.
  */
-export default function PlaybookPanel({ memberId, gate: gateRaw }: { memberId: string; gate: string | null }) {
+export default function GrowthHubPanel({ memberId, gate: gateRaw }: { memberId: string; gate: string | null }) {
   const qc = useQueryClient();
   const gate = gateNumber(gateRaw);
   const { tasks, member } = useGateBuild(memberId, gate);
@@ -40,7 +40,7 @@ export default function PlaybookPanel({ memberId, gate: gateRaw }: { memberId: s
       }, { onConflict: 'user_id' });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-playbook', memberId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-growth-hub', memberId] }),
     onError: (e: Error) => toast.error(e.message),
   });
 

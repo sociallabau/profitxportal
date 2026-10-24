@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildProgress, gateLabel, gateNumber, goalStatus, helpPrompt, nextTask, trainingLink, withStatus,
-  GATE_GOALS, type PlaybookTask, type TaskProgress,
-} from './playbook';
+  GATE_GOALS, type GrowthHubTask, type TaskProgress,
+} from './growthHub';
 
-const task = (over: Partial<PlaybookTask>): PlaybookTask => ({
+const task = (over: Partial<GrowthHubTask>): GrowthHubTask => ({
   id: 't', gate: 2, position: 1, title: 'Task', why: '', kind: 'once', module_codes: [],
   training_label: null, training_url: null, proof_hint: '', active: true, ...over,
 });
