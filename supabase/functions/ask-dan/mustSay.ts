@@ -52,6 +52,7 @@ export function mustSay(i: MustSayInput): Rule[] {
   if (workload) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
   if (/too busy|no time|don'?t have (the )?time|can'?t find (the )?time|flat out|swamped/.test(q) && /post|content|own (stuff|marketing|socials|page)|film (myself|me)/.test(q)) {
     out.push({ say: "Give the easy way to document while they shoot: a quick intro on camera at the client's shoot ('here at x, shooting y today because it'll get them z') then cut in clips they already have, or pay a friend ~$100 to film BTS. Their own content isn't optional.", short: "quick intro on camera at the shoot plus clips, or a friend filming BTS for ~$100", test: /intro|\$100|friend/i });
+    out.push({ say: "Be blunt (it's an excuse, so don't open with \"That's fine\"): their own content is the lifeblood of the business, so \"too busy\" isn't good enough; find solutions, not excuses.", short: "your own content is the lifeblood, too busy isn't good enough", test: /lifeblood|not optional|isn'?t optional|isn'?t good enough|no excuses|find solutions/i });
   }
   if (caseStudy) out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
   if (/ad spend|ads? budget/.test(q) && /bundle|include|inside|\binto\b|\bin (my|the) (retainer|price|package|fee)/.test(q)) {
