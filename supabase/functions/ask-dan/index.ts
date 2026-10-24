@@ -20,7 +20,8 @@ const SOURCE_TAGS: Record<string, string> = {
 };
 const GROUP_CALL = /momentum|q&a|q & a|workshop|hot seat|powerup|power up|pay to play|edit flow/i;
 
-type Answer = { answer: string; next_steps: string[]; resource: string | null };
+type Point = { do: string; why: string };
+type Answer = { answer: string; points: Point[]; note: string | null; resource: string | null };
 type Turn = { role: "user" | "assistant"; content: string };
 type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 type Plan = { topic?: string; is_boundary?: boolean; asks_about_other_member?: boolean; search_terms?: string[]; member_facts_needed?: string[]; gate_relevant?: boolean };
@@ -47,12 +48,27 @@ function toAnswer(v: unknown): Answer | null {
   const o = v as Record<string, unknown>;
   const answer = String(o.answer ?? "").trim();
   if (!answer) return null;
+  let points: Point[] = [];
+  if (Array.isArray(o.points)) {
+    points = o.points.map(p => {
+      if (p && typeof p === "object") {
+        const po = p as Record<string, unknown>;
+        return { do: String(po.do ?? "").trim(), why: String(po.why ?? "").trim() };
+      }
+      return { do: String(p ?? "").trim(), why: "" };
+    }).filter(p => p.do).slice(0, 4);
+  } else if (Array.isArray(o.next_steps)) {
+    // Legacy shape from older chats: plain action strings become points without a reason.
+    points = o.next_steps.map(String).filter(Boolean).slice(0, 4).map(s => ({ do: s, why: "" }));
+  }
   return {
     answer,
-    next_steps: Array.isArray(o.next_steps) ? o.next_steps.map(String).filter(Boolean).slice(0, 3) : [],
+    points,
+    note: o.note && o.note !== "null" ? String(o.note) : null,
     resource: o.resource && o.resource !== "null" ? String(o.resource) : null,
   };
 }
+const fullText = (a: Answer) => [a.answer, ...a.points.map(p => `${p.do} ${p.why}`), a.note ?? ""].join("\n");
 
 // ---------- model calls ----------
 async function callAnthropic(model: string, system: Block[], messages: Turn[], retried = false, metrics?: Timing, stage = "other", signal?: AbortSignal): Promise<string> {
@@ -261,7 +277,7 @@ async function answerPipeline(p: PipelineInput) {
   for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(draftSystem, [{ role: "user", content: userTurn }], clock.data, "draft"))));
   if (!draft) {
     issues.push({ type: "guardrail", note: "Draft JSON invalid twice — flagged to Dan" });
-    const final = { answer: FLAG_REPLY, next_steps: [], resource: null };
+    const final: Answer = { answer: FLAG_REPLY, points: [], note: null, resource: null };
     return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish() };
   }
 
@@ -283,13 +299,13 @@ async function answerPipeline(p: PipelineInput) {
   let final: Answer = draft;
   const checked = await runCheck(draft);
   if (checked) { final = checked.final; pass = checked.pass; issues.push(...checked.issues); }
-  else { issues.push({ type: "guardrail", note: "Checker unavailable — safe fallback; unchecked draft withheld" }); final = { answer: FLAG_REPLY, next_steps: [], resource: null }; }
+  else { issues.push({ type: "guardrail", note: "Checker unavailable — safe fallback; unchecked draft withheld" }); final = { answer: FLAG_REPLY, points: [], note: null, resource: null }; }
 
   const guardStarted = performance.now();
   const retryBefore = clock.data.steps.check_retry ?? 0;
   // GUARDRAILS — deterministic repairs first; only privacy gets another checker call.
   const problems = (a: Answer) => {
-    const text = [a.answer, ...a.next_steps].join("\n");
+    const text = fullText(a);
     const out: string[] = [];
     const names = privacy ? findNames(text, tokens) : [];
     if (names.length) out.push(`remove other member names (${names.join(", ")})`);
@@ -297,46 +313,75 @@ async function answerPipeline(p: PipelineInput) {
     if (banned.length) out.push(`rewrite the lines containing banned phrases/swearing: ${banned.join(", ")}`);
     if (looksTruncated(a.answer)) out.push("the answer is cut off — finish it cleanly");
     const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
-    if (wordCount(a.answer) > (shortReply ? 60 : 220)) out.push(shortReply ? "cut to under 60 words" : "cut to under 170 words");
+    if (shortReply) {
+      if (wordCount(a.answer) > 60) out.push("cut to under 60 words");
+    } else {
+      if (a.points.length < 2 || a.points.length > 4) out.push("needs 2–4 dot points");
+      if (wordCount(text) > 130) out.push("cut to under ~110 words total");
+    }
     // Ads/scaling/pricing questions must use the member's cost per client — only when it was actually computed.
     const cpc = block.derived?.cost_per_client;
     if (typeof cpc === "number" && Number.isFinite(cpc) && !shortReply) {
-      if (["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(a.answer.replace(/\$(15|20)\b/g, ""))) {
+      if (["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(text.replace(/\$(15|20)\b/g, ""))) {
         out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client vs their lowest retainer${block.derived?.lowest_retainer_price ? ` $${block.derived.lowest_retainer_price}` : ""}) and say whether it's under half`);
-      } else if (plan.topic === "ads" && !a.answer.includes(String(Math.round(cpc)))) {
+      } else if (plan.topic === "ads" && !text.includes(String(Math.round(cpc)))) {
         out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client) and say whether it's under half their first month's fee`);
       }
     }
     // Sequence rule: follow-up problem + allowed to scale → scaling must be conditional on speed to lead.
-    if (/no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question) && /\bscal/i.test(a.answer) && !/15\s*[–-]\s*30/.test(a.answer)) {
+    if (/no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question) && /\bscal/i.test(text) && !/15\s*[–-]\s*30/.test(text)) {
       out.push(`put follow-up first and make scaling conditional: "you can scale, but only once you're calling every lead within 15–30 mins"`);
     }
     return { out, names };
   };
   const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
-  const maximum = shortReply ? 60 : 220;
+  const maximum = shortReply ? 60 : 115;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
-  final = { ...final, answer: clean(final.answer), next_steps: final.next_steps.map(clean).filter(Boolean) };
+  final = {
+    ...final,
+    answer: clean(final.answer),
+    points: final.points.map(pt => ({ do: clean(pt.do), why: clean(pt.why) })).filter(pt => pt.do),
+    note: final.note ? clean(final.note) : null,
+  };
   // Code may append only precomputed member facts or the exact fixed sequence rule, never invent coaching.
   const cpc = block.derived?.cost_per_client;
-  if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !final.answer.includes(String(Math.round(cpc)))) {
+  if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !fullText(final).includes(String(Math.round(cpc)))) {
     const price = block.derived?.lowest_retainer_price;
     if (typeof price === "number" && price > 0) {
       const verdict = block.derived?.cac_vs_first_month;
-      final.answer += `\n\nThat's ~$${Math.round(cpc)} a client vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 50 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}.`;
+      const why = `vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 50 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}`;
+      if (final.points.length < 4) final = { ...final, points: [...final.points, { do: `That's ~$${Math.round(cpc)} a client`, why }] };
+      else final = { ...final, note: `That's ~$${Math.round(cpc)} a client ${why}.` };
     }
   }
   const followupProblem = /no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question);
-  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 50 && /\bscal/i.test(final.answer)) {
-    final.answer = final.answer.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
+  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 50 && /\bscal/i.test(fullText(final))) {
+    const fix = (s: string) => s.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
+    final = { ...final, answer: fix(final.answer), points: final.points.map(pt => ({ do: fix(pt.do), why: fix(pt.why) })) };
   }
-  if (wordCount(final.answer) > maximum) {
-    const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
-    let kept = "";
-    for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
-    if (kept) final = { ...final, answer: kept };
+  if (wordCount(fullText(final)) > maximum) {
+    if (shortReply) {
+      const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
+      let kept = "";
+      for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
+      if (kept) final = { ...final, answer: kept };
+    } else {
+      // Drop the lowest-priority points (and the note) until the total fits.
+      let pts = [...final.points];
+      let note = final.note;
+      while (note && wordCount(fullText({ ...final, points: pts, note })) > maximum) note = null;
+      while (pts.length > 2 && wordCount(fullText({ ...final, points: pts, note })) > maximum) pts = pts.slice(0, -1);
+      final = { ...final, points: pts, note };
+    }
   }
-  if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final.answer = final.answer.trim() + ".";
+  // Close every visible line cleanly: stance, each point, and the note.
+  const close = (s: string) => looksTruncated(s) && /[A-Za-z0-9]$/.test(s.trim()) ? s.trim() + "." : s;
+  final = {
+    ...final,
+    answer: close(final.answer),
+    points: final.points.map(pt => ({ do: close(pt.do), why: close(pt.why) })),
+    note: final.note ? close(final.note) : null,
+  };
   let probs = problems(final);
   if (probs.names.length) {
     issues.push({ type: "guardrail", note: "Privacy re-check" });
@@ -344,10 +389,10 @@ async function answerPipeline(p: PipelineInput) {
     if (again) { final = again.final; issues.push(...again.issues); }
     probs = problems(final);
   }
-  if (probs.out.length || !final.answer.trim() || wordCount(final.answer) < (shortReply ? 15 : 40)) {
-    // Never publish an answer still violating privacy, semantics, voice or the unchanged word limits.
+  if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 5 : 30)) {
+    // Never publish an answer still violating privacy, semantics, voice or the word limits.
     issues.push({ type: "guardrail", note: `Unsafe final withheld: ${probs.out.join("; ") || "length"}` });
-    final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, next_steps: [], resource: null };
+    final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, points: [], note: null, resource: null };
     pass = false;
   }
   clock.data.steps.guardrails = Math.max(0, Math.round(performance.now() - guardStarted) - ((clock.data.steps.check_retry ?? 0) - retryBefore));
@@ -378,19 +423,26 @@ function buildDebug(mode: string, memberId: string | null, member: MemberInput |
 }
 
 function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short = false) {
-  const text = [a.answer, ...a.next_steps].join("\n");
-  const wc = wordCount(a.answer);
+  const text = fullText(a);
+  const wc = wordCount(text);
   const names = findNames(text, tokens);
   const banned = findBanned(text);
-  const [min, max] = short ? [15, 60] : [40, 220];
-  return [
+  const checks = [
     { check: "no swear words or banned phrases", pass: banned.length === 0, why: banned.join(", ") || "clean" },
     { check: "no real member names", pass: names.length === 0, why: names.join(", ") || "none" },
-    { check: `answer ${min}–${max} words`, pass: wc >= min && wc <= max, why: `${wc} words` },
-    { check: "ends cleanly", pass: !looksTruncated(a.answer), why: a.answer.trim().slice(-30) },
+    short
+      ? { check: "boundary/privacy reply 15–60 words", pass: wc >= 15 && wc <= 60, why: `${wc} words` }
+      : { check: "total under ~110 words", pass: wc <= 120, why: `${wc} words` },
+    ...(short ? [] : [
+      { check: "stance line max ~15 words", pass: wordCount(a.answer) <= 18, why: `${wordCount(a.answer)} words` },
+      { check: "2–4 dot points", pass: a.points.length >= 2 && a.points.length <= 4, why: `${a.points.length} points` },
+      { check: "every point has one reason", pass: a.points.every(pt => pt.why.trim().length > 0), why: a.points.every(pt => pt.why.trim()) ? "all have why" : "missing why" },
+    ]),
+    { check: "ends cleanly", pass: !looksTruncated(a.points.length ? (a.note ?? (a.points[a.points.length - 1].why || a.points[a.points.length - 1].do)) : a.answer), why: a.answer.trim().slice(-30) },
     { check: "valid JSON", pass: true, why: "parsed" },
     { check: "resource null or exact catalogue title", pass: a.resource === null || catalogueLines.includes(a.resource), why: a.resource ?? "null" },
   ];
+  return checks;
 }
 
 // ---------- handler ----------
@@ -453,15 +505,15 @@ Deno.serve(async (req) => {
         let compare = "";
         if (test.name === "ADS_5_DAYS_SCALE") {
           const { data: t9 } = await admin.from("dan_ai_test_results").select("answer, dan_ai_tests!inner(name)").eq("run_id", body.run_id).eq("dan_ai_tests.name", "ADS_5_DAYS_EARLY").maybeSingle();
-          compare = `\n\n=====\n\nTEST 9 ANSWER (for comparison)\n${t9?.answer?.answer ?? "(missing)"}`;
+          compare = `\n\n=====\n\nTEST 9 ANSWER (for comparison)\n${t9?.answer ? fullText(t9.answer as Answer) : "(missing)"}`;
         }
         const criteria = [
           ...(test.must_include as string[]).map(c => `include: ${c}`),
           ...(test.must_not as string[]).map(c => `must_not: ${c}`),
         ].join("\n");
         const sys: Block[] = [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }, { type: "text", text: GRADER_PROMPT }];
-        const counted = wordCount(res.answer?.answer ?? "");
-        const msg = `${buildMemberBlock(member).text}\n\nANSWER FIELD WORD COUNT (computed in code, use for length criteria): ${counted}. Do not count next_steps or resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
+const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
+        const msg = `${buildMemberBlock(member).text}\n\nTOTAL WORD COUNT (computed in code, use for length criteria): ${counted} across stance + points + note. Do not count resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
         let graded: Record<string, unknown> | null = null;
         for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
         const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];
@@ -509,7 +561,7 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false }).limit(10);
     const history: Turn[] = (past ?? []).reverse().map((m: Turn) => {
       const a = m.role === "assistant" ? toAnswer(parseJson(m.content)) : null;
-      return { role: m.role, content: a ? a.answer : m.content };
+      return { role: m.role, content: a ? fullText(a) : m.content };
     });
     const r = await answerPipeline({ admin, question, history, catalogue, mode, member: memberPromise, memberId, clock, status });
     const member = r.member;
@@ -519,7 +571,7 @@ Deno.serve(async (req) => {
         { user_id: userId, thread_id: threadId, role: "user", content: question },
         { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...r.final, context_used: r.block.hasContext }) },
       ]),
-      admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.next_steps, resource: r.final.resource }),
+      admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.points.map(pt => pt.why ? `${pt.do} — ${pt.why}` : pt.do), resource: r.final.resource }),
     ]);
 
     return {
