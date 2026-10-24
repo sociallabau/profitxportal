@@ -431,7 +431,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
       { check: "2–4 dot points", pass: a.points.length >= 2 && a.points.length <= 4, why: `${a.points.length} points` },
       { check: "every point has one reason", pass: a.points.every(pt => pt.why.trim().length > 0), why: a.points.every(pt => pt.why.trim()) ? "all have why" : "missing why" },
     ]),
-    { check: "ends cleanly", pass: !looksTruncated(a.points.length ? (a.note ?? a.points[a.points.length - 1].why || a.points[a.points.length - 1].do) : a.answer), why: a.answer.trim().slice(-30) },
+    { check: "ends cleanly", pass: !looksTruncated(a.points.length ? (a.note ?? (a.points[a.points.length - 1].why || a.points[a.points.length - 1].do)) : a.answer), why: a.answer.trim().slice(-30) },
     { check: "valid JSON", pass: true, why: "parsed" },
     { check: "resource null or exact catalogue title", pass: a.resource === null || catalogueLines.includes(a.resource), why: a.resource ?? "null" },
   ];
