@@ -30,7 +30,7 @@ describe('mustSay', () => {
     expect(says(mustSay({ ...base, question: 'Should I include the ad spend in my retainer price to keep it simple?' }))).toContain('on top of the fee');
     const r = mustSay({ ...base, question: 'Can I skip the boost and go straight to lead gen at $50/day?' });
     expect(says(r)).toContain('$50 profile-visit boost');
-    expect(missingRules(r, 'Lead gen at $50/day comes later.')).toHaveLength(1);
+    expect(missingRules(r, 'Lead gen at $50/day comes later.').map(x => x.short)).toEqual(["for now it's a ~$50 profile-visit boost behind your best posts; awareness comes at Gate 2", 'lead gen comes at Gate 3']);
   });
   it('ADS_5_DAYS_SCALE: under half and the CPA column on the lead tracking sheet', () => {
     const r = mustSay({ ...base, gate: 3, costPerClient: 363, lowestPrice: 2000, question: 'Ads have run 5 days, can I scale?' });
@@ -38,10 +38,18 @@ describe('mustSay', () => {
     expect(missingRules(r, '~$363 a client vs $2,000. Log every lead daily in your growth hub.').map(x => x.short)).toContain('check the CPA column on your lead tracking sheet');
     expect(missingRules(r, '~$363 a client is under half your $2,000. Bump it once every lead is called within 15–30 mins; check the CPA column on your lead tracking sheet.')).toEqual([]);
   });
-  it('ADS_5_DAYS_EARLY: no Gate 3 bump or cost-per-client rules below Gate 3', () => {
-    const r = mustSay({ ...base, costPerClient: 600, lowestPrice: 2950, question: 'Been running lead gen 5 days at $20/day, 4 leads. Kill it or bump to $40/day?' });
-    expect(r.map(x => x.short).join(' ')).not.toContain('bump it once');
-    expect(r.map(x => x.short).join(' ')).not.toContain('half your');
+  it('ADS_5_DAYS_EARLY: follow-up in 15–30 mins, no Gate 3 or starter-boost rules', () => {
+    const r = mustSay({ ...base, costPerClient: 600, lowestPrice: 2950, question: 'Been running lead gen 5 days at $20/day, 4 leads, none booked a call. Kill it or bump to $40/day?' });
+    const shorts = r.map(x => x.short).join(' ');
+    expect(shorts).toContain('call every lead within 15–30 mins');
+    expect(shorts).not.toContain('bump it once');
+    expect(shorts).not.toContain('half your');
+    expect(shorts).not.toContain('$50 profile-visit');
+  });
+  it('SKIP_BOOST: the $50 boost and lead gen at Gate 3', () => {
+    const r = mustSay({ ...base, question: 'Can I skip the profile visit boost and go straight to lead gen at $50/day?' });
+    expect(r.map(x => x.short)).toContain('lead gen comes at Gate 3');
+    expect(missingRules(r, 'Put a ~$50 profile-visit boost behind your best posts. Awareness at Gate 2, lead gen comes at Gate 3.')).toEqual([]);
   });
   it('asks for the Context Room when it is empty', () => {
     expect(says(mustSay({ ...base, hasContext: false, question: 'What should I charge?' }))).toContain('Context Room');

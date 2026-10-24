@@ -53,8 +53,15 @@ export function mustSay(i: MustSayInput): Rule[] {
   if (adsMoney && /save|cut|cash|switch off|turn off|stop/.test(q)) {
     out.push({ say: "Never switch off awareness/lead gen to save cash; keep awareness running.", short: "never switch off awareness", test: /(never|don'?t|do not)\s+(switch|turn|shut)\s+(off|it off)|(switch|turn)ing off|keep (your )?(awareness|it|boosting)\s+(running|on|going)/i });
   }
-  if ((i.gate == null || i.gate <= 1) && adsMoney) {
+  // Someone already running lead gen is asking about that campaign, not where to start with ads.
+  const alreadyRunning = /(been |i'?m |currently |we'?re )?running (lead gen|awareness|my ads|ads)\b|lead gen (has been|is) (running|live)/.test(q);
+  if ((i.gate == null || i.gate <= 1) && adsMoney && !alreadyRunning) {
     out.push({ say: "Below or at Gate 1: put a ~$50 profile-visit boost behind their best posts; awareness ads come at Gate 2.", short: "for now it's a ~$50 profile-visit boost behind your best posts; awareness comes at Gate 2", test: /\$\s?50(?![\d,])(?!\s*\/\s*(day|d)\b)[^.]{0,80}\b(profile|pv|boost)|\b(profile[- ]visit|pv) boost[^.]{0,40}\$\s?50(?![\d,])(?!\s*\/)/i });
+    if (/lead gen/.test(q) && /skip|straight|instead|jump|go to/.test(q)) out.push({ say: "Lead gen comes at Gate 3 (after awareness at Gate 2), unless Dan has fast-tracked them.", short: "lead gen comes at Gate 3", test: /lead gen[^.]{0,50}gate (3|iii)\b|gate (3|iii)\b[^.]{0,50}lead gen/i });
+  }
+  // Leads coming in with no calls booked: the problem is follow-up, so Dan's speed-to-lead number has to be there.
+  if (/\bleads?\b/.test(q) && /(none|no one|nobody|0|zero|no) (have |has )?(booked|booking|calls?)|no (booked )?calls|not booking/.test(q)) {
+    out.push({ say: "The main issue is follow-up: call every lead within 15–30 mins.", short: "the main issue is follow-up: call every lead within 15–30 mins", test: /15\s*[–-]\s*30\s*min/i });
   }
   const cpc = i.costPerClient, price = i.lowestPrice;
   // Cost per client and scaling are Gate 3 steps (or Dan's lead gen fast-track); earlier gates get their own gate's step instead.
