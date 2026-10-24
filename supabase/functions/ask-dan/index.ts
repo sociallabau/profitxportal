@@ -15,6 +15,7 @@ import { bestRecording } from "./recordings.ts";
 import { loadBuildHelp } from "./buildHelp.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
+import { gateFromLabel, mustSay } from "./mustSay.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
@@ -353,9 +354,16 @@ async function answerPipeline(p: PipelineInput) {
   // "Help me do this" on a build task: the task, Dan's proof ask and its module content, walked through as steps.
   const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null);
   const buildText = buildHelp ? `${buildHelp}\n\n${BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
+  const must = shortAnswer ? [] : mustSay({
+    question: p.question,
+    gate: member?.extras?.gate_number ?? gateFromLabel(member?.gate),
+    revenue: block.derived?.total_revenue_latest ?? block.derived?.mrr_latest ?? null,
+    hasContext: block.hasContext, hasMember: !!member,
+  });
+  const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m}`).join("\n")}\n\n=====\n\n` : "";
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
-  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${recording ? `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}\nUse this exact line as the resource unless another line fits the question clearly better.\n\n` : ""}${buildText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
+  const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${recording ? `BEST-MATCHING RECORDING (Dan's Drive transcripts cover this question best): ${recording}\nUse this exact line as the resource unless another line fits the question clearly better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
   let draft: Answer | null = null;
@@ -369,7 +377,7 @@ async function answerPipeline(p: PipelineInput) {
   // CHECK
   p.status?.("Checking with Dan's Growth Hub…");
   const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT, cache_control: { type: "ephemeral" } }];
-  const checkBase = `RESOURCES\n${catalogue}\n\nPASSAGES\n${passageText}\n\n${buildText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
+  const checkBase = `RESOURCES\n${catalogue}\n\nPASSAGES\n${passageText}\n\n${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
     for (let i = 0; i < 2; i++) {
       try {
@@ -442,30 +450,39 @@ async function answerPipeline(p: PipelineInput) {
   // Over the limit: the checker tightens the wording first, so trimming below never drops a rule, a computed number or the data nudge.
   if (checked && wordCount(fullText(final)) > maximum) {
     const target = shortReply ? 60 : buildHelp ? 160 : 110;
-    const tighter = await runCheck(final, `cut to under ~${target} words by tightening the wording of every line. Keep every point, number and rule of Dan's, and keep the note if it asks them to update their numbers or Context Room.`);
+    const tighter = await runCheck(final, `cut to under ~${target} words by tightening the wording of every line. Keep every point, number and rule of Dan's${must.length ? ` (especially the MUST SAY rules)` : ""}, and keep the note if it asks them to update their numbers or Context Room.`);
     if (tighter && wordCount(fullText(tighter.final)) < wordCount(fullText(final))) { final = tighter.final; issues.push(...tighter.issues); }
   }
-  if (wordCount(fullText(final)) > maximum) {
-    if (shortReply) {
-      const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
-      let kept = "";
-      for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
-      if (kept) final = { ...final, answer: kept };
-    } else {
-      // Last resort: drop the lowest-priority points (and a plain note) until the total fits,
-      // keeping a data/Context Room nudge and the point that carries their cost per client.
-      let pts = [...final.points];
-      let note = final.note;
-      const over = () => wordCount(fullText({ ...final, points: pts, note })) > maximum;
-      const dataNudge = !!note && /context room|latest totals|submit|90-day goal/i.test(note);
-      while (note && !dataNudge && over()) note = null;
-      const carriesCost = (pt: Point) => typeof cpc === "number" && Number.isFinite(cpc) && hasCostPerClient(`${pt.do} ${pt.why}`, cpc);
-      while (pts.length > 2 && over()) {
-        const drop = pts.map((pt, i) => ({ pt, i })).reverse().find(x => !carriesCost(x.pt))?.i ?? pts.length - 1;
-        pts = pts.filter((_, i) => i !== drop);
+  // Last resort for length: trim to the limit, keeping a data/Context Room nudge and the cost-per-client point.
+  const trim = (input: Answer): Answer => {
+    let final = input;
+    if (wordCount(fullText(final)) > maximum) {
+      if (shortReply) {
+        const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
+        let kept = "";
+        for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
+        if (kept) final = { ...final, answer: kept };
+      } else {
+        // Last resort: drop the lowest-priority points (and a plain note) until the total fits,
+        // keeping a data/Context Room nudge and the point that carries their cost per client.
+        let pts = [...final.points];
+        let note = final.note;
+        const over = () => wordCount(fullText({ ...final, points: pts, note })) > maximum;
+        const dataNudge = !!note && /context room|latest totals|submit|90-day goal/i.test(note);
+        while (note && !dataNudge && over()) note = null;
+        const carriesCost = (pt: Point) => typeof cpc === "number" && Number.isFinite(cpc) && hasCostPerClient(`${pt.do} ${pt.why}`, cpc);
+        while (pts.length > 2 && over()) {
+          const drop = pts.map((pt, i) => ({ pt, i })).reverse().find(x => !carriesCost(x.pt))?.i ?? pts.length - 1;
+          pts = pts.filter((_, i) => i !== drop);
+        }
+        final = { ...final, points: pts, note };
       }
-      final = { ...final, points: pts, note };
     }
+    return final;
+  };
+  final = trim(final);
+  if (checked && !shortReply && member && !block.hasContext && !/context room/i.test(fullText(final))) {
+    final = { ...final, note: "Fill in your Context Room so I can make this specific to you." };
   }
   // Close every visible line cleanly: stance, each point, and the note.
   const close = (s: string) => looksTruncated(s) && /[A-Za-z0-9]$/.test(s.trim()) ? s.trim() + "." : s;
@@ -480,8 +497,14 @@ async function answerPipeline(p: PipelineInput) {
     issues.push({ type: "guardrail", note: "Re-check unresolved guardrail violations" });
     const again = await runCheck(final, probs.out.join("; "));
     if (again) { final = again.final; issues.push(...again.issues); }
+    if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !hasCostPerClient(fullText(final), cpc)) {
+      final = repairCostPerClient(final, cpc, block.derived?.lowest_retainer_price);
+    }
+    final = trim(final);
     probs = problems(final);
   }
+  // Length is fixed by trimming above, so only real problems (privacy, voice, a cut-off, a missing number) withhold the answer.
+  probs = { ...probs, out: probs.out.filter(o => !/^cut to under/.test(o)) };
   if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 15 : 30)) {
     // Never publish an answer still violating privacy, semantics, voice or the word limits.
     issues.push({ type: "guardrail", note: `Unsafe final withheld: ${probs.out.join("; ") || "length"}` });
