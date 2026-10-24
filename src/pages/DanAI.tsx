@@ -37,12 +37,6 @@ function resourceTitle(r: string) {
 }
 interface Thread { id: string; title: string; at: string }
 
-const FALLBACK_EXAMPLES = [
-  'How much should I charge for a monthly retainer?',
-  'A client wants to drop their price — do I hold or move?',
-  "My ads are getting leads but nobody's booking calls",
-  'How do I find and pay my first editor?',
-];
 
 function parseAnswer(content: string): Answer {
   try {
@@ -68,7 +62,6 @@ export default function DanAI() {
   const [input, setInput] = useState('');
   const [pending, setPending] = useState<null | 'thinking' | 'checking'>(null);
   const [status, setStatus] = useState('Reading your numbers…');
-  const [examples, setExamples] = useState<string[]>(FALLBACK_EXAMPLES);
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [memberId, setMemberId] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
@@ -80,8 +73,6 @@ export default function DanAI() {
   useEffect(() => {
     if (!user) return;
     loadThreads();
-    supabase.from('suggested_questions').select('question').order('position', { ascending: true })
-      .then(({ data }) => { if (data?.length) setExamples(data.map(q => q.question)); });
   }, [user]);
 
   useEffect(() => {
@@ -238,14 +229,6 @@ export default function DanAI() {
                 <h1 className="text-2xl italic font-extrabold tracking-tight">Dan AI</h1>
                 <p className="text-sm text-[hsl(var(--dan-muted))] mt-1 mb-6">Ask me anything about your business.</p>
                 {box}
-                <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-[680px]">
-                  {examples.slice(0, 3).map(ex => (
-                    <button key={ex} onClick={() => { setInput(ex); inputRef.current?.focus(); }}
-                      className="text-xs px-3 py-1.5 rounded-full border border-[hsl(var(--dan-ink)/0.12)] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] transition-colors">
-                      {ex}
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : (
               <>
