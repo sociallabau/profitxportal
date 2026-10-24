@@ -134,6 +134,13 @@
       "when": 1792832245987,
       "tag": "0018_add_dan_ai_live_function",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792833538721,
+      "tag": "0019_member_memory_hourly_and_watch_tables",
+      "breakpoints": true
     }
   ]
 }
