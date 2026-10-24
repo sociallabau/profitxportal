@@ -49,6 +49,8 @@ function toAnswer(o: Record<string, unknown>): Answer {
     context_used: typeof o.context_used === 'boolean' ? o.context_used : undefined,
     sources: o.sources && typeof o.sources === 'object' ? o.sources as Sources : undefined,
     all_clients: o.all_clients === true,
+    resource_why: typeof o.resource_why === 'string' ? o.resource_why : null,
+    cta: o.cta && typeof o.cta === 'object' && typeof (o.cta as { href?: unknown }).href === 'string' ? o.cta as { label: string; href: string } : null,
   };
 }
 
@@ -203,7 +205,7 @@ export default function DanAI() {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder={allClients ? 'Ask about all your clients…' : 'Ask Dan AI'}
           aria-label="Ask Dan AI"
-          className="flex-1 bg-transparent border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 resize-none text-base leading-6 text-[hsl(var(--dan-ink))] placeholder:text-[hsl(var(--dan-muted))] focus:outline-none py-2" />
+          className="flex-1 !bg-transparent border-0 !shadow-none ring-0 focus:ring-0 focus-visible:ring-0 resize-none text-base leading-6 text-[hsl(var(--dan-ink))] placeholder:text-[hsl(var(--dan-muted))] focus:outline-none py-2" />
         <button onClick={() => send()} disabled={!!pending || !input.trim()} aria-label="Send"
           className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-[hsl(var(--dan-violet))] to-[hsl(var(--dan-cyan))] text-white flex items-center justify-center shadow-[0_0_20px_-2px_hsl(var(--dan-violet))] disabled:opacity-35 disabled:shadow-none transition-opacity">
           {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-5 h-5" />}

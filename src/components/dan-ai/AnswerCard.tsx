@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { PlayCircle, ShieldCheck, ScanSearch } from 'lucide-react';
+import { ArrowRight, PlayCircle, ShieldCheck, ScanSearch } from 'lucide-react';
 import { resourceLink } from '@/data/resourceCatalogue';
 
 export interface Point { do: string; why: string }
@@ -14,12 +14,16 @@ export interface Sources {
 export interface Answer {
   answer: string; points: Point[]; note: string | null; resource: string | null;
   context_used?: boolean; sources?: Sources; all_clients?: boolean;
+  /** Why this member should watch the prescribed session. */
+  resource_why?: string | null;
+  /** A next action button, e.g. the Monthly Check-In when their numbers are old. */
+  cta?: { label: string; href: string } | null;
 }
 
 const monthName = (m?: string | null) => m ? new Date(`${m.slice(0, 7)}-01T12:00:00`).toLocaleDateString('en-AU', { month: 'short' }) : null;
 
 /** The recording Dan AI prescribes, with its workbook and templates. */
-function Prescription({ line }: { line: string }) {
+function Prescription({ line, why }: { line: string; why?: string | null }) {
   const r = resourceLink(line);
   const body = (
     <>
@@ -27,7 +31,8 @@ function Prescription({ line }: { line: string }) {
         <PlayCircle className="w-5 h-5 text-white" />
       </span>
       <span className="min-w-0">
-                <span className="block text-sm font-semibold truncate">{r.title}</span>
+        <span className="block text-sm font-semibold truncate">{r.title}</span>
+        {why && <span className="block text-[12px] leading-4 text-[hsl(var(--dan-muted))] mt-0.5">Why watch: {why}</span>}
       </span>
     </>
   );
@@ -95,7 +100,12 @@ export default function AnswerCard({ a, animate, footer }: { a: Answer; animate:
       )}
 
       {a.note && <p className="text-[13px] leading-5 text-[hsl(var(--dan-muted))] border-l-2 border-[hsl(var(--dan-violet)/0.6)] pl-3">{a.note}</p>}
-      {a.resource && <Prescription line={a.resource} />}
+      {a.cta && (
+        <Link to={a.cta.href} className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-br from-[hsl(var(--dan-violet))] to-[hsl(var(--dan-cyan))] shadow-[0_0_24px_-6px_hsl(var(--dan-violet))] hover:brightness-110 transition">
+          {a.cta.label}<ArrowRight className="w-4 h-4" />
+        </Link>
+      )}
+      {a.resource && <Prescription line={a.resource} why={a.resource_why} />}
       {a.sources && <UnderTheHood s={a.sources} />}
       {footer}
     </div>

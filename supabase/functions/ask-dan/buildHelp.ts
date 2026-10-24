@@ -4,6 +4,8 @@
  * member through building it with the exact material they need.
  */
 
+import { nextBuildTask, type BuildTask } from "./dossier.ts";
+
 const HELP_RE = /^Help me do this build task step by step: "(.+?)"/;
 
 /** The task title from the Growth Hub "Help me do this" question, or null. */
@@ -33,8 +35,18 @@ export function sectionsText(sections: unknown, cap = 3000): string {
 // deno-lint-ignore no-explicit-any
 type DB = any;
 
-export async function loadBuildHelp(admin: DB, question: string, gate: number | null): Promise<string | null> {
-  const title = buildTaskTitle(question);
+/** "What should I focus on?", "not sure what to do this week": answered with their next build task, walked through. */
+export function isFocusQuestion(question: string): boolean {
+  return /\bfocus\b|what (should|do|can) i (do|work on|be doing|tackle)|work on|next (step|move|thing)|this week|today|where (do|should) i start|priorit|what now|not sure what|what'?s next|stuck on what/i.test(question);
+}
+
+/**
+ * The build task this question is about, with its proof and full training content:
+ * the task named in "Help me do this", or for a focus question their next build task.
+ */
+export async function loadBuildHelp(admin: DB, question: string, gate: number | null, build: BuildTask[] = []): Promise<string | null> {
+  const next = !buildTaskTitle(question) && isFocusQuestion(question) ? nextBuildTask(build) : null;
+  const title = buildTaskTitle(question) ?? next?.title;
   if (!title) return null;
   let q = admin.from("playbook_tasks").select("title, why, kind, module_codes, training_label, proof_hint, gate").eq("title", title).eq("active", true);
   if (gate) q = q.eq("gate", gate);
@@ -45,7 +57,9 @@ export async function loadBuildHelp(admin: DB, question: string, gate: number | 
     ? await admin.from("module_pages").select("module_id, title, subtitle, sections").in("module_id", codes)
     : { data: [] };
   const L = [
-    `BUILD TASK THEY'RE DOING (Gate ${task.gate}, ${task.kind}): ${task.title}`,
+    next
+      ? `THEIR NEXT BUILD TASK — this is what they should focus on (Gate ${task.gate}, ${task.kind}): ${task.title}${next.status === "needs_changes" ? `\nDan sent it back${next.review_note ? `: "${next.review_note}"` : ""}. Fix that first.` : ""}`
+      : `BUILD TASK THEY'RE DOING (Gate ${task.gate}, ${task.kind}): ${task.title}`,
     task.why && `Why it matters: ${task.why}`,
     task.proof_hint && `Proof Dan wants, sent to him on WhatsApp: ${task.proof_hint}`,
     task.training_label && !codes.length && `Training: ${task.training_label}`,

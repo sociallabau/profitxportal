@@ -12,14 +12,14 @@ import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
 import { loadExtras } from "./dossier.ts";
 import { bestRecording } from "./recordings.ts";
-import { loadBuildHelp } from "./buildHelp.ts";
+import { buildTaskTitle, loadBuildHelp } from "./buildHelp.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
 import { gateFromLabel, missingRules, mustSay } from "./mustSay.ts";
 import { signals } from "./signals.ts";
-import { prescribe, workshopGuideText } from "./workshops.ts";
+import { guideFor, prescribe, workshopGuideText } from "./workshops.ts";
 import { loadRoster, ROSTER_PROMPT } from "./roster.ts";
-import { BRAIN_HEADER, BUILD_HELP_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
+import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
 const SONNET = "claude-sonnet-5-5";
@@ -32,7 +32,7 @@ const SOURCE_TAGS: Record<string, string> = {
 const GROUP_CALL = /momentum|q&a|q & a|workshop|hot seat|powerup|power up|pay to play|edit flow/i;
 
 type Point = { do: string; why: string };
-type Answer = { answer: string; points: Point[]; note: string | null; resource: string | null };
+type Answer = { answer: string; points: Point[]; note: string | null; resource: string | null; resource_why?: string | null };
 type Turn = { role: "user" | "assistant"; content: string };
 type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 type Plan = { topic?: string; is_boundary?: boolean; asks_about_other_member?: boolean; search_terms?: string[]; member_facts_needed?: string[]; gate_relevant?: boolean };
@@ -77,6 +77,7 @@ function toAnswer(v: unknown): Answer | null {
     points,
     note: o.note && o.note !== "null" ? String(o.note) : null,
     resource: o.resource && o.resource !== "null" ? String(o.resource) : null,
+    resource_why: typeof o.resource_why === "string" && o.resource_why.trim() && o.resource_why !== "null" ? o.resource_why.trim().slice(0, 200) : null,
   };
 }
 const fullText = (a: Answer) => [a.answer, ...a.points.map(p => `${p.do} ${p.why}`), a.note ?? ""].join("\n");
@@ -377,8 +378,9 @@ async function answerPipeline(p: PipelineInput) {
     prescription && prescription !== recording && `PRESCRIBED FOR THEIR PROBLEM (from their question and what looks off): ${prescription}`,
   ].filter(Boolean).join("\n\n");
   // "Help me do this" on a build task: the task, Dan's proof ask and its module content, walked through as steps.
-  const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null);
-  const buildText = buildHelp ? `${buildHelp}\n\n${BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
+  const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null, member?.extras?.build ?? []);
+  const focus = !!buildHelp && !buildTaskTitle(p.question);
+  const buildText = buildHelp ? `${buildHelp}\n\n${focus ? FOCUS_FORMAT : BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
   const must = shortAnswer ? [] : mustSay({
     question: p.question,
     gate: member?.extras?.gate_number ?? gateFromLabel(member?.gate),
@@ -581,6 +583,12 @@ async function answerPipeline(p: PipelineInput) {
   // Every real answer ends on the recording that covers it, when Drive gave us one.
   const fallback = recording ?? prescription;
   if (!final.resource && fallback && final.answer !== FLAG_REPLY && final.answer !== NAME_FALLBACK) final = { ...final, resource: fallback };
+  // Why watch it: the model's line when it's about this same session (the checker may drop it), else what the guide says the session covers.
+  const modelWhy = final.resource && final.resource === matched
+    ? final.resource_why ?? (matchResource(draft.resource, catalogueLines) === matched ? draft.resource_why ?? null : null)
+    : null;
+  const guide = final.resource ? guideFor(final.resource) : null;
+  final = { ...final, resource_why: final.resource ? modelWhy ?? (guide ? `Covers ${guide.fixes.split(": ")[1] ?? guide.fixes}.` : null) : null };
 
   return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short) };
 }
@@ -652,7 +660,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.14";
+const VERSION = "2026-10-24.15";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -739,7 +747,7 @@ async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) 
     if (!test) return { error: "unknown test" };
     const member = persona(test.persona_key);
     const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, vaultSources, mode: "test", member, memberId: null, clock, extraRules });
-    const { data: allProfiles } = await admin.from("profiles").select("full_name");
+    const { data: allProfiles } = await admin.from("profiles").select("full_name").or("is_admin.is.null,is_admin.eq.false");
     const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
     const short = !!r.plan.is_boundary || !!r.plan.asks_about_other_member;
     const checks = codeChecks(r.final, catalogueLines, tokens, short);
@@ -900,7 +908,7 @@ Deno.serve(async (req) => {
         const member = persona(test.persona_key);
         if (!member) return json({ error: `Unknown persona ${test.persona_key}` }, 400);
         const r = await answerPipeline({ admin, question: test.question, history: [], catalogue, vaultSources, mode: "test", member, memberId: null, clock });
-        const { data: allProfiles } = await admin.from("profiles").select("full_name");
+        const { data: allProfiles } = await admin.from("profiles").select("full_name").or("is_admin.is.null,is_admin.eq.false");
         const tokens = nameTokens(((allProfiles ?? []) as { full_name: string | null }[]).map(x => x.full_name ?? "").filter(Boolean), null);
         const short = !!r.plan.is_boundary || !!r.plan.asks_about_other_member;
         const checks = codeChecks(r.final, catalogueLines, tokens, short);
@@ -1012,6 +1020,27 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
     const memberPromise = clock.measure("context_load", () => memberId ? loadMemberInput(admin, memberId) : Promise.resolve(null));
     const execute = async (status?: (status: string) => void) => {
     status?.("Reading your numbers…");
+    // Numbers over 35 days old (or none yet): send them to the Monthly Check-In first, then they come back
+    // for advice built on where they really are. Help with a named build task doesn't depend on numbers.
+    if (mode === "member" && !buildTaskTitle(question)) {
+      const m = await memberPromise;
+      const d = m ? buildMemberBlock(m).derived : null;
+      const days = d?.days_since_latest ?? null;
+      if (d && (d.data_freshness === "none" || (days != null && days > 35))) {
+        const final: Answer = {
+          answer: days == null
+            ? "Submit your first Monthly Check-In bro, then come back and I'll map out your next move off your real numbers."
+            : `Your numbers are ${days} days old bro. Submit your Monthly Check-In, then come back and I'll build your next move off where you're really at.`,
+          points: [], note: null, resource: null,
+        };
+        const cta = { label: "Submit your Monthly Check-In", href: "/submissions/monthly" };
+        await admin.from("dan_ai_messages").insert([
+          { user_id: userId, thread_id: threadId, role: "user", content: question },
+          { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...final, context_used: true, cta }) },
+        ]);
+        return { ...final, thread_id: threadId, context_used: true, cta };
+      }
+    }
     const { data: past } = await admin.from("dan_ai_messages").select("role, content").eq("user_id", userId).eq("thread_id", threadId)
       .order("created_at", { ascending: false }).limit(10);
     const history: Turn[] = (past ?? []).reverse().map((m: Turn) => {
