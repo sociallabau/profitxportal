@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, ExternalLink, BookOpen, ChevronDown, ChevronRight, LayoutGrid, List } from 'lucide-react';
 import OnboardingNoticeModal from '@/components/OnboardingNoticeModal';
 import RevenueLadder from '@/components/RevenueLadder';
 import RoadmapAudit from '@/components/RoadmapAudit';
+import ProfitXModel from '@/components/roadmap/ProfitXModel';
 
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
@@ -12,7 +13,8 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { PROFITX_MODULES } from '@/data/modules';
-import { MODULE_GATE, ROMAN } from '@/lib/growthHub';
+import { GATES, MODULE_GATE, ROMAN, gateNumber, type GateNumber } from '@/lib/growthHub';
+import { useMemberGrowthHub } from '@/hooks/useGrowthHub';
 
 const PILLARS = [
   {
@@ -90,7 +92,7 @@ export default function Roadmap() {
     queryKey: ['profile-tier', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('tier, onboarding_notice_seen').eq('id', user!.id).single();
+      const { data } = await supabase.from('profiles').select('tier, onboarding_notice_seen, gate').eq('id', user!.id).single();
       return data;
     },
   });
@@ -172,6 +174,10 @@ export default function Roadmap() {
 
 
   const shouldShowNotice = clientTier === 'onboarding' && !profile?.onboarding_notice_seen && showNotice;
+  const gate = gateNumber(profile?.gate);
+  const { data: memberGrowthHub } = useMemberGrowthHub(user?.id);
+  // Always opens on the grid; the list is a focused view of the member's current gate.
+  const [view, setView] = useState<'grid' | 'list'>('grid');
 
   return (
     <PageLayout>
@@ -194,14 +200,36 @@ export default function Roadmap() {
 
       <RoadmapAudit includeScale={isFullScale} onOpenModule={(code) => navigate(`/module/${code}`)} />
 
-      <ProfitXRoadmapGrid
-        stages={profitxStages}
-        completionMap={completionMap}
-        hasPage={hasPage}
-        onOpen={(code) => navigate(`/module/${code}`)}
-      />
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-sm font-semibold">The modules</h2>
+        <div className="inline-flex rounded-full bg-muted p-1 text-xs font-semibold" role="tablist" aria-label="Roadmap view">
+          {([['grid', LayoutGrid, 'Grid'], ['list', List, 'By gate']] as const).map(([v, Icon, label]) => (
+            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors ${view === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Icon className="w-3.5 h-3.5" />{label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <LegacyModulesSection defaultOpen={!isInFlow}>
+      {view === 'grid' ? (
+        <ProfitXRoadmapGrid
+          stages={profitxStages}
+          completionMap={completionMap}
+          hasPage={hasPage}
+          onOpen={(code) => navigate(`/module/${code}`)}
+        />
+      ) : (
+        <GateModuleList gate={gate ?? 1} extra={memberGrowthHub?.settings.extra_modules ?? []} completionMap={completionMap} hasPage={hasPage} onOpen={(code) => navigate(`/module/${code}`)} />
+      )}
+
+      <section className="bg-card border border-border rounded-xl p-4 sm:p-6 mt-8">
+        <h2 className="text-sm font-semibold">The ProfitX model</h2>
+        <p className="text-xs text-muted-foreground mt-0.5 mb-4">A sharp offer, consistent sales and simplified delivery. Tap any module to open it.</p>
+        <ProfitXModel gate={gate} />
+      </section>
+
+      <LegacyModulesSection>
         <PillarRoadmap
           completionMap={completionMap}
           unlockedTiers={unlockedTiers}
@@ -214,8 +242,9 @@ export default function Roadmap() {
   );
 }
 
-function LegacyModulesSection({ children, defaultOpen = false }: { children: React.ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+/** The original curriculum, always closed until the member opens it. */
+function LegacyModulesSection({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="mt-10">
@@ -234,6 +263,63 @@ function LegacyModulesSection({ children, defaultOpen = false }: { children: Rea
         </div>
       </button>
       {open && <div className="mt-4">{children}</div>}
+    </div>
+  );
+}
+
+/**
+ * The modules grouped by the gate they open at. The member's gate is open;
+ * cleared gates fold away and later gates stay locked, like the Growth Hub map.
+ */
+function GateModuleList({ gate, extra, completionMap, hasPage, onOpen }: {
+  gate: GateNumber; extra: string[]; completionMap: Record<string, boolean>; hasPage: (id: string) => boolean; onOpen: (code: string) => void;
+}) {
+  const codes = (g: GateNumber) => Object.keys(MODULE_GATE).filter(code => MODULE_GATE[code] === g);
+  const unlockedExtras = extra.filter(code => (MODULE_GATE[code] ?? 1) > gate);
+  return (
+    <div className="space-y-3">
+      {GATES.map(g => {
+        const state = g.gate < gate ? 'cleared' : g.gate === gate ? 'current' : 'locked';
+        const list = state === 'current' ? [...codes(g.gate), ...unlockedExtras] : [];
+        return (
+          <div key={g.gate} className={`rounded-xl border p-4 sm:p-5 ${state === 'current' ? 'bg-card border-primary/40' : 'bg-card/60 border-border'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`text-sm font-bold ${state === 'locked' ? 'text-muted-foreground' : ''}`}>
+                <span className="text-primary">Gate {ROMAN[g.gate]}</span> · {g.name}
+                <span className="text-xs font-medium text-muted-foreground ml-2">{g.headline}</span>
+              </p>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1 shrink-0">
+                {state === 'locked' && <Lock className="w-3 h-3" />}
+                {state === 'cleared' ? 'Cleared' : state === 'current' ? "You're here" : 'Locked'} · {codes(g.gate).join(' ')}
+              </span>
+            </div>
+            {list.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {list.map(code => (
+                  <li key={code}>
+                    {hasPage(code) ? (
+                      <button onClick={() => onOpen(code)} className="w-full flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 text-left hover:border-primary/40 transition-colors">
+                        <span className="shrink-0 rounded-md bg-primary text-primary-foreground px-2 py-0.5 text-xs font-bold">{code}</span>
+                        <span className="text-sm font-semibold flex-1">{PROFITX_MODULES[code]}</span>
+                        {MODULE_GATE[code] > gate && <span className="text-[10px] text-muted-foreground">Unlocked by Dan</span>}
+                        {completionMap[code] ? <CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-3 rounded-lg border border-dashed border-border px-3 py-2.5">
+                        <span className="shrink-0 rounded-md bg-muted text-muted-foreground px-2 py-0.5 text-xs font-bold">{code}</span>
+                        <span className="text-sm font-semibold flex-1 text-muted-foreground">{PROFITX_MODULES[code]}</span>
+                        <a href={ONBOARDING_COVERED_CODES.has(code) ? undefined : DAN_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="text-[11px] text-foreground/70 hover:underline">
+                          {ONBOARDING_COVERED_CODES.has(code) ? 'Covered in onboarding' : 'Book a call with Dan'}
+                        </a>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
