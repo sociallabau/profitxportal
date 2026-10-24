@@ -327,7 +327,7 @@ async function answerPipeline(p: PipelineInput) {
     }
   }
   const followupProblem = /no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question);
-  if (followupProblem && /\bscal/i.test(final.answer)) {
+  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 0.5 && /\bscal/i.test(final.answer)) {
     final.answer = final.answer.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
   }
   if (wordCount(final.answer) > maximum) {
