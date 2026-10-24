@@ -44,7 +44,17 @@ export function mustSay(i: MustSayInput): Rule[] {
   if (path && i.gate == null && retainers != null && retainers < 3) {
     out.push({ say: `They have ${retainers} paying retainers, so say plainly they're not at Gate 1 yet (Gate 1 = 3 paying retainers held 2 months).`, short: "you're not at Gate 1 yet (that's 3 paying retainers held 2 months)", test: /not (at |in )?gate (1|i)\b|not (at |in )?gate (1|i) yet|below gate (1|i)\b/i });
   }
-  if (freeWork && (path || /\bcount|retainers?\b/.test(q))) out.push({ say: "A free (or case-study) client doesn't count toward the gate: only PAYING monthly retainers count.", short: "free clients don't count, only paying retainers", test: /(doesn'?t|don'?t|does not|do not|won'?t|isn'?t|not) count/i });
+  if (/conversations?|convos?|enquir|inquir|more (leads|clients|dms)|get (more )?clients|find clients|outreach|warm (dm|people|leads)/.test(q)) {
+    out.push({ say: "More conversations comes from content: plan and film BTS posts and post them to hit the monthly posting goal.", short: "plan, film and post BTS content to hit your posting goal", test: /\bbts\b|behind.the.scenes/i });
+    out.push(i.gate != null && i.gate >= 2
+      ? { say: "Add each new post into their ongoing awareness profile-visit campaign.", short: "add your posts into the ongoing awareness profile-visit campaign", test: /awareness|ongoing (pv|profile.visit)/i }
+      : { say: "Put a $50–100 profile-visit boost behind each post.", short: "$50–100 profile-visit boost on each post", test: /\$?50\s*[–-]\s*\$?100|profile.visit boost|pv boost/i });
+    out.push({ say: "DM anyone who interacts with those posts (likes, comments, follows, story replies).", short: "DM anyone who interacts with your posts", test: /\bdm\b[^.]{0,60}(interact|engag|lik|comment|follow|repl)|(interact|engag|lik|comment|follow|repl)[^.]{0,60}\bdm/i });
+  }
+  if (freeWork && (path || /\bcount|retainers?\b/.test(q))) {
+    out.push({ say: "A free (or case-study) client doesn't count toward the gate: only PAYING monthly retainers count.", short: "free clients don't count, only paying retainers", test: /(doesn'?t|don'?t|does not|do not|won'?t|isn'?t|not) count/i });
+    out.push({ say: "Make point 1 their priority: landing the next PAYING retainer (case studies support that, they don't replace it).", short: "your priority is landing the next paying retainer", test: /(next|another|one more|3rd|third) paying (retainer|client)|land(ing)? (your |the |a |one more |another )?(next |3rd |third )?paying/i });
+  }
   if (workload) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
   if (caseStudy) out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
   if (/ad spend|ads? budget/.test(q) && /bundle|include|inside|\binto\b|\bin (my|the) (retainer|price|package|fee)/.test(q)) {

@@ -660,7 +660,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.15";
+const VERSION = "2026-10-24.16";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -1022,15 +1022,17 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
     status?.("Reading your numbers…");
     // Numbers over 35 days old (or none yet): send them to the Monthly Check-In first, then they come back
     // for advice built on where they really are. Help with a named build task doesn't depend on numbers.
+    // "stale" = over 35 days since the end of their latest month (see derive in context.ts).
     if (mode === "member" && !buildTaskTitle(question)) {
       const m = await memberPromise;
       const d = m ? buildMemberBlock(m).derived : null;
-      const days = d?.days_since_latest ?? null;
-      if (d && (d.data_freshness === "none" || (days != null && days > 35))) {
+      if (d && d.data_freshness !== "fresh") {
+        const [y, mo] = (d.latest_month ?? "").split("-").map(Number);
+        const month = new Date(Date.UTC(y, mo - 1, 15)).toLocaleDateString("en-AU", { month: "long", timeZone: "UTC" });
         const final: Answer = {
-          answer: days == null
+          answer: d.data_freshness === "none"
             ? "Submit your first Monthly Check-In bro, then come back and I'll map out your next move off your real numbers."
-            : `Your numbers are ${days} days old bro. Submit your Monthly Check-In, then come back and I'll build your next move off where you're really at.`,
+            : `Your latest numbers are from ${month} bro. Submit your Monthly Check-In, then come back and I'll build your next move off where you're really at.`,
           points: [], note: null, resource: null,
         };
         const cta = { label: "Submit your Monthly Check-In", href: "/submissions/monthly" };

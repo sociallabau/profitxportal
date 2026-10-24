@@ -24,7 +24,9 @@ describe('mustSay', () => {
     expect(says(r)).not.toContain('on top of the fee');
     expect(says(r)).not.toContain('$15–20k');
     expect(says(r)).not.toContain('$50');
-    expect(missingRules(r, "Not yet. The free client doesn't count. Post case studies on your own account.")).toEqual([]);
+    expect(r.map(x => x.short)).toContain('your priority is landing the next paying retainer');
+    expect(missingRules(r, "Not yet. The free client doesn't count. Land your next paying retainer. Post case studies on your own account.")).toEqual([]);
+    expect(missingRules(r, "Not yet. The free client doesn't count. Post case studies on your own account.").map(x => x.short)).toEqual(['your priority is landing the next paying retainer']);
   });
   it('AD_SPEND_INSIDE and SKIP_BOOST: on top of the fee, and the $50 boost', () => {
     expect(says(mustSay({ ...base, question: 'Should I include the ad spend in my retainer price to keep it simple?' }))).toContain('on top of the fee');

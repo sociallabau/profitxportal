@@ -62,7 +62,9 @@ const mrrOf = (t: Totals) => t.mrr ?? t.mrr_manual ?? null;
 export function derive(m: MemberInput, today = new Date()): Derived {
   const t = m.totals;
   const latest = t[0] ?? null;
-  const days = latest ? Math.floor((today.getTime() - Date.parse(latest.month + "T00:00:00Z")) / 86400000) : null;
+  // Days since the END of their latest month: last month's numbers aren't old until the month after is over.
+  const [ly, lm] = latest ? latest.month.split("-").map(Number) : [];
+  const days = latest ? Math.floor((today.getTime() - Date.UTC(ly, lm, 1)) / 86400000) : null;
   const mrrLatest = latest ? mrrOf(latest) : null;
   let trend: string | null = null;
   if (t.length >= 2) {
@@ -95,7 +97,7 @@ export function derive(m: MemberInput, today = new Date()): Derived {
   const allOneoff = (mrrLatest ?? 0) === 0 && ((totalRev ?? 0) > 0 || (oneoff ?? 0) > 0);
   return {
     latest_month: latest?.month ?? null, days_since_latest: days,
-    data_freshness: !latest ? "none" : (days ?? 0) > 45 ? "stale" : "fresh",
+    data_freshness: !latest ? "none" : (days ?? 0) > 35 ? "stale" : "fresh",
     mrr_latest: mrrLatest, mrr_trend: trend,
     oneoff_revenue_latest: oneoff, total_revenue_latest: totalRev, all_oneoff: allOneoff, new_clients_latest: nc, ad_spend_latest: ad,
     cost_per_client: cpc, lowest_retainer_price: low,
