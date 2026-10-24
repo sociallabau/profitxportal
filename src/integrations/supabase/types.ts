@@ -1169,16 +1169,14 @@ export type Database = {
         Row: {
           active_retainers: number | null
           ad_leads: number | null
+          ad_spend: number | null
           ad_spend_awareness: number | null
           ad_spend_leadgen: number | null
-          case_studies_posted: number | null
-          retainer_convos: number | null
-          retainers_lost: number | null
-          ad_spend: number | null
           biggest_win: string | null
           booked_calls: number | null
           business_confidence: number | null
           calls_showed: number | null
+          case_studies_posted: number | null
           content_posts: number | null
           created_at: string | null
           expense_contractors: number | null
@@ -1199,22 +1197,22 @@ export type Database = {
           nps: number | null
           offers_made: number | null
           oneoff_revenue: number | null
+          retainer_convos: number | null
+          retainers_lost: number | null
           total_revenue: number | null
           user_id: string | null
         }
         Insert: {
           active_retainers?: number | null
           ad_leads?: number | null
+          ad_spend?: number | null
           ad_spend_awareness?: number | null
           ad_spend_leadgen?: number | null
-          case_studies_posted?: number | null
-          retainer_convos?: number | null
-          retainers_lost?: number | null
-          ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null
           business_confidence?: number | null
           calls_showed?: number | null
+          case_studies_posted?: number | null
           content_posts?: number | null
           created_at?: string | null
           expense_contractors?: number | null
@@ -1235,22 +1233,22 @@ export type Database = {
           nps?: number | null
           offers_made?: number | null
           oneoff_revenue?: number | null
+          retainer_convos?: number | null
+          retainers_lost?: number | null
           total_revenue?: number | null
           user_id?: string | null
         }
         Update: {
           active_retainers?: number | null
           ad_leads?: number | null
+          ad_spend?: number | null
           ad_spend_awareness?: number | null
           ad_spend_leadgen?: number | null
-          case_studies_posted?: number | null
-          retainer_convos?: number | null
-          retainers_lost?: number | null
-          ad_spend?: number | null
           biggest_win?: string | null
           booked_calls?: number | null
           business_confidence?: number | null
           calls_showed?: number | null
+          case_studies_posted?: number | null
           content_posts?: number | null
           created_at?: string | null
           expense_contractors?: number | null
@@ -1271,6 +1269,8 @@ export type Database = {
           nps?: number | null
           offers_made?: number | null
           oneoff_revenue?: number | null
+          retainer_convos?: number | null
+          retainers_lost?: number | null
           total_revenue?: number | null
           user_id?: string | null
         }
