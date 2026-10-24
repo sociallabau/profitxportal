@@ -1943,7 +1943,6 @@ export type Database = {
       }
     }
     Functions: {
-      dan_ai_live: { Args: never; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       my_dan_brief: {
         Args: never
