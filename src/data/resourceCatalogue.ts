@@ -1,4 +1,4 @@
-import { VAULT_ITEMS, driveId } from './vault';
+import { VAULT_ITEMS, driveId, fathomToken, notionPage } from './vault';
 
 /**
  * What Dan can point a member at: the recorded sessions in the Vault and the
@@ -153,7 +153,11 @@ export function resourceCatalogue(): string {
  */
 export function vaultSources(): Record<string, string> {
   return Object.fromEntries(VAULT_ITEMS.flatMap(r =>
-    [r.url, r.transcriptUrl, r.workbookUrl].map(driveId).filter((id): id is string => !!id).map(id => [id, vaultLine(r)])));
+    [
+      ...[r.url, r.transcriptUrl, r.workbookUrl].map(driveId),
+      fathomToken(r.url),
+      ...[r.workbookUrl].map(u => { const n = notionPage(u); return n ? `notion-${n.id}` : null; }),
+    ].filter((id): id is string => !!id).map(id => [id, vaultLine(r)])));
 }
 
 /** Where a resource line Dan AI picked should take the member. */

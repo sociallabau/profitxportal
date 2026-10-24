@@ -52,7 +52,7 @@ function useTicking(userId?: string) {
 }
 
 /** The one thing to do next. Dan AI's brief when there is one, the task either way. */
-export function NextMove({ task, brief, isAdmin, userId, compact = false }: { task: TaskWithStatus | null; brief: string | null; isAdmin: boolean; userId?: string; compact?: boolean }) {
+export function NextMove({ task, brief, isAdmin, userId, compact = false, noGate = false }: { task: TaskWithStatus | null; brief: string | null; isAdmin: boolean; userId?: string; compact?: boolean; noGate?: boolean }) {
   const hasPage = useModulePages();
   const canAsk = useCanUseDanAi(isAdmin);
   const training = task ? trainingLink(task, hasPage) : null;
@@ -83,7 +83,7 @@ export function NextMove({ task, brief, isAdmin, userId, compact = false }: { ta
           </div>
         </>
       ) : (
-        <p className="relative font-bold text-xl mt-2.5 pr-16">{brief || 'Build list clear for this month. Hold your numbers and Dan will move you up.'}</p>
+        <p className="relative font-bold text-xl mt-2.5 pr-16">{brief || (noGate ? 'Dan sets your gate on your kickoff call. Your build list and next move show up here once he does.' : 'Build list clear for this month. Hold your numbers and Dan will move you up.')}</p>
       )}
     </div>
   );

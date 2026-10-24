@@ -302,6 +302,35 @@ export function driveFileId(url?: string): string | null {
   return url?.match(/drive\.google\.com\/file\/d\/([\w-]+)/)?.[1] ?? null;
 }
 
+/** The Fathom share token of a Fathom link. */
+export function fathomToken(url?: string): string | null {
+  return url?.match(/fathom\.video\/share\/([\w-]+)/)?.[1] ?? null;
+}
+
+/** Host and page id of a public Notion workbook link. */
+export function notionPage(url?: string): { host: string; id: string } | null {
+  const m = url?.match(/^https:\/\/([\w-]+\.notion\.site)\/(?:[^?]*-)?([0-9a-f]{32})/);
+  return m ? { host: m[1], id: m[2] } : null;
+}
+
+/**
+ * Every file behind each Vault entry, for Dan AI's knowledge sync. The edge
+ * functions can't import from src, so this is written to
+ * supabase/functions/_shared/vaultFiles.ts (a test keeps the two identical).
+ */
+export function vaultFiles() {
+  return VAULT_ITEMS.map(v => {
+    const links = [v.url, v.transcriptUrl, v.workbookUrl, ...(v.templates ?? []).map(t => t.url)];
+    return {
+      title: v.title,
+      date: v.sortDate ?? null,
+      drive: [v.url, v.transcriptUrl, v.workbookUrl].map(driveId).filter((x): x is string => !!x),
+      fathom: links.map(fathomToken).filter((x): x is string => !!x),
+      notion: [v.workbookUrl].map(notionPage).filter((x): x is { host: string; id: string } => !!x),
+    };
+  });
+}
+
 /** The Drive id of a Drive file or Google Doc link (recording, notes, transcript or workbook). */
 export function driveId(url?: string): string | null {
   return url?.match(/(?:drive\.google\.com\/file\/d|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d)\/([\w-]+)/)?.[1] ?? null;

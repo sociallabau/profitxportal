@@ -12,6 +12,8 @@
 // separated), optional CRON_SECRET.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { isCronCall } from "../_shared/cron.ts";
+import { VAULT_FILES } from "../_shared/vaultFiles.ts";
+import { fathomTranscript, notionText } from "../_shared/vaultText.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -257,6 +259,84 @@ function chunkText(text: string, size = 1400, overlap = 200): string[] {
   return chunks;
 }
 
+// deno-lint-ignore no-explicit-any
+type DB = any;
+
+const textChunks = (text: string) => chunkText(text);
+
+async function insertDoc(admin: DB, doc: { title: string; source_type: string; source_id: string; source_url: string }, text: string): Promise<number> {
+  const chunks = textChunks(text);
+  if (!chunks.length) return 0;
+  const { data, error } = await admin.from("knowledge_docs").insert({ ...doc, word_count: text.split(/\s+/).length }).select("id").single();
+  if (error || !data) throw error ?? new Error("insert failed");
+  for (let i = 0; i < chunks.length; i += 100) {
+    const { error: e } = await admin.from("knowledge_chunks").insert(chunks.slice(i, i + 100).map((content, j) => ({ doc_id: data.id, chunk_index: i + j, content })));
+    if (e) throw e;
+  }
+  return chunks.length;
+}
+
+/** One Drive file into the knowledge base: Docs are ingested, videos queued for transcription. */
+async function ingestDriveFile(admin: DB, token: string, clientEmail: string, id: string): Promise<string> {
+  try {
+    const meta = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,mimeType,size,modifiedTime&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!meta.ok) return `no access (${meta.status}): share it with ${clientEmail}`;
+    const file = await meta.json() as DriveFile;
+    const { data: existing } = await admin.from("knowledge_docs").select("id").eq("source_id", id).maybeSingle();
+    if (existing) return `already in knowledge: ${file.name}`;
+    if (file.mimeType === GOOGLE_DOC || file.mimeType === "text/plain") {
+      const { text, kind } = file.mimeType === GOOGLE_DOC ? await fetchDocText(token, id) : { text: await fetchPlainFile(token, id), kind: "plain" as const };
+      const n = await insertDoc(admin, {
+        title: file.name, source_type: isTeaching(file.name) ? "teaching" : kind === "notes" ? "note" : kind === "plain" ? "transcript" : "call",
+        source_id: id, source_url: `https://docs.google.com/document/d/${id}`,
+      }, text);
+      return n ? `ingested: ${file.name} (${n} chunks)` : `empty: ${file.name}`;
+    }
+    if (file.mimeType.startsWith("video/") || file.mimeType.startsWith("audio/")) {
+      const { error } = await admin.from("transcription_jobs").upsert({ drive_file_id: id, title: file.name, mime_type: file.mimeType, size_bytes: file.size ? Number(file.size) : null, status: "pending", updated_at: new Date().toISOString() }, { onConflict: "drive_file_id", ignoreDuplicates: true });
+      return error ? `queue failed: ${error.message}` : `queued for transcription: ${file.name}`;
+    }
+    return `unsupported type ${file.mimeType}: ${file.name}`;
+  } catch (err) {
+    return `error: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
+
+/** Loads whatever the Vault page links to that isn't in the knowledge base yet, a few items per run. */
+async function syncVault(admin: DB, token: string, clientEmail: string, limit: number): Promise<string[]> {
+  const ids = VAULT_FILES.flatMap(v => [...v.drive, ...v.fathom, ...v.notion.map(n => `notion-${n.id}`)]);
+  const { data } = await admin.from("knowledge_docs").select("source_id").in("source_id", ids);
+  const have = new Set(((data ?? []) as { source_id: string }[]).map(d => d.source_id));
+  const { data: jobs } = await admin.from("transcription_jobs").select("drive_file_id").in("drive_file_id", ids);
+  for (const j of (jobs ?? []) as { drive_file_id: string }[]) have.add(j.drive_file_id);
+  const out: string[] = [];
+  const name = (t: string) => t.replace(/^(Workshop|Lesson|Momentum Call|Hot Seat|Q&A)\s*[—–-]\s*/i, "");
+  const day = (d: string | null) => d ? d.replace(/-/g, "/") : "";
+  for (const v of VAULT_FILES) {
+    if (out.length >= limit) break;
+    for (const id of v.drive) if (!have.has(id) && out.length < limit) {
+      const r = await ingestDriveFile(admin, token, clientEmail, id);
+      if (!/^unsupported|^already/.test(r)) out.push(r);
+    }
+    for (const t of v.fathom) if (!have.has(t) && out.length < limit) {
+      try {
+        const text = await fathomTranscript(t);
+        const n = await insertDoc(admin, { title: `ProfitX ${v.title} - ${day(v.date)} – Fathom transcript`, source_type: "teaching", source_id: t, source_url: `https://fathom.video/share/${t}` }, text);
+        out.push(`fathom: ${v.title} (${n} chunks)`);
+      } catch (err) { out.push(`fathom failed: ${v.title}: ${err instanceof Error ? err.message : String(err)}`); }
+    }
+    for (const nb of v.notion) if (!have.has(`notion-${nb.id}`) && out.length < limit) {
+      try {
+        const text = await notionText(nb.host, nb.id);
+        if (text.split(/\s+/).length < 40) continue;
+        const n = await insertDoc(admin, { title: `Workbook — ${name(v.title)}${v.date ? ` (${day(v.date)})` : ""}`, source_type: "teaching", source_id: `notion-${nb.id}`, source_url: `https://${nb.host}/${nb.id}` }, text);
+        out.push(`workbook: ${v.title} (${n} chunks)`);
+      } catch (err) { out.push(`workbook failed: ${v.title}: ${err instanceof Error ? err.message : String(err)}`); }
+    }
+  }
+  return out;
+}
+
 /** Meet transcripts and Gemini notes are the text worth ingesting. */
 function isTranscriptLike(name: string): boolean {
   return /transcript|notes by gemini|notes/i.test(name);
@@ -331,35 +411,12 @@ Deno.serve(async (req) => {
     const fileIds: string[] = Array.isArray(body.file_ids) ? body.file_ids.filter((x: unknown) => typeof x === "string" && /^[\w-]{10,100}$/.test(x)).slice(0, 10) : [];
     if (fileIds.length) {
       const report: Record<string, string> = {};
-      for (const id of fileIds) {
-        try {
-          const meta = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,mimeType,size,modifiedTime&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${token}` } });
-          if (!meta.ok) { report[id] = `no access (${meta.status}): share it with ${sa.client_email}`; continue; }
-          const file = await meta.json() as DriveFile;
-          const { data: existing } = await admin.from("knowledge_docs").select("id").eq("source_id", id).maybeSingle();
-          if (existing) { report[id] = `already in knowledge: ${file.name}`; continue; }
-          if (file.mimeType === GOOGLE_DOC || file.mimeType === "text/plain") {
-            const { text, kind } = file.mimeType === GOOGLE_DOC ? await fetchDocText(token, id) : { text: await fetchPlainFile(token, id), kind: "plain" as const };
-            const chunks = chunkText(text);
-            if (!chunks.length) { report[id] = `empty: ${file.name}`; continue; }
-            const { data: doc, error } = await admin.from("knowledge_docs").insert({
-              title: file.name, source_type: isTeaching(file.name) ? "teaching" : kind === "notes" ? "note" : kind === "plain" ? "transcript" : "call",
-              source_id: id, source_url: `https://docs.google.com/document/d/${id}`, word_count: text.split(/\s+/).length,
-            }).select("id").single();
-            if (error || !doc) throw error ?? new Error("insert failed");
-            for (let i = 0; i < chunks.length; i += 100) {
-              const { error: e } = await admin.from("knowledge_chunks").insert(chunks.slice(i, i + 100).map((content, j) => ({ doc_id: doc.id, chunk_index: i + j, content })));
-              if (e) throw e;
-            }
-            report[id] = `ingested: ${file.name} (${chunks.length} chunks)`;
-          } else if (file.mimeType.startsWith("video/") || file.mimeType.startsWith("audio/")) {
-            const { error } = await admin.from("transcription_jobs").upsert({ drive_file_id: id, title: file.name, mime_type: file.mimeType, size_bytes: file.size ? Number(file.size) : null, status: "pending", updated_at: new Date().toISOString() }, { onConflict: "drive_file_id", ignoreDuplicates: true });
-            report[id] = error ? `queue failed: ${error.message}` : `queued for transcription: ${file.name}`;
-          } else report[id] = `unsupported type ${file.mimeType}: ${file.name}`;
-        } catch (err) { report[id] = `error: ${err instanceof Error ? err.message : String(err)}`; }
-      }
+      for (const id of fileIds) report[id] = await ingestDriveFile(admin, token, sa.client_email, id);
       return json({ report });
     }
+
+    // Every Vault entry's files (notes, recordings, Fathom transcripts, Notion workbooks) go in as soon as they're on the Vault page.
+    const vault = await syncVault(admin, token, sa.client_email, Number(body.vault_limit) || 4);
     let ingested = 0;
     let remaining = 0;
     let queued = 0;
@@ -457,7 +514,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return json({ ingested, queued, skipped, remaining, hasMore: remaining > 0, errors });
+    return json({ ingested, queued, skipped, remaining, hasMore: remaining > 0, errors, vault });
   } catch (err) {
     console.error("drive-sync error", err);
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);

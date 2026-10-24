@@ -18,7 +18,7 @@ import DanAiButton from '@/components/DanAiButton';
 import { useGateBuild } from '@/hooks/useGrowthHub';
 import { useDanBrief } from '@/hooks/useDanBrief';
 import { gateNumber, nextTask } from '@/lib/growthHub';
-import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS } from '@/lib/dashboardExample';
+import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS, EXAMPLE_BUILD, EXAMPLE_NEXT, EXAMPLE_BRIEF } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
@@ -324,8 +324,10 @@ export default function Dashboard() {
       </div>
 
       <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} moveUp={dashboardProfile?.gate_move_up} keyTask={dashboardProfile?.gate_key_task}
-        nextMove={gate ? <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact /> : undefined}
-        buildSteps={gate ? <BuildList tasks={buildTasks} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} /> : undefined} />
+        nextMove={example
+          ? <NextMove task={EXAMPLE_NEXT} brief={EXAMPLE_BRIEF} isAdmin={Boolean(profile?.is_admin)} compact />
+          : <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact noGate={!gate} />}
+        buildSteps={example ? <BuildList tasks={EXAMPLE_BUILD} isAdmin={false} /> : gate ? <BuildList tasks={buildTasks} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} /> : undefined} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">

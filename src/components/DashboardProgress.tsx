@@ -64,7 +64,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
             {nextMove}
             {buildSteps && <div className="rounded-lg bg-card border border-border p-5">
               <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="text-xs font-semibold text-muted-foreground">Your action steps · {gate}</h2>
+                <h2 className="text-xs font-semibold text-muted-foreground flex items-center gap-2">Your action steps{gate ? ` · ${gate}` : ''} <ExampleLabel show={example} /></h2>
                 <Button variant="link" size="sm" className="px-0 h-auto" disabled={example} onClick={() => navigate('/growth-hub')}>Growth Hub <ArrowUpRight /></Button>
               </div>
               {buildSteps}

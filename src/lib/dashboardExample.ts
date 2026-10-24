@@ -1,3 +1,4 @@
+import type { TaskWithStatus } from '@/lib/growthHub';
 import { OWNER_USER_ID } from '@/lib/owner';
 import type { Call } from '@/data/calls';
 import momentumThumbnail from '@/assets/momentum-call-thumb.png';
@@ -32,3 +33,18 @@ export const EXAMPLE_WINS = [
   { id: 'example-1', win_text: 'Signed two new retainers this month — the ads are paying off!', cash_amount: 3200, created_at: '2026-10-22T12:00:00+10:00' },
   { id: 'example-2', win_text: 'Handed editing over to the team and got a full day back each week.', cash_amount: 0, created_at: '2026-10-20T12:00:00+10:00' },
 ];
+const exampleTask = (n: number, title: string, why: string, codes: string[], status: TaskWithStatus['status'], kind: TaskWithStatus['kind'] = 'once'): TaskWithStatus => ({
+  id: `example-${n}`, gate: 2, position: n, title, why, kind, module_codes: codes, training_label: null, training_url: null,
+  proof_hint: 'a screenshot', active: true, period: kind === 'monthly' ? 'example' : 'once', status, progress: null,
+});
+
+/** The example member's Gate 2 build list, for the owner-only screenshot dashboard. */
+export const EXAMPLE_BUILD: TaskWithStatus[] = [
+  exampleTask(1, 'Kickoff call with Dan', 'Set your gate and 90-day plan', [], 'approved', 'kickoff'),
+  exampleTask(2, 'Awareness campaign live at $5–20/day', 'Keeps your best posts in front of the right people', ['C4'], 'approved'),
+  exampleTask(3, 'Post 8 times on your own account', 'BTS and case studies start conversations', ['C1'], 'submitted', 'monthly'),
+  exampleTask(4, 'Start 6 retainer conversations', 'The Gate 2 bar for new clients', ['C2'], 'open', 'monthly'),
+  exampleTask(5, 'Post 4 case studies on your own account', 'Proof that sells the retainer for you', ['C3'], 'open'),
+];
+export const EXAMPLE_NEXT = EXAMPLE_BUILD[3];
+export const EXAMPLE_BRIEF = '4 conversations down, 2 to go this month. DM everyone who engaged with your last BTS.';
