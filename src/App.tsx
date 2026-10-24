@@ -15,7 +15,7 @@ import Auth from "./pages/Auth";
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Roadmap = lazy(() => import("./pages/Roadmap"));
-const Playbooks = lazy(() => import("./pages/GrowthHub"));
+const GrowthHub = lazy(() => import("./pages/GrowthHub"));
 const GrowthHubEditor = lazy(() => import("./pages/admin/GrowthHubEditor"));
 const NewClients = lazy(() => import("./pages/submissions/NewClients"));
 const MonthlyTotals = lazy(() => import("./pages/submissions/MonthlyTotals"));
@@ -80,7 +80,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
-          <Route path="/growth-hub" element={<ProtectedRoute><Playbooks /></ProtectedRoute>} />
+          <Route path="/growth-hub" element={<ProtectedRoute><GrowthHub /></ProtectedRoute>} />
           <Route path="/playbooks" element={<Navigate to="/growth-hub" replace />} />
           <Route path="/content-studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
           <Route path="/content-generator" element={<ProtectedRoute><ContentGenerator /></ProtectedRoute>} />
