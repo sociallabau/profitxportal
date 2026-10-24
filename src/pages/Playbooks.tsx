@@ -38,7 +38,7 @@ function useUnlock(userId: string | undefined, gate: GateNumber | null) {
 
 export default function Playbooks() {
   const { user } = useRequireAuth();
-  usePageTracking('playbooks');
+  usePageTracking('growth-hub');
   const { data: profile } = useProfile();
   const isAdmin = Boolean(profile?.is_admin);
 

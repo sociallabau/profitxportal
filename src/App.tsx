@@ -80,7 +80,8 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
-          <Route path="/playbooks" element={<ProtectedRoute><Playbooks /></ProtectedRoute>} />
+          <Route path="/growth-hub" element={<ProtectedRoute><Playbooks /></ProtectedRoute>} />
+          <Route path="/playbooks" element={<Navigate to="/growth-hub" replace />} />
           <Route path="/content-studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
           <Route path="/content-generator" element={<ProtectedRoute><ContentGenerator /></ProtectedRoute>} />
           <Route path="/hot-list" element={<ProtectedRoute><HotList /></ProtectedRoute>} />
@@ -101,7 +102,8 @@ const App = () => (
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/dan-ai" element={DAN_AI_MEMBERS_LIVE ? <ProtectedRoute><DanAI /></ProtectedRoute> : <AdminRoute><DanAI /></AdminRoute>} />
-          <Route path="/admin/playbooks" element={<AdminRoute><PlaybookEditor /></AdminRoute>} />
+          <Route path="/admin/growth-hub" element={<AdminRoute><PlaybookEditor /></AdminRoute>} />
+          <Route path="/admin/playbooks" element={<Navigate to="/admin/growth-hub" replace />} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />
         </Routes>
