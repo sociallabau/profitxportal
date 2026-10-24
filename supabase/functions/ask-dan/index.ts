@@ -498,7 +498,7 @@ Deno.serve(async (req) => {
         let compare = "";
         if (test.name === "ADS_5_DAYS_SCALE") {
           const { data: t9 } = await admin.from("dan_ai_test_results").select("answer, dan_ai_tests!inner(name)").eq("run_id", body.run_id).eq("dan_ai_tests.name", "ADS_5_DAYS_EARLY").maybeSingle();
-          compare = `\n\n=====\n\nTEST 9 ANSWER (for comparison)\n${t9?.answer?.answer ?? "(missing)"}`;
+          compare = `\n\n=====\n\nTEST 9 ANSWER (for comparison)\n${t9?.answer ? fullText(t9.answer as Answer) : "(missing)"}`;
         }
         const criteria = [
           ...(test.must_include as string[]).map(c => `include: ${c}`),

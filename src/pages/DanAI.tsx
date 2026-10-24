@@ -15,7 +15,8 @@ import TestsAdmin from '@/components/dan-ai/TestsAdmin';
 import TimingSummary, { type DanTiming } from '@/components/dan-ai/TimingSummary';
 import { askDanStream } from '@/lib/danStream';
 
-interface Answer { answer: string; next_steps: string[]; resource: string | null; context_used?: boolean }
+interface Point { do: string; why: string }
+interface Answer { answer: string; points: Point[]; note: string | null; resource: string | null; context_used?: boolean }
 interface Debug {
   timing?: DanTiming;
   mode?: string; data_freshness?: string; brain_loaded?: boolean;
