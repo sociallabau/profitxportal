@@ -337,14 +337,15 @@ async function answerPipeline(p: PipelineInput) {
   const clock = p.clock;
   const planned = clock.measure("plan", () => runPlan(p.question, p.history, clock.data));
   const [brain, member, { data: allProfiles }, catalogue, { data: voice }] = await Promise.all([
-    clock.measure("brain_load", () => loadBrain(p.admin)), p.member, p.admin.from("profiles").select("id, full_name"), Promise.resolve(p.catalogue),
+    clock.measure("brain_load", () => loadBrain(p.admin)), p.member, p.admin.from("profiles").select("id, full_name, is_admin"), Promise.resolve(p.catalogue),
     p.admin.from("voice_profile").select("content").eq("slug", "default").maybeSingle(),
   ]);
   const voiceText = (voice as { content: string } | null)?.content?.trim() ? `\n\nDAN'S VOICE PROFILE (built from his real messages; match it):\n${(voice as { content: string }).content.trim().slice(0, 4000)}` : "";
   const askerName = member?.name ?? null;
   p.status?.("Thinking…");
-  const otherNames = ((allProfiles ?? []) as { id: string; full_name: string | null }[])
-    .filter(x => x.id !== p.memberId && x.full_name).map(x => x.full_name ?? "");
+  // Admins (Dan and Emily) aren't other members: "I'll flag it to Dan and Emily" is a normal reply, not a privacy leak.
+  const otherNames = ((allProfiles ?? []) as { id: string; full_name: string | null; is_admin: boolean | null }[])
+    .filter(x => x.id !== p.memberId && x.full_name && !x.is_admin).map(x => x.full_name ?? "");
   const tokens = nameTokens(otherNames, p.mode === "test" ? null : askerName);
 
   const block = member ? buildMemberBlock(member) : { text: "ABOUT THIS MEMBER: none (general answer, no member selected).", derived: null, hasContext: false, summary: "no member" };
@@ -617,7 +618,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.12";
+const VERSION = "2026-10-24.13";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
