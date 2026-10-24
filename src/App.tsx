@@ -15,8 +15,8 @@ import Auth from "./pages/Auth";
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Roadmap = lazy(() => import("./pages/Roadmap"));
-const Playbooks = lazy(() => import("./pages/Playbooks"));
-const PlaybookEditor = lazy(() => import("./pages/admin/PlaybookEditor"));
+const Playbooks = lazy(() => import("./pages/GrowthHub"));
+const GrowthHubEditor = lazy(() => import("./pages/admin/GrowthHubEditor"));
 const NewClients = lazy(() => import("./pages/submissions/NewClients"));
 const MonthlyTotals = lazy(() => import("./pages/submissions/MonthlyTotals"));
 const Financials = lazy(() => import("./pages/Financials"));
@@ -102,7 +102,7 @@ const App = () => (
           <Route path="/client-journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/admin/journey" element={<AdminRoute><ClientJourney /></AdminRoute>} />
           <Route path="/dan-ai" element={DAN_AI_MEMBERS_LIVE ? <ProtectedRoute><DanAI /></ProtectedRoute> : <AdminRoute><DanAI /></AdminRoute>} />
-          <Route path="/admin/growth-hub" element={<AdminRoute><PlaybookEditor /></AdminRoute>} />
+          <Route path="/admin/growth-hub" element={<AdminRoute><GrowthHubEditor /></AdminRoute>} />
           <Route path="/admin/playbooks" element={<Navigate to="/admin/growth-hub" replace />} />
           <Route path="/admin/my-finances" element={<OwnerRoute><MyFinances /></OwnerRoute>} />
           <Route path="*" element={<ProtectedRoute><NotFound /></ProtectedRoute>} />

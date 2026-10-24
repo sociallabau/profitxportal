@@ -6,8 +6,8 @@ import { canUseDanAi } from '@/lib/danAccess';
 import {
   GATE_GOALS, goalStatus, helpPrompt, trainingLink,
   type GateNumber, type TaskStatus, type TaskWithStatus,
-} from '@/lib/playbook';
-import { useTickTask, useUntickTask, type GateModule } from '@/hooks/usePlaybook';
+} from '@/lib/growthHub';
+import { useTickTask, useUntickTask, type GateModule } from '@/hooks/useGrowthHub';
 
 const STATUS: Record<TaskStatus, { label: string; cls: string }> = {
   approved: { label: 'Approved', cls: 'violet-grad text-white' },

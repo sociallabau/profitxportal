@@ -13,10 +13,10 @@ import { getUpcomingCalls, brisbaneDateKey, type Call } from '@/data/calls';
 import type { LucideIcon } from 'lucide-react';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
 import ExampleLabel from '@/components/ExampleLabel';
-import { NextMove } from '@/components/playbook/PlaybookCards';
-import { useGateBuild } from '@/hooks/usePlaybook';
+import { NextMove } from '@/components/growth-hub/GrowthHubCards';
+import { useGateBuild } from '@/hooks/useGrowthHub';
 import { useDanBrief } from '@/hooks/useDanBrief';
-import { gateNumber, nextTask } from '@/lib/playbook';
+import { gateNumber, nextTask } from '@/lib/growthHub';
 import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------

@@ -12,8 +12,8 @@ export type GateNumber = 1 | 2 | 3 | 4;
 export type TaskKind = 'kickoff' | 'once' | 'monthly';
 export type TaskStatus = 'open' | 'submitted' | 'approved' | 'needs_changes';
 
-export type PlaybookGate = { gate: GateNumber; name: string; headline: string; focus: string; what_you_get: string };
-export type PlaybookTask = {
+export type GrowthHubGate = { gate: GateNumber; name: string; headline: string; focus: string; what_you_get: string };
+export type GrowthHubTask = {
   id: string; gate: GateNumber; position: number; title: string; why: string; kind: TaskKind;
   module_codes: string[]; training_label: string | null; training_url: string | null; proof_hint: string; active: boolean;
 };
@@ -22,10 +22,10 @@ export type TaskProgress = {
   proof_url: string | null; member_note: string | null; review_note: string | null;
   submitted_at?: string; reviewed_at?: string | null;
 };
-export type TaskWithStatus = PlaybookTask & { period: string; status: TaskStatus; progress: TaskProgress | null };
+export type TaskWithStatus = GrowthHubTask & { period: string; status: TaskStatus; progress: TaskProgress | null };
 
 /** Fallback copy if playbook_gates hasn't loaded (or the migration isn't run yet). */
-export const GATES: PlaybookGate[] = [
+export const GATES: GrowthHubGate[] = [
   { gate: 1, name: 'Fix', headline: '3 paying retainers', focus: 'Offer · Proof · Sales', what_you_get: 'The offer sells' },
   { gate: 2, name: 'Fuel', headline: '1 new client every month', focus: 'Content · Conversations · Tracking', what_you_get: 'Demand on purpose' },
   { gate: 3, name: 'Scale', headline: '2 new clients every month', focus: 'Leads · Follow-up · Hub', what_you_get: 'Demand as a system' },
@@ -68,7 +68,7 @@ export function periodFor(kind: TaskKind, month = monthKey()): string {
 }
 
 /** Merges a gate's tasks with the member's progress for the current period. */
-export function withStatus(tasks: PlaybookTask[], progress: TaskProgress[], month = monthKey()): TaskWithStatus[] {
+export function withStatus(tasks: GrowthHubTask[], progress: TaskProgress[], month = monthKey()): TaskWithStatus[] {
   return tasks
     .filter(task => task.active)
     .sort((a, b) => a.position - b.position)
@@ -96,7 +96,7 @@ export function buildProgress(tasks: TaskWithStatus[]): { done: number; approved
 }
 
 /** Where the "training" chip points: a URL/Loom, the module page, or nothing. */
-export function trainingLink(task: Pick<PlaybookTask, 'module_codes' | 'training_url' | 'training_label'>): { label: string; href: string | null; external: boolean } | null {
+export function trainingLink(task: Pick<GrowthHubTask, 'module_codes' | 'training_url' | 'training_label'>): { label: string; href: string | null; external: boolean } | null {
   if (task.training_url) return { label: task.training_label || task.module_codes[0] || 'Training', href: task.training_url, external: /^https?:/i.test(task.training_url) };
   if (task.module_codes.length) return { label: task.module_codes.join(' + '), href: `/module/${task.module_codes[0]}`, external: false };
   if (task.training_label) return { label: task.training_label, href: null, external: false };
@@ -104,7 +104,7 @@ export function trainingLink(task: Pick<PlaybookTask, 'module_codes' | 'training
 }
 
 /** The question the "Help me do this" button sends to Dan AI. */
-export function helpPrompt(task: Pick<PlaybookTask, 'title' | 'module_codes' | 'training_label'>): string {
+export function helpPrompt(task: Pick<GrowthHubTask, 'title' | 'module_codes' | 'training_label'>): string {
   const training = task.module_codes.length ? ` (training: ${task.module_codes.join(' + ')})` : task.training_label ? ` (training: ${task.training_label})` : '';
   return `Help me do this build task step by step: "${task.title}"${training}`;
 }

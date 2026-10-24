@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase';
-import { usePlaybookContent } from '@/hooks/usePlaybook';
-import { ROMAN, type GateNumber, type PlaybookTask, type TaskKind } from '@/lib/playbook';
+import { useGrowthHubContent } from '@/hooks/useGrowthHub';
+import { ROMAN, type GateNumber, type GrowthHubTask, type TaskKind } from '@/lib/growthHub';
 
-type Draft = Omit<PlaybookTask, 'id'> & { id?: string };
+type Draft = Omit<GrowthHubTask, 'id'> & { id?: string };
 const blank = (gate: GateNumber, position: number): Draft => ({
   gate, position, title: '', why: '', kind: 'monthly', module_codes: [], training_label: null, training_url: null, proof_hint: '', active: true,
 });
@@ -59,12 +59,12 @@ function TaskEditor({ task, onSaved }: { task: Draft; onSaved: () => void }) {
   );
 }
 
-export default function PlaybookEditor() {
+export default function GrowthHubEditor() {
   const qc = useQueryClient();
-  const { data } = usePlaybookContent();
+  const { data } = useGrowthHubContent();
   const [gate, setGate] = useState<GateNumber>(1);
   const [adding, setAdding] = useState(false);
-  const refresh = () => { setAdding(false); qc.invalidateQueries({ queryKey: ['playbook-content'] }); };
+  const refresh = () => { setAdding(false); qc.invalidateQueries({ queryKey: ['growth-hub-content'] }); };
   const tasks = (data?.tasks ?? []).filter(t => t.gate === gate);
   return (
     <PageLayout>

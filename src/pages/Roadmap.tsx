@@ -12,7 +12,7 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { PROFITX_MODULES } from '@/data/modules';
-import { MODULE_GATE, ROMAN } from '@/lib/playbook';
+import { MODULE_GATE, ROMAN } from '@/lib/growthHub';
 
 const PILLARS = [
   {

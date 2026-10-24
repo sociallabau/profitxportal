@@ -3,15 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { PartyPopper } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
-import LevelMap from '@/components/playbook/LevelMap';
-import { BuildList, GateGoals, GateTrainings, NextMove } from '@/components/playbook/PlaybookCards';
+import LevelMap from '@/components/growth-hub/LevelMap';
+import { BuildList, GateGoals, GateTrainings, NextMove } from '@/components/growth-hub/GrowthHubCards';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { usePageTracking } from '@/hooks/usePageTracking';
-import { useGateBuild } from '@/hooks/usePlaybook';
+import { useGateBuild } from '@/hooks/useGrowthHub';
 import { useDanBrief } from '@/hooks/useDanBrief';
-import { GATES, ROMAN, buildProgress, gateNumber, nextTask, type GateNumber } from '@/lib/playbook';
+import { GATES, ROMAN, buildProgress, gateNumber, nextTask, type GateNumber } from '@/lib/growthHub';
 
 const money = (n: number) => `$${n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : n}`;
 

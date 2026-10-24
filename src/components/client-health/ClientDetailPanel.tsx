@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@
 import { X, ChevronRight, TrendingUp, Trophy, Eye, Clock, ArrowUpCircle, AlertTriangle, DollarSign, Copy, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ContextRoom from '@/components/ContextRoom';
-import PlaybookPanel from '@/components/client-health/PlaybookPanel';
+import GrowthHubPanel from '@/components/client-health/GrowthHubPanel';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -228,10 +228,10 @@ export default function ClientDetailPanel({
 
               <div className="p-6 space-y-5">
                 <Accordion type="single" collapsible defaultValue="playbook" className="space-y-2">
-                  <AccordionItem value="playbook" className="border border-border rounded-lg px-4">
+                  <AccordionItem value="growth-hub" className="border border-border rounded-lg px-4">
                     <AccordionTrigger className="text-sm hover:no-underline">Growth Hub &amp; Dan AI memory</AccordionTrigger>
                     <AccordionContent>
-                      <PlaybookPanel key={client.id} memberId={client.id} gate={client.gate ?? null} />
+                      <GrowthHubPanel key={client.id} memberId={client.id} gate={client.gate ?? null} />
                     </AccordionContent>
                   </AccordionItem>
                   <AccordionItem value="context-room" className="border border-border rounded-lg px-4">

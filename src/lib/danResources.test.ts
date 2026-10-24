@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bestRecording, recordingName, titleDate } from '../../supabase/functions/ask-dan/recordings';
 import { buildTaskTitle, sectionsText } from '../../supabase/functions/ask-dan/buildHelp';
-import { helpPrompt } from '@/lib/playbook';
+import { helpPrompt } from '@/lib/growthHub';
 import { resourceCatalogue, resourceLink, vaultSources } from '@/data/resourceCatalogue';
 
 const lines = resourceCatalogue().split('\n');

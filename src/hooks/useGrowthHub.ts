@@ -2,16 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import {
   GATES, monthKey, withStatus,
-  type GateNumber, type PlaybookGate, type PlaybookTask, type TaskProgress, type TaskWithStatus,
-} from '@/lib/playbook';
+  type GateNumber, type GrowthHubGate, type GrowthHubTask, type TaskProgress, type TaskWithStatus,
+} from '@/lib/growthHub';
 
 export type GateModule = { gate: GateNumber; module_code: string; note: string | null; position: number };
-export type MemberPlaybook = { fast_track_lead_gen: boolean; fast_track_since: string | null; extra_modules: string[] };
+export type MemberGrowthHub = { fast_track_lead_gen: boolean; fast_track_since: string | null; extra_modules: string[] };
 
 /** Gate copy, every task and every gate→module link. Same for all members, so cached long. */
-export function usePlaybookContent() {
+export function useGrowthHubContent() {
   return useQuery({
-    queryKey: ['playbook-content'],
+    queryKey: ['growth-hub-content'],
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const [gates, tasks, modules] = await Promise.all([
@@ -21,8 +21,8 @@ export function usePlaybookContent() {
       ]);
       return {
         // Before the migration runs the tables don't exist: fall back to the built-in gate copy.
-        gates: (gates.data?.length ? gates.data : GATES) as PlaybookGate[],
-        tasks: (tasks.data ?? []) as PlaybookTask[],
+        gates: (gates.data?.length ? gates.data : GATES) as GrowthHubGate[],
+        tasks: (tasks.data ?? []) as GrowthHubTask[],
         modules: (modules.data ?? []) as GateModule[],
       };
     },
@@ -30,9 +30,9 @@ export function usePlaybookContent() {
 }
 
 /** One member's ticks, proof and Dan's settings for them. */
-export function useMemberPlaybook(userId?: string | null) {
+export function useMemberGrowthHub(userId?: string | null) {
   return useQuery({
-    queryKey: ['member-playbook', userId],
+    queryKey: ['member-growth-hub', userId],
     enabled: !!userId,
     queryFn: async () => {
       const [progress, settings] = await Promise.all([
@@ -41,7 +41,7 @@ export function useMemberPlaybook(userId?: string | null) {
       ]);
       return {
         progress: (progress.data ?? []) as TaskProgress[],
-        settings: (settings.data ?? { fast_track_lead_gen: false, fast_track_since: null, extra_modules: [] }) as MemberPlaybook,
+        settings: (settings.data ?? { fast_track_lead_gen: false, fast_track_since: null, extra_modules: [] }) as MemberGrowthHub,
       };
     },
   });
@@ -49,8 +49,8 @@ export function useMemberPlaybook(userId?: string | null) {
 
 /** A gate's build list with this member's status for the current month. */
 export function useGateBuild(userId: string | null | undefined, gate: GateNumber | null, month = monthKey()) {
-  const content = usePlaybookContent();
-  const member = useMemberPlaybook(userId);
+  const content = useGrowthHubContent();
+  const member = useMemberGrowthHub(userId);
   const tasks: TaskWithStatus[] = gate && content.data
     ? withStatus(content.data.tasks.filter(t => t.gate === gate), member.data?.progress ?? [], month)
     : [];
@@ -68,7 +68,7 @@ export function useTickTask(userId?: string | null) {
         .upsert({ ...t, user_id: userId!, status: 'submitted' }, { onConflict: 'user_id,task_id,period' });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-playbook', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-growth-hub', userId] }),
   });
 }
 
@@ -81,7 +81,7 @@ export function useUntickTask(userId?: string | null) {
         .eq('user_id', userId!).eq('task_id', t.task_id).eq('period', t.period);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-playbook', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-growth-hub', userId] }),
   });
 }
 
@@ -97,6 +97,6 @@ export function useReviewTask(userId?: string | null) {
       }, { onConflict: 'user_id,task_id,period' });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-playbook', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-growth-hub', userId] }),
   });
 }
