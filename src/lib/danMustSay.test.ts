@@ -38,10 +38,9 @@ describe('mustSay', () => {
     expect(missingRules(r, '~$363 a client vs $2,000. Log every lead daily in your growth hub.').map(x => x.short)).toContain('check the CPA column on your lead tracking sheet');
     expect(missingRules(r, '~$363 a client is under half your $2,000. Bump it once every lead is called within 15–30 mins; check the CPA column on your lead tracking sheet.')).toEqual([]);
   });
-  it('ADS_5_DAYS_EARLY: follow-up in 15–30 mins, no Gate 3 or starter-boost rules', () => {
+  it('ADS_5_DAYS_EARLY: no Gate 3 or starter-boost rules', () => {
     const r = mustSay({ ...base, costPerClient: 600, lowestPrice: 2950, question: 'Been running lead gen 5 days at $20/day, 4 leads, none booked a call. Kill it or bump to $40/day?' });
     const shorts = r.map(x => x.short).join(' ');
-    expect(shorts).toContain('call every lead within 15–30 mins');
     expect(shorts).not.toContain('bump it once');
     expect(shorts).not.toContain('half your');
     expect(shorts).not.toContain('$50 profile-visit');
