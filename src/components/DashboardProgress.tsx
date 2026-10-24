@@ -25,7 +25,7 @@ function FocusList({ items, fallback }: { items: string[]; fallback?: string }) 
   );
 }
 
-/** `nextMove` (the Playbook's "Your next move" card) replaces the Focus card once the member has a gate. */
+/** `nextMove` (the Growth Hub "Your next move" card) replaces the Focus card once the member has a gate. */
 export default function DashboardProgress({ series, gate, keyTask, moveUp, nextMove, example = false }: {
   series: RevenuePoint[]; gate?: string | null; keyTask?: string | null; moveUp?: string | null;
   nextMove?: ReactNode; example?: boolean;

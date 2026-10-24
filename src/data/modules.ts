@@ -1,5 +1,5 @@
 // The 18 ProfitX roadmap modules. One list, used by the Roadmap grid, the
-// Playbooks trainings and the build list chips, so names can't drift apart.
+// Growth Hub trainings and the build list chips, so names can't drift apart.
 export const PROFITX_MODULES: Record<string, string> = {
   O1: 'Market & Message', O2: 'Golden Retainer', O3: 'Tier Flow',
   O4: 'Revenue Architect', O5: 'Premium Positioning', O6: 'Financial Mastery',
