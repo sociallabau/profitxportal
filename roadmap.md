@@ -20,4 +20,5 @@
 - [x] Replace missing cron settings with database-held token authentication; apply the pushed migration exactly and deploy all three functions.
 - [x] Restore guardrail fixes on top of ab61ea4 and run regression tests.
 - [x] Run the Drive sync command once; response timed out at the migration's default 5 seconds, with null status and content.
-- [x] Deploy the eight requested edge functions and remove the deployed legacy dan-ai function.- [x] Rename every Playbooks mention to Growth Hub (sidebar, page heading, links, editor, Dan status) and redirect the old address.
+- [x] Deploy the eight requested edge functions and remove the deployed legacy dan-ai function.
+- [x] Rename every Playbooks mention to Growth Hub (sidebar, page heading, links, editor, Dan status) and redirect the old address.
