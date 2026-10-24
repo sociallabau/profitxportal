@@ -408,3 +408,28 @@ select:focus {
 @keyframes dan-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .dan-fade-up { animation: dan-fade-up 0.5s ease-out 1s both; }
 @media (prefers-reduced-motion: reduce) { .dan-fade-up { animation: none; } }
+
+/* Chat message entrance */
+@keyframes dan-msg-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+.dan-msg-in { animation: dan-msg-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .dan-msg-in { animation: none; } }
+
+/* Thinking prism bar: fills to ~92% over ~18s, with a moving sheen */
+@keyframes dan-prism-fill { from { width: 4%; } to { width: 92%; } }
+@keyframes dan-prism-sheen { from { transform: translateX(-100%); } to { transform: translateX(320%); } }
+.dan-prism {
+  position: relative; overflow: hidden; height: 4px; border-radius: 9999px;
+  background: hsl(var(--dan-ink) / 0.08);
+}
+.dan-prism-fill {
+  height: 100%; border-radius: 9999px; overflow: hidden; position: relative;
+  background: linear-gradient(90deg, hsl(var(--dan-violet) / 0.55), hsl(var(--dan-violet)), hsl(290 100% 72%));
+  box-shadow: 0 0 12px hsl(var(--dan-violet) / 0.6);
+  animation: dan-prism-fill 18s cubic-bezier(0.1, 0.6, 0.3, 1) both;
+}
+.dan-prism-fill::after {
+  content: ''; position: absolute; inset: 0; width: 32%;
+  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.55), transparent);
+  animation: dan-prism-sheen 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .dan-prism-fill, .dan-prism-fill::after { animation: none; } .dan-prism-fill { width: 60%; } }

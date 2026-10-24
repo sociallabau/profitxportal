@@ -219,9 +219,12 @@ export default function DanAI() {
               <DanAiOrb state={orbState} intro />
             </div>
             {pending && (
-              <p className="text-center text-xs text-[hsl(var(--dan-muted))] mt-1">
-                {status}
-              </p>
+              <div className="w-full max-w-[680px] mx-auto mt-3 px-1">
+                <div className="dan-prism"><div className="dan-prism-fill" /></div>
+                <p className="text-center text-xs text-[hsl(var(--dan-muted))] mt-2">
+                  {status}
+                </p>
+              </div>
             )}
 
             {!convo ? (
@@ -234,11 +237,11 @@ export default function DanAI() {
               <>
                 <div className="flex-1 w-full max-w-[680px] mx-auto space-y-6 py-6">
                   {messages.map((m, idx) => m.role === 'user' ? (
-                    <div key={m.id} className="flex justify-end">
+                    <div key={m.id} className="flex justify-end dan-msg-in">
                       <p className="max-w-[85%] bg-[hsl(var(--dan-violet)/0.1)] rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] whitespace-pre-wrap">{m.content}</p>
                     </div>
                   ) : (
-                    <div key={m.id} className="group space-y-3">
+                    <div key={m.id} className="group space-y-3 dan-msg-in">
                       <p className="text-[15px] whitespace-pre-wrap break-words leading-7">{m.parsed?.answer}</p>
                       {!!m.parsed?.next_steps.length && (
                         <ul className="list-disc pl-5 space-y-1 text-[15px] leading-7">
