@@ -11,6 +11,7 @@
 // with the folders shared to its client_email), DRIVE_FOLDER_IDS (comma
 // separated), optional CRON_SECRET.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isCronCall } from "../_shared/cron.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -289,14 +290,11 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const cronSecret = Deno.env.get("CRON_SECRET");
-    const providedSecret = req.headers.get("x-cron-secret");
-    const isCron = Boolean(cronSecret && providedSecret === cronSecret);
-
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    const isCron = await isCronCall(admin, req);
 
     if (!isCron) {
       const authHeader = req.headers.get("Authorization");

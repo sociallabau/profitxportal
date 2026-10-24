@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { timing, relevantExcerpt, checkerResult, type Timing } from "./performance.ts";
 import { joinChunks } from "../_shared/danBrain.ts";
+import { isCronCall } from "../_shared/cron.ts";
 import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
 import { loadExtras } from "./dossier.ts";
@@ -527,11 +528,11 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
-    // Scheduled memory rebuild (pg_cron), authenticated by CRON_SECRET instead of a user.
-    const cronSecret = Deno.env.get("CRON_SECRET");
-    if (cronSecret && req.headers.get("x-cron-secret") === cronSecret) {
+    // Scheduled memory rebuild (pg_cron), authenticated by the database's cron token instead of a user.
+    const cronAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    if (await isCronCall(cronAdmin, req)) {
       const body = await req.json().catch(() => ({}));
-      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const admin = cronAdmin;
       const { data: rows } = await admin.from("member_memory").select("user_id, dirty_at, refreshed_at").order("dirty_at", { ascending: false }).limit(200);
       const due = ((rows ?? []) as { user_id: string; dirty_at: string; refreshed_at: string | null }[])
         .filter(r => !r.refreshed_at || r.dirty_at > r.refreshed_at).slice(0, Math.min(Number(body.limit) || 10, 25));

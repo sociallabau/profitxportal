@@ -4,6 +4,7 @@
 // token, transcribes asynchronously, and posts the result back to
 // transcribe-callback, which writes it into the knowledge base.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isCronCall } from "../_shared/cron.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,16 +21,16 @@ Deno.serve(async (req) => {
 
   try {
     // An admin clicking the button, or the scheduled job.
-    const cronSecret = Deno.env.get("CRON_SECRET");
-    const providedSecret = req.headers.get("x-cron-secret");
-    const isCron = Boolean(cronSecret && providedSecret === cronSecret);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const isCron = await isCronCall(admin, req);
 
     if (!isCron) {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
       const scoped = createClient(
-        Deno.env.get("SUPABASE_URL")!,
+        supabaseUrl,
         Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authHeader } } },
       );
@@ -46,8 +47,6 @@ Deno.serve(async (req) => {
     const callbackSecret = Deno.env.get("TRANSCRIBE_CALLBACK_SECRET");
     if (!callbackSecret) return json({ error: "TRANSCRIBE_CALLBACK_SECRET is not set" }, 500);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
     const jobIds: string[] | undefined = body?.jobIds;
