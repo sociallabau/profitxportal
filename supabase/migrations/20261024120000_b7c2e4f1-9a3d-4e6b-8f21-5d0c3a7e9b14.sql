@@ -282,7 +282,7 @@ END $$;
 -- ---------- member memory ----------
 -- Dan AI's running picture of each member, rewritten by ask-dan (Sonnet) from
 -- everything in the portal. Any change to a member's data marks it dirty;
--- ask-dan refreshes it after their next question and hourly via cron.
+-- ask-dan refreshes it after their next question and every 2 days via cron.
 -- Admin-read only: members never see the memory itself, only better answers.
 CREATE TABLE IF NOT EXISTS public.member_memory (
   user_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -372,7 +372,8 @@ SELECT id FROM public.profiles WHERE NOT coalesce(is_admin, false)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Scheduled jobs: Drive sync (every 30 min), transcription (hourly) and the
--- member memory rebuild (hourly). All read app.settings.supabase_url,
+-- member memory rebuild (every 2 days, in 6 hourly batches of 15 so no single
+-- call runs long; Instagram is re-pulled at most every 2 days inside it). All read app.settings.supabase_url,
 -- app.settings.cron_secret and app.settings.anon_key. The anon key (public)
 -- gets the call past the functions gateway; each function only acts on a
 -- matching CRON_SECRET. Re-registering the two existing jobs adds that header.
@@ -386,7 +387,7 @@ BEGIN
   FOR job IN SELECT * FROM (VALUES
     ('dan-ai-drive-sync', '*/30 * * * *', 'drive-sync', '{}'),
     ('dan-ai-transcribe', '15 * * * *', 'transcribe', '{"limit": 3}'),
-    ('dan-ai-member-memory', '40 * * * *', 'ask-dan', '{"limit": 15}')
+    ('dan-ai-member-memory', '40 3-8 */2 * *', 'ask-dan', '{"limit": 15}')
   ) AS v(name, schedule, fn, body)
   LOOP
     PERFORM cron.unschedule(job.name) WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = job.name);

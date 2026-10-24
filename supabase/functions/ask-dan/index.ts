@@ -176,7 +176,7 @@ async function safeBrief(admin: DB, raw: unknown, memberId: string, ownName: str
 }
 // Sonnet rewrites each member's running memory from everything the portal holds.
 // Triggers mark it dirty when their data changes; refreshed after their questions
-// (debounced) and by the hourly job.
+// (debounced) and by the every-2-days job.
 const MEMORY_DEBOUNCE_MS = 10 * 60 * 1000;
 function memorySummary(m: Record<string, unknown>): string {
   const list = (k: string, label: string) => Array.isArray(m[k]) && (m[k] as unknown[]).length ? `${label}: ${(m[k] as unknown[]).map(String).join("; ")}` : null;
@@ -194,7 +194,7 @@ async function refreshMemory(admin: DB, memberId: string, force = false): Promis
   if (!force && row?.refreshed_at && row.dirty_at <= row.refreshed_at) return { ok: true, skipped: "up to date" };
   const startedAt = new Date().toISOString();
   await admin.from("member_memory").upsert({ user_id: memberId, refresh_started_at: startedAt }, { onConflict: "user_id" });
-  // Their Instagram: pulled at most daily (or when the handle changes), cached on the memory row.
+  // Their Instagram: pulled at most every 2 days (or when the handle changes), cached on the memory row.
   const { data: room } = await admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle();
   const handle = cleanHandle((room?.answers as Record<string, unknown> | null)?.instagram_handle);
   if (handle && (handle !== row?.instagram_handle || !row?.instagram_fetched_at || now - Date.parse(row.instagram_fetched_at) > IG_REFRESH_MS)) {

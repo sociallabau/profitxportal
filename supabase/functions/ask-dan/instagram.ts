@@ -4,7 +4,7 @@
 
 export type IgPost = { date: string | null; type: "reel" | "post"; caption: string; likes: number; views: number; comments: number; url: string };
 
-export const IG_REFRESH_MS = 24 * 60 * 60 * 1000;
+export const IG_REFRESH_MS = 2 * 24 * 60 * 60 * 1000;
 
 /** "@Agency", "instagram.com/agency/", "agency" → "agency". Null if it doesn't look like a handle. */
 export function cleanHandle(raw: unknown): string | null {
