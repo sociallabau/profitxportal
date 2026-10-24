@@ -127,6 +127,13 @@
       "when": 1792829057191,
       "tag": "0017_monthly_check_in_gate_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792832245987,
+      "tag": "0018_add_dan_ai_live_function",
+      "breakpoints": true
     }
   ]
 }
