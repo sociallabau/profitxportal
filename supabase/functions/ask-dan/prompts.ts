@@ -2,7 +2,7 @@
 
 export const BRAIN_HEADER = `DAN'S BRAIN — THE RULEBOOK. Dan's frameworks, Gate criteria, definitions, default numbers, playbook answers, voice and boundaries. This overrides everything else, including the passages.`;
 
-export const FLAG_REPLY = "Let me flag that one to Dan — he'll get back to you.";
+export const FLAG_REPLY = "Let me flag that one to Dan — he'll get back to you as soon as he's free.";
 export const NAME_FALLBACK = "Can't share other members' details bro — but happy to help with yours. What's going on in your business?";
 
 export const BANNED_PHRASES = [

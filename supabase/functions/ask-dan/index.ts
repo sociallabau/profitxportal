@@ -335,7 +335,7 @@ async function answerPipeline(p: PipelineInput) {
     return { out, names };
   };
   const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
-  const maximum = shortReply ? 60 : 130;
+  const maximum = shortReply ? 60 : 115;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = {
     ...final,
