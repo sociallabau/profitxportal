@@ -5,6 +5,7 @@
  * a question and prescribe the workshop for it.
  */
 import type { Derived, MemberInput, Totals } from "./context.ts";
+import { gateNumber } from "./dossier.ts";
 
 export type Signal = { problem: string; fix: string };
 
@@ -16,7 +17,7 @@ const CONVOS: Record<number, number> = { 1: 4, 2: 6 };
 export function signals(m: MemberInput, d: Derived): Signal[] {
   const out: Signal[] = [];
   const t = m.totals[0];
-  const gate = m.extras?.gate_number ?? null;
+  const gate = m.extras?.gate_number ?? gateNumber(m.gate);
   const x = m.extras;
 
   if (d.data_freshness === "none") out.push({ problem: "no monthly numbers submitted yet", fix: "submit their Monthly Check-In so the advice can use real numbers" });

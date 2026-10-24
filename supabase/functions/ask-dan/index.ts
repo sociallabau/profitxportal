@@ -597,7 +597,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.5";
+const VERSION = "2026-10-24.7";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -671,8 +671,9 @@ async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) 
   if (action === "ask") {
     const question = String(body.question ?? "").slice(0, 4000);
     const memberId = typeof body.member_id === "string" ? body.member_id : null;
-    const member = body.persona ? persona(String(body.persona)) : memberId ? await loadMemberInput(admin, memberId) : null;
-    const mode = body.persona ? "test" : body.mode === "admin" ? "admin" : "member";
+    const synthetic = body.member && typeof body.member === "object" ? { answers: {}, totals: [], goal: null, ...body.member } as MemberInput : null;
+    const member = synthetic ?? (body.persona ? persona(String(body.persona)) : memberId ? await loadMemberInput(admin, memberId) : null);
+    const mode = synthetic || body.persona ? "test" : body.mode === "admin" ? "admin" : "member";
     const r = await answerPipeline({ admin, question, history: [], catalogue, vaultSources, mode, member, memberId, clock, extraRules });
     const short = wordCount(fullText(r.final)) <= 60 && !r.final.points.length;
     return { version: VERSION, final: r.final, words: wordCount(fullText(r.final)), code_checks: codeChecks(r.final, catalogueLines, [], short), debug: buildDebug(mode, memberId, r.member, r), draft: r.draft };

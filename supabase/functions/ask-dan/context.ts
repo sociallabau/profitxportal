@@ -93,7 +93,6 @@ export function derive(m: MemberInput, today = new Date()): Derived {
   const missing = KEY_FIELDS.filter(([k]) => !isFilled(m.answers[k]) && !(ov && OVERVIEW_COVERS[k]?.test(ov))).map(([, l]) => l);
   const oneoff = latest?.oneoff_revenue ?? null, totalRev = latest?.total_revenue ?? null;
   const allOneoff = (mrrLatest ?? 0) === 0 && ((totalRev ?? 0) > 0 || (oneoff ?? 0) > 0);
-  if (!m.gate) missing.push("current gate");
   return {
     latest_month: latest?.month ?? null, days_since_latest: days,
     data_freshness: !latest ? "none" : (days ?? 0) > 45 ? "stale" : "fresh",
@@ -212,7 +211,8 @@ export function extrasLines(x: MemberExtras): string[] {
   if (x.pipeline.total) L.push(`Hot List: ${x.pipeline.total} people (${Object.entries(x.pipeline.by_stage).map(([k, v]) => `${k} ${v}`).join(", ")})${x.pipeline.open_value ? `, ~$${Math.round(x.pipeline.open_value)} open deal value` : ""}`);
   if (x.wins.length) L.push(`Recent wins: ${x.wins.join(" | ")}`);
   if (x.instagram) L.push(...instagramLines(x.instagram.handle, x.instagram.posts, x.instagram.fetched_at));
-  L.push(`Content logged in the last 30 days: ${x.content_30d.posts} posts${x.content_30d.best ? `; best: ${x.content_30d.best}` : ""}`);
+  // Most members don't log content in the portal, so 0 here means "not logged", not "didn't post".
+  if (x.content_30d.posts) L.push(`Content logged in the last 30 days: ${x.content_30d.posts} posts${x.content_30d.best ? `; best: ${x.content_30d.best}` : ""}`);
   if (x.ads.length) L.push(`Ad campaigns: ${x.ads.join(" | ")}`);
   if (x.audit) L.push(`Latest roadmap audit: ${x.audit}`);
   if (x.weak_modules.length) L.push(`Weakest roadmap scores: ${x.weak_modules.join(", ")}`);

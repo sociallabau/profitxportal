@@ -35,7 +35,8 @@ export function mustSay(i: MustSayInput): Rule[] {
   const workload = /hire|hiring|editor|outsourc|\bva\b|assistant|overwhelm|burn(ed|t)? ?out|too busy|no time|drowning|workload|boundar|scope|extra|weekend|capacity/.test(q);
   const adsMoney = /\bads?\b|ad spend|budget|boost|awareness|lead gen|campaign|save (money|cash)|cut (back|costs)|switch off|turn off|pause/.test(q);
   const path = /\bgate\b|next step|what (should|do) i (focus|do)|where (am i|do i start)|path|roadmap|what'?s next|level up|move up/.test(q);
-  const scale = /\bscal|increase (the )?budget|spend more|double/.test(q);
+  const scale = /\bscal|increase (the )?budget|raise (the )?budget|spend more|double|bump/.test(q);
+  const weakCreative = /ctr\s*(of\s*)?0?\.[0-9]|0\.[0-9]+\s*%\s*ctr|one (video|creative|ad)\b|single (video|creative|ad)|low ctr|ctr (is )?(low|bad|poor)/.test(q);
   const revenueNote = i.revenue != null && i.revenue > 0 ? `, against their ~${money(i.revenue)}/mo now` : "";
   const retainers = statedRetainers(i.question);
 
@@ -50,15 +51,16 @@ export function mustSay(i: MustSayInput): Rule[] {
   if (freeWork || (adsMoney && /save|cut|cash|switch off|turn off|skip|stop/.test(q))) {
     out.push({ say: "Never switch off awareness/lead gen to save cash; keep awareness running.", short: "never switch off awareness", test: /(never|don'?t|do not)\s+(switch|turn|shut)\s+(off|it off)|(switch|turn)ing off|keep (your )?(awareness|it|boosting)\s+(running|on|going)/i });
   }
-  if (path && (i.gate == null || i.gate <= 1) && (adsMoney || path)) {
+  if ((i.gate == null || i.gate <= 1) && (adsMoney || /\bgate\b/.test(q)) && (path || adsMoney)) {
     out.push({ say: "Below or at Gate 1: put a ~$50 profile-visit boost behind their best posts; awareness ads come at Gate 2.", short: "for now it's a ~$50 profile-visit boost behind your best posts; awareness comes at Gate 2", test: /\$\s?50\b[^.]*\b(boost|profile)|\b(boost|profile)[^.]*\$\s?50\b/i });
   }
   const cpc = i.costPerClient, price = i.lowestPrice;
   if (adsMoney && typeof cpc === "number" && Number.isFinite(cpc) && typeof price === "number" && price > 0) {
     const under = cpc < price / 2;
     out.push({ say: `Say their ~${money(cpc)} a client is ${under ? "UNDER" : "NOT under"} half their ${money(price)} first month's fee, in those words.`, short: `~${money(cpc)} a client is ${under ? "under" : "not under"} half your ${money(price)} first month`, test: under ? /under half/i : /not under half|over half|more than half/i });
-    if (scale || under) out.push({ say: "Scaling only works if every lead and follow-up is tracked in their Growth Hub.", short: "track every lead and follow-up in your Growth Hub", test: /growth hub|\bhub\b/i });
+    if (scale) out.push({ say: "Scaling only works if every lead and follow-up is tracked in their Growth Hub.", short: "track every lead and follow-up in your Growth Hub", test: /growth hub|\bhub\b/i });
   }
+  if (weakCreative) out.push({ say: "Weak CTR (~0.4–0.6% is the kill zone) or one creative: add 3–4 creatives to the SAME campaign; don't start a new one.", short: "add 3–4 creatives to the same campaign", test: /3\s*[–-]\s*4 (new )?(creatives|ads|videos)/i });
   if (i.hasMember && !i.hasContext) out.push({ say: "Their Context Room is empty: give Dan's defaults and end with one line asking them to fill in their Context Room.", short: "fill in your Context Room so I can make this specific", test: /context room/i });
   return out;
 }

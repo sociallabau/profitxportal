@@ -35,3 +35,11 @@ describe('mustSay', () => {
     expect(says(mustSay({ ...base, hasContext: false, question: 'What should I charge?' }))).toContain('Context Room');
   });
 });
+
+describe('mustSay creatives', () => {
+  it('asks for 3–4 creatives on a weak CTR', () => {
+    const r = mustSay({ gate: 2, revenue: 3000, hasContext: true, hasMember: true, question: 'Lead gen 5 days, CTR 0.5%, one video. Kill it or bump to $40/day?' });
+    expect(r.map(x => x.short).join(' ')).toContain('3–4 creatives');
+    expect(missingRules(r.filter(x => x.short.includes('creatives')), 'Add 3–4 creatives to the SAME campaign.')).toEqual([]);
+  });
+});
