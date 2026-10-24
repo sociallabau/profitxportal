@@ -24,7 +24,7 @@ describe('mustSay', () => {
     expect(says(r)).toContain('OWN account');
     expect(says(r)).toContain('on top of the fee');
     expect(says(r)).toContain('switch off awareness');
-    expect(missingRules(r, 'Post case studies on your own account. Ad spend sits on top of the fee. Never switch off awareness. Editor at ~$15–20k.')).toEqual([]);
+    expect(missingRules(r, 'Post case studies on your own account. Ad spend sits on top of the fee. Never switch off awareness. Editor at ~$15–20k. Put a ~$50 profile-visit boost behind your best posts.')).toEqual([]);
   });
   it('ADS_5_DAYS_SCALE: under half and the Growth Hub', () => {
     const r = mustSay({ ...base, gate: 3, costPerClient: 363, lowestPrice: 2000, question: 'Ads have run 5 days, can I scale?' });
