@@ -286,6 +286,7 @@ async function answerPipeline(p: PipelineInput) {
   else { issues.push({ type: "guardrail", note: "Checker unavailable — safe fallback; unchecked draft withheld" }); final = { answer: FLAG_REPLY, next_steps: [], resource: null }; }
 
   const guardStarted = performance.now();
+  const retryBefore = clock.data.steps.check_retry ?? 0;
   // GUARDRAILS — deterministic repairs first; only privacy gets another checker call.
   const problems = (a: Answer) => {
     const text = [a.answer, ...a.next_steps].join("\n");
@@ -314,7 +315,7 @@ async function answerPipeline(p: PipelineInput) {
   };
   const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
   const maximum = shortReply ? 60 : 170;
-  const clean = (text: string) => text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n");
+  const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = { ...final, answer: clean(final.answer), next_steps: final.next_steps.map(clean).filter(Boolean) };
   if (wordCount(final.answer) > maximum) {
     const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
@@ -322,6 +323,7 @@ async function answerPipeline(p: PipelineInput) {
     for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
     if (kept) final = { ...final, answer: kept };
   }
+  if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final.answer = final.answer.trim() + ".";
   let probs = problems(final);
   if (probs.names.length) {
     issues.push({ type: "guardrail", note: "Privacy re-check" });
@@ -335,7 +337,7 @@ async function answerPipeline(p: PipelineInput) {
     final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, next_steps: [], resource: null };
     pass = false;
   }
-  clock.data.steps.guardrails = Math.round(performance.now() - guardStarted) - (clock.data.steps.check_retry ?? 0);
+  clock.data.steps.guardrails = Math.max(0, Math.round(performance.now() - guardStarted) - ((clock.data.steps.check_retry ?? 0) - retryBefore));
   // JSON parsed fine, so an unpunctuated ending is style, not a cut-off: close it.
   if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final = { ...final, answer: final.answer.trim() + "." };
   const matched = matchResource(final.resource, catalogueLines);

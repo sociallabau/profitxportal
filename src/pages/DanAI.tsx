@@ -5,7 +5,6 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { functionErrorMessage } from '@/lib/functionError';
 import { resourceCatalogue } from '@/data/resourceCatalogue';
 import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
