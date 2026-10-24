@@ -17,5 +17,7 @@
 - [x] Keep basic details visible and deeper questions collapsed; verify saving and layout.
 - [x] Re-run only the final cron block and verify all three schedules.
 - [x] Check persistent cron settings; database-setting permission denied, so configure public URL/key fallbacks in job commands.
-- [ ] Enable successful cron execution — blocked: app.settings.cron_secret is missing; no secret fabricated or security bypassed.
+- [x] Replace missing cron settings with database-held token authentication; apply the pushed migration exactly and deploy all three functions.
+- [x] Restore guardrail fixes on top of ab61ea4 and run regression tests.
+- [x] Run the Drive sync command once; response timed out at the migration's default 5 seconds, with null status and content.
 - [x] Deploy the eight requested edge functions and remove the deployed legacy dan-ai function.

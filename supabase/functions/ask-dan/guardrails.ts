@@ -42,7 +42,7 @@ export const wordCount = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
 export function looksTruncated(text: string): boolean {
   const t = text.trim();
-  return !/[.!?)"'’”…]$/.test(t);
+  return !/[.!?:)"'’”…]$/.test(t);
 }
 
 /** Resource must match a catalogue line exactly (full line or just its title part). */
@@ -51,4 +51,19 @@ export function matchResource(resource: string | null, catalogue: string[]): str
   const r = resource.trim();
   const title = (line: string) => (line.split(" · ").pop() ?? line).split(" — ")[0].trim();
   return catalogue.find(l => l === r) ?? catalogue.find(l => title(l) === title(r)) ?? null;
+}
+
+/** Match dollar amounts rather than coincidental digits. */
+export function hasCostPerClient(text: string, cost: number): boolean {
+  return [...text.matchAll(/\$\s*(\d[\d,]*(?:\.\d+)?)/g)]
+    .some(match => Number(match[1].replace(/,/g, "")) === Math.round(cost));
+}
+
+/** Keep computed facts inside a point, not a disposable trailing note. */
+export function repairCostPerClient<T extends { points: { do: string; why: string }[] }>(answer: T, cost: number, price: number | null | undefined): T {
+  if (!Number.isFinite(cost) || !answer.points.length) return answer;
+  const fact = `~$${Math.round(cost).toLocaleString("en-US")} a client${typeof price === "number" && price > 0 ? ` vs your $${price.toLocaleString("en-US")} retainer, ${cost < price / 2 ? "under half" : "not under half"} your first month's fee` : ""}`;
+  const index = answer.points.findIndex(point => /cost|client|fee|budget|scal/i.test(`${point.do} ${point.why}`));
+  const target = index < 0 ? 0 : index;
+  return { ...answer, points: answer.points.map((point, i) => i === target ? { ...point, why: `${point.why.replace(/[.!]$/, "")}; ${fact}.` } : point) };
 }

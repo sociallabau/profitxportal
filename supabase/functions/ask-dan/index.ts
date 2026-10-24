@@ -14,7 +14,7 @@ import { loadExtras } from "./dossier.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
 import { BRAIN_HEADER, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
-import { findBanned, findNames, looksTruncated, matchResource, nameTokens, redact, wordCount } from "./guardrails.ts";
+import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
 const SONNET = "claude-sonnet-5-5";
 const HAIKU = "claude-haiku-5-5";
@@ -348,7 +348,7 @@ async function answerPipeline(p: PipelineInput) {
 
   // DRAFT (retry once on invalid JSON)
   let draft: Answer | null = null;
-  for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(draftSystem, [{ role: "user", content: userTurn }], clock.data, "draft"))));
+  for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(draftSystem, [{ role: "user", content: userTurn + (i ? '\nReturn valid JSON only. Escape newlines inside strings. Use answer, points [{do, why}], note and resource.' : '') }], clock.data, "draft"))));
   if (!draft) {
     issues.push({ type: "guardrail", note: "Draft JSON invalid twice — flagged to Dan" });
     const final: Answer = { answer: FLAG_REPLY, points: [], note: null, resource: null };
@@ -388,17 +388,18 @@ async function answerPipeline(p: PipelineInput) {
     if (looksTruncated(a.answer)) out.push("the answer is cut off — finish it cleanly");
     const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
     if (shortReply) {
-      if (wordCount(a.answer) > 60) out.push("cut to under 60 words");
+      if (wordCount(text) < 15 || wordCount(text) > 60) out.push("boundary/privacy reply must be 15–60 words");
+      if (a.points.length || a.note) out.push("boundary/privacy reply must be 1–2 short lines, no points or note");
     } else {
       if (a.points.length < 2 || a.points.length > 4) out.push("needs 2–4 dot points");
+      if (a.points.some(pt => !pt.why.trim())) out.push("each point needs one short reason");
+      if (wordCount(a.answer) > 18) out.push("stance must be max ~15 words");
       if (wordCount(text) > 130) out.push("cut to under ~110 words total");
     }
     // Ads/scaling/pricing questions must use the member's cost per client — only when it was actually computed.
     const cpc = block.derived?.cost_per_client;
     if (typeof cpc === "number" && Number.isFinite(cpc) && !shortReply) {
-      if (["ads", "pricing", "sales", "offer"].includes(String(plan.topic)) && !/\$\s?\d/.test(text.replace(/\$(15|20)\b/g, ""))) {
-        out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client vs their lowest retainer${block.derived?.lowest_retainer_price ? ` $${block.derived.lowest_retainer_price}` : ""}) and say whether it's under half`);
-      } else if (plan.topic === "ads" && !text.includes(String(Math.round(cpc)))) {
+      if (plan.topic === "ads" && !hasCostPerClient(text, cpc)) {
         out.push(`use their cost per client in dollars (~$${Math.round(cpc)} a client) and say whether it's under half their first month's fee`);
       }
     }
@@ -419,14 +420,8 @@ async function answerPipeline(p: PipelineInput) {
   };
   // Code may append only precomputed member facts or the exact fixed sequence rule, never invent coaching.
   const cpc = block.derived?.cost_per_client;
-  if (!shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !fullText(final).includes(String(Math.round(cpc)))) {
-    const price = block.derived?.lowest_retainer_price;
-    if (typeof price === "number" && price > 0) {
-      const verdict = block.derived?.cac_vs_first_month;
-      const why = `vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 50 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}`;
-      if (final.points.length < 4) final = { ...final, points: [...final.points, { do: `That's ~$${Math.round(cpc)} a client`, why }] };
-      else final = { ...final, note: `That's ~$${Math.round(cpc)} a client ${why}.` };
-    }
+  if (checked && !shortReply && plan.topic === "ads" && typeof cpc === "number" && Number.isFinite(cpc) && !hasCostPerClient(fullText(final), cpc)) {
+    final = repairCostPerClient(final, cpc, block.derived?.lowest_retainer_price);
   }
   const followupProblem = /no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question);
   if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 50 && /\bscal/i.test(fullText(final))) {
@@ -457,13 +452,13 @@ async function answerPipeline(p: PipelineInput) {
     note: final.note ? close(final.note) : null,
   };
   let probs = problems(final);
-  if (probs.names.length) {
-    issues.push({ type: "guardrail", note: "Privacy re-check" });
+  if (checked && probs.out.length) {
+    issues.push({ type: "guardrail", note: "Re-check unresolved guardrail violations" });
     const again = await runCheck(final, probs.out.join("; "));
     if (again) { final = again.final; issues.push(...again.issues); }
     probs = problems(final);
   }
-  if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 5 : 30)) {
+  if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 15 : 30)) {
     // Never publish an answer still violating privacy, semantics, voice or the word limits.
     issues.push({ type: "guardrail", note: `Unsafe final withheld: ${probs.out.join("; ") || "length"}` });
     final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, points: [], note: null, resource: null };
