@@ -323,11 +323,11 @@ async function answerPipeline(p: PipelineInput) {
     const price = block.derived?.lowest_retainer_price;
     if (typeof price === "number" && price > 0) {
       const verdict = block.derived?.cac_vs_first_month;
-      final.answer += `\n\nThat's ~$${Math.round(cpc)} a client vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 0.5 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}.`;
+      final.answer += `\n\nThat's ~$${Math.round(cpc)} a client vs your $${price.toLocaleString("en-US")} retainer${typeof verdict === "number" ? verdict < 50 ? ", under half your first month's fee" : ", not under half your first month's fee" : ""}.`;
     }
   }
   const followupProblem = /no (booked )?calls|not booking|aren'?t booking|slow (to )?repl|leads? but no|not calling|haven'?t called/i.test(p.question);
-  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 0.5 && /\bscal/i.test(final.answer)) {
+  if (followupProblem && typeof block.derived?.cac_vs_first_month === "number" && block.derived.cac_vs_first_month < 50 && /\bscal/i.test(final.answer)) {
     final.answer = final.answer.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
   }
   if (wordCount(final.answer) > maximum) {
@@ -460,7 +460,8 @@ Deno.serve(async (req) => {
           ...(test.must_not as string[]).map(c => `must_not: ${c}`),
         ].join("\n");
         const sys: Block[] = [{ type: "text", text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" } }, { type: "text", text: GRADER_PROMPT }];
-        const msg = `${buildMemberBlock(member).text}\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
+        const counted = wordCount(res.answer?.answer ?? "");
+        const msg = `${buildMemberBlock(member).text}\n\nANSWER FIELD WORD COUNT (computed in code, use for length criteria): ${counted}. Do not count next_steps or resource.\n\n=====\n\nQUESTION\n${test.question}\n\n=====\n\nANSWER\n${JSON.stringify(res.answer)}${compare}\n\n=====\n\nCRITERIA\n${criteria}`;
         let graded: Record<string, unknown> | null = null;
         for (let i = 0; i < 2 && !graded; i++) graded = parseJson(await callAnthropic(SONNET, sys, [{ role: "user", content: msg }]));
         const crit = Array.isArray(graded?.criteria) ? graded?.criteria as { pass: boolean }[] : [];

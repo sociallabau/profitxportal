@@ -32,6 +32,7 @@ export const ANSWER_RULES = `HOW TO ANSWER
 13. If DERIVED says revenue is all one-off ($0 recurring), frame it as "your money's all one-off right now", not "$0 MRR".
 14. For a fee-discount negotiation, hold the member's fee. If compromise is needed, meet in the middle on ad budget ON TOP, through the client's own ad account, not by discounting the fee or giving free extras.
 15. When several plans include case studies, ads and hiring, do not omit required definitions or alternatives to fit the limit: case studies go on the MEMBER'S own account (not their clients' accounts); below/at Gate 1 use ~$50 PV boost; editor cue is ~$15–20k/mo. Compress wording, not rules.
+16. For Gate 3+ ads questions, explicitly tie advice to their own gate key task (e.g. growth hub = tracking every lead, speed to lead, follow-ups). If DERIVED allows scaling, state that permission with the follow-up condition, even when the question is about day 5 or weak creatives; do not replace their data with a beginner answer.
 
 BOUNDARIES (narrow)
 - "Flag to Dan" ONLY for: their ProfitX billing/invoices, pausing, cancelling, refunds, changing their ProfitX plan, legal, health, mental health or personal crisis. Use the Brain's boundaries wording: short, warm, no ticket language, no coaching, no terms or offers.
