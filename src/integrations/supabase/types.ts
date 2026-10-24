@@ -906,6 +906,169 @@ export type Database = {
         }
         Relationships: []
       }
+      member_memory: {
+        Row: {
+          brief: string | null
+          dirty_at: string
+          instagram: Json | null
+          instagram_fetched_at: string | null
+          instagram_handle: string | null
+          memory: Json
+          refresh_started_at: string | null
+          refreshed_at: string | null
+          sources: Json
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          brief?: string | null
+          dirty_at?: string
+          instagram?: Json | null
+          instagram_fetched_at?: string | null
+          instagram_handle?: string | null
+          memory?: Json
+          refresh_started_at?: string | null
+          refreshed_at?: string | null
+          sources?: Json
+          summary?: string
+          user_id: string
+        }
+        Update: {
+          brief?: string | null
+          dirty_at?: string
+          instagram?: Json | null
+          instagram_fetched_at?: string | null
+          instagram_handle?: string | null
+          memory?: Json
+          refresh_started_at?: string | null
+          refreshed_at?: string | null
+          sources?: Json
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_memory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_memory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_playbook: {
+        Row: {
+          extra_modules: string[]
+          fast_track_lead_gen: boolean
+          fast_track_since: string | null
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          extra_modules?: string[]
+          fast_track_lead_gen?: boolean
+          fast_track_since?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          extra_modules?: string[]
+          fast_track_lead_gen?: boolean
+          fast_track_since?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_playbook_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_playbook_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_task_progress: {
+        Row: {
+          id: string
+          member_note: string | null
+          period: string
+          proof_url: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          member_note?: string | null
+          period?: string
+          proof_url?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          member_note?: string | null
+          period?: string
+          proof_url?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_task_progress_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_task_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_task_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_pages: {
         Row: {
           created_at: string | null
@@ -1185,6 +1348,121 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbook_gate_modules: {
+        Row: {
+          gate: number
+          id: string
+          module_code: string
+          note: string | null
+          position: number
+        }
+        Insert: {
+          gate: number
+          id?: string
+          module_code: string
+          note?: string | null
+          position?: number
+        }
+        Update: {
+          gate?: number
+          id?: string
+          module_code?: string
+          note?: string | null
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_gate_modules_gate_fkey"
+            columns: ["gate"]
+            isOneToOne: false
+            referencedRelation: "playbook_gates"
+            referencedColumns: ["gate"]
+          },
+        ]
+      }
+      playbook_gates: {
+        Row: {
+          focus: string
+          gate: number
+          headline: string
+          name: string
+          updated_at: string
+          what_you_get: string
+        }
+        Insert: {
+          focus?: string
+          gate: number
+          headline: string
+          name: string
+          updated_at?: string
+          what_you_get?: string
+        }
+        Update: {
+          focus?: string
+          gate?: number
+          headline?: string
+          name?: string
+          updated_at?: string
+          what_you_get?: string
+        }
+        Relationships: []
+      }
+      playbook_tasks: {
+        Row: {
+          active: boolean
+          created_at: string
+          gate: number
+          id: string
+          kind: string
+          module_codes: string[]
+          position: number
+          proof_hint: string
+          title: string
+          training_label: string | null
+          training_url: string | null
+          updated_at: string
+          why: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          gate: number
+          id?: string
+          kind?: string
+          module_codes?: string[]
+          position?: number
+          proof_hint?: string
+          title: string
+          training_label?: string | null
+          training_url?: string | null
+          updated_at?: string
+          why?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          gate?: number
+          id?: string
+          kind?: string
+          module_codes?: string[]
+          position?: number
+          proof_hint?: string
+          title?: string
+          training_label?: string | null
+          training_url?: string | null
+          updated_at?: string
+          why?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_tasks_gate_fkey"
+            columns: ["gate"]
+            isOneToOne: false
+            referencedRelation: "playbook_gates"
+            referencedColumns: ["gate"]
           },
         ]
       }
@@ -1645,6 +1923,13 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      my_dan_brief: {
+        Args: never
+        Returns: {
+          brief: string
+          refreshed_at: string
+        }[]
+      }
       my_monthly_reviews: {
         Args: never
         Returns: {

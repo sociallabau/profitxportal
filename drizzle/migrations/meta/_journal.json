@@ -99,6 +99,13 @@
       "when": 1792810402486,
       "tag": "0013_dan_ai_check_timings",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792819873405,
+      "tag": "0014_playbooks_and_member_memory",
+      "breakpoints": true
     }
   ]
 }
