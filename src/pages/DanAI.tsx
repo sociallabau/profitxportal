@@ -5,64 +5,57 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { resourceCatalogue, resourceLink, vaultSources } from '@/data/resourceCatalogue';
-import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History, PlayCircle } from 'lucide-react';
+import { resourceCatalogue, vaultSources } from '@/data/resourceCatalogue';
+import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import DanAiOrb, { type OrbState } from '@/components/DanAiOrb';
 import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
 import ChecksAdmin from '@/components/dan-ai/ChecksAdmin';
 import TestsAdmin from '@/components/dan-ai/TestsAdmin';
 import TimingSummary, { type DanTiming } from '@/components/dan-ai/TimingSummary';
+import NeuralField from '@/components/dan-ai/NeuralField';
+import ThinkingTrace from '@/components/dan-ai/ThinkingTrace';
+import AnswerCard, { type Answer, type Point, type Sources } from '@/components/dan-ai/AnswerCard';
 import { askDanStream } from '@/lib/danStream';
 
-interface Point { do: string; why: string }
-interface Answer { answer: string; points: Point[]; note: string | null; resource: string | null; context_used?: boolean }
 interface Debug {
   timing?: DanTiming;
   mode?: string; data_freshness?: string; brain_loaded?: boolean;
   derived?: Record<string, unknown> | null; plan?: unknown;
   passages?: { title: string; source_type: string; score: number }[];
   checker_issues?: { type: string; note: string }[]; guardrails?: { type: string; note: string }[];
-  about_member: string; member_id: string | null;
+  about_member?: string; member_id: string | null;
   brain?: { docs: number; words: number }; goal?: string;
-  monthly_totals: { count: number; months: string[] };
-  context_room: { found?: boolean; fields_filled: number; missing?: string[] };
+  monthly_totals?: { count: number; months: string[] };
+  context_room?: { found?: boolean; fields_filled: number; missing?: string[] };
   passage_titles?: string[];
+  roster_clients?: number; roster_words?: number;
 }
-interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer; debug?: Debug }
-
-/** The session at the bottom of an answer: a link to the recording, plus its workbook and templates. */
-function ResourceLink({ line }: { line: string }) {
-  const r = resourceLink(line);
-  const cls = 'inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--dan-violet))] hover:underline';
-  const label = <><PlayCircle className="w-4 h-4 shrink-0" />Watch: {r.title}</>;
-  return (
-    <div className="space-y-1">
-      {!r.href ? <p className={cls}>{label}</p>
-        : r.external ? <a href={r.href} target="_blank" rel="noreferrer" className={cls}>{label}</a>
-        : <Link to={r.href} className={cls}>{label}</Link>}
-      {r.extras.length > 0 && (
-        <p className="text-xs text-[hsl(var(--dan-muted))] pl-[22px]">
-          {r.extras.map((x, i) => <span key={x.url}>{i > 0 && ' · '}<a href={x.url} target="_blank" rel="noreferrer" className="hover:underline">{x.label}</a></span>)}
-        </p>
-      )}
-    </div>
-  );
-}
+interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer; debug?: Debug; fresh?: boolean }
 interface Thread { id: string; title: string; at: string }
 
+const toPoints = (v: unknown): Point[] => Array.isArray(v)
+  ? v.map((p: unknown) => typeof p === 'object' && p !== null
+      ? { do: String((p as Point).do ?? ''), why: String((p as Point).why ?? '') }
+      : { do: String(p), why: '' }).filter(p => p.do)
+  : [];
+
+function toAnswer(o: Record<string, unknown>): Answer {
+  return {
+    answer: String(o.answer ?? ''),
+    points: Array.isArray(o.points) ? toPoints(o.points) : toPoints(o.next_steps),
+    note: typeof o.note === 'string' ? o.note : null,
+    resource: typeof o.resource === 'string' ? o.resource : null,
+    context_used: typeof o.context_used === 'boolean' ? o.context_used : undefined,
+    sources: o.sources && typeof o.sources === 'object' ? o.sources as Sources : undefined,
+    all_clients: o.all_clients === true,
+  };
+}
 
 function parseAnswer(content: string): Answer {
   try {
     const o = JSON.parse(content);
-    if (o && typeof o.answer === 'string') {
-      const points: Point[] = Array.isArray(o.points)
-        ? o.points.map((p: unknown) => typeof p === 'object' && p !== null
-            ? { do: String((p as Point).do ?? ''), why: String((p as Point).why ?? '') }
-            : { do: String(p), why: '' }).filter((p: Point) => p.do)
-        : Array.isArray(o.next_steps) ? o.next_steps.map((s: unknown) => ({ do: String(s), why: '' })) : [];
-      return { answer: o.answer, points, note: typeof o.note === 'string' ? o.note : null, resource: o.resource ?? null, context_used: typeof o.context_used === 'boolean' ? o.context_used : undefined };
-    }
+    if (o && typeof o.answer === 'string') return toAnswer(o);
   } catch { /* plain text */ }
   return { answer: content, points: [], note: null, resource: null };
 }
@@ -80,14 +73,17 @@ export default function DanAI() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [pending, setPending] = useState<null | 'thinking' | 'checking'>(null);
-  const [status, setStatus] = useState('Reading your numbers…');
+  const [steps, setSteps] = useState<string[]>([]);
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [memberId, setMemberId] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [answered, setAnswered] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [params, setParams] = useSearchParams();
+
+  const allClients = isAdmin && memberId === 'all';
 
   // "Help me do this" on a build task lands here with the question ready to send.
   useEffect(() => {
@@ -97,7 +93,6 @@ export default function DanAI() {
     setParams({}, { replace: true });
     inputRef.current?.focus();
   }, [params, setParams]);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -110,7 +105,7 @@ export default function DanAI() {
       .order('full_name').then(({ data }) => setMembers(data ?? []));
   }, [isAdmin]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, pending]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, steps]);
 
   const loadThreads = async () => {
     if (!user) return;
@@ -144,29 +139,25 @@ export default function DanAI() {
     setInput('');
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', content: asked }]);
     setPending('thinking');
-    setStatus('Reading your numbers…');
+    setSteps([allClients ? 'Opening the command centre…' : 'Reading your numbers…']);
     try {
-    const data = await askDanStream({ question: asked, thread_id: threadId, catalogue: resourceCatalogue(), vault_sources: vaultSources(), member_id: isAdmin && memberId ? memberId : undefined }, next => {
-      setStatus(next); setPending(next.startsWith('Checking') ? 'checking' : 'thinking');
-    });
-    const parsed: Answer = {
-      answer: String(data.answer ?? ''),
-      points: Array.isArray(data.points) ? data.points.map((p: unknown) => typeof p === 'object' && p !== null ? { do: String((p as Point).do ?? ''), why: String((p as Point).why ?? '') } : { do: String(p), why: '' }).filter((p: Point) => p.do) : [],
-      note: typeof data.note === 'string' ? data.note : null,
-      resource: typeof data.resource === 'string' ? data.resource : null,
-      context_used: data.context_used === true,
-    };
-    setThreadId(typeof data.thread_id === 'string' ? data.thread_id : null);
-    setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, debug: isAdmin ? data.debug as Debug : undefined }]);
-    loadThreads();
-    setAnswered(true); setTimeout(() => setAnswered(false), 1300);
-    inputRef.current?.focus();
+      const data = await askDanStream({ question: asked, thread_id: threadId, catalogue: resourceCatalogue(), vault_sources: vaultSources(), member_id: isAdmin && memberId ? memberId : undefined }, next => {
+        setSteps(prev => prev[prev.length - 1] === next ? prev : [...prev, next]);
+        setPending(/^checking|final safety/i.test(next) ? 'checking' : 'thinking');
+      });
+      const parsed = toAnswer(data);
+      setThreadId(typeof data.thread_id === 'string' ? data.thread_id : null);
+      setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, fresh: true, debug: isAdmin ? data.debug as Debug : undefined }]);
+      loadThreads();
+      setAnswered(true); setTimeout(() => setAnswered(false), 1300);
+      inputRef.current?.focus();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't get an answer — try again");
       setMessages(prev => prev.slice(0, -1));
       setInput(asked);
     } finally {
       setPending(null);
+      setSteps([]);
     }
   };
 
@@ -192,27 +183,29 @@ export default function DanAI() {
   const chatTab = tab === 'chat';
   const convo = messages.length > 0 || !!pending;
   const orbState: OrbState = pending ?? (answered ? 'answered' : 'idle');
-  const violet = 'hsl(var(--dan-violet))';
+
+  const contextPicker = isAdmin && (
+    <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-[hsl(var(--dan-muted))] w-full max-w-[680px] mx-auto">
+      <span className="dan-mono uppercase tracking-[0.15em] text-[10px]">Context</span>
+      <select value={memberId} onChange={e => setMemberId(e.target.value)}
+        className="dan-chip text-xs focus:outline-none cursor-pointer [&>option]:bg-[hsl(var(--dan-paper))]">
+        <option value="">No member (general answer)</option>
+        <option value="all">All clients (command centre)</option>
+        {members.map(m => <option key={m.id} value={m.id}>{m.full_name ?? m.id}</option>)}
+      </select>
+    </div>
+  );
 
   const box = (
     <div className="w-full max-w-[680px] mx-auto">
-      {isAdmin && (
-        <div className="flex items-center gap-1.5 mb-2 text-xs text-[hsl(var(--dan-muted))]">
-          <span>Context from:</span>
-          <select value={memberId} onChange={e => setMemberId(e.target.value)}
-            className="bg-transparent text-[hsl(var(--dan-ink))] text-xs focus:outline-none cursor-pointer">
-            <option value="">No member (general answer)</option>
-            {members.map(m => <option key={m.id} value={m.id}>{m.full_name ?? m.id}</option>)}
-          </select>
-        </div>
-      )}
-      <div className="flex items-end gap-2 rounded-[20px] bg-[hsl(var(--dan-paper))] border border-[hsl(var(--dan-violet)/0.25)] shadow-[0_8px_30px_-12px_hsl(var(--dan-violet)/0.35)] p-2 pl-4 transition-all focus-within:border-[hsl(var(--dan-violet))] focus-within:ring-4 focus-within:ring-[hsl(var(--dan-violet)/0.15)]">
+      <div className={`dan-glass dan-ring ${pending ? 'dan-ring-on' : ''} flex items-end gap-2 rounded-[26px] p-2 pl-5 transition-shadow focus-within:shadow-[0_0_0_4px_hsl(var(--dan-violet)/0.14),0_30px_60px_-28px_rgb(90_50_170/0.45)]`}>
         <textarea ref={inputRef} autoFocus rows={1} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="What's the actual problem? The more detail, the sharper the answer."
+          placeholder={allClients ? 'Ask about all your clients…' : 'Ask Dan AI'}
+          aria-label="Ask Dan AI"
           className="flex-1 bg-transparent border-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 resize-none text-base leading-6 text-[hsl(var(--dan-ink))] placeholder:text-[hsl(var(--dan-muted))] focus:outline-none py-2" />
         <button onClick={() => send()} disabled={!!pending || !input.trim()} aria-label="Send"
-          className="w-10 h-10 shrink-0 rounded-full bg-[hsl(var(--dan-violet))] text-[hsl(var(--dan-violet-fg))] flex items-center justify-center disabled:opacity-40 transition-opacity">
+          className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-[hsl(var(--dan-violet))] to-[hsl(var(--dan-cyan))] text-white flex items-center justify-center shadow-[0_0_20px_-2px_hsl(var(--dan-violet))] disabled:opacity-35 disabled:shadow-none transition-opacity">
           {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
         </button>
       </div>
@@ -221,20 +214,31 @@ export default function DanAI() {
 
   return (
     <PageLayout mainClassName="dan-canvas">
+      <NeuralField active={!!pending} />
+      <div className="dan-liquid" aria-hidden="true" />
+      <div className="dan-grid" aria-hidden="true" />
       <div className="relative min-h-[calc(100vh-6rem)] flex flex-col">
         {/* top bar */}
         <div className="flex items-center justify-between h-10">
           {chatTab ? (
-            <button onClick={() => setHistoryOpen(true)} aria-label="History"
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] hover:bg-[hsl(var(--dan-ink)/0.06)]">
-              <History className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setHistoryOpen(true)} aria-label="Past chats"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] hover:bg-[hsl(var(--dan-ink)/0.08)]">
+                <History className="w-4 h-4" />
+              </button>
+              {convo && (
+                <button onClick={newThread} aria-label="New chat"
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] hover:bg-[hsl(var(--dan-ink)/0.08)]">
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           ) : <span />}
           {isAdmin && (
-            <div className="flex rounded-full bg-[hsl(var(--dan-ink)/0.06)] p-0.5 text-xs">
+            <div className="flex rounded-full dan-glass p-0.5 text-xs">
               {(['chat', 'knowledge', 'checks', 'tests'] as Tab[]).map(t => (
                 <button key={t} onClick={() => setTab(t)}
-                  className={`px-3 py-1 rounded-full capitalize transition-colors ${tab === t ? 'bg-[hsl(var(--dan-paper))] text-[hsl(var(--dan-ink))] shadow-sm' : 'text-[hsl(var(--dan-muted))]'}`}>
+                  className={`px-3 py-1 rounded-full capitalize transition-colors ${tab === t ? 'bg-[hsl(var(--dan-violet)/0.35)] text-[hsl(var(--dan-ink))]' : 'text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))]'}`}>
                   {t}
                 </button>
               ))}
@@ -248,83 +252,39 @@ export default function DanAI() {
           </div>
         )}
 
-        {chatTab && (
-          <>
-            <div className={`mx-auto transition-all duration-700 ease-out ${convo ? 'w-16 h-16 mt-0' : 'w-[220px] h-[220px] sm:w-[320px] sm:h-[320px] mt-6 sm:mt-10'}`}>
-              <DanAiOrb state={orbState} intro />
+        {chatTab && !convo && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-8 pb-[8vh]">
+            <div className="w-[260px] h-[260px] sm:w-[400px] sm:h-[400px]"><DanAiOrb state="idle" intro /></div>
+            <div className="dan-fade-up w-full">
+              {box}
+              <div className="mt-3">{contextPicker}</div>
             </div>
-            {pending && (
-              <div className="w-full max-w-[680px] mx-auto mt-3 px-1">
-                <div className="dan-prism"><div className="dan-prism-fill" /></div>
-                <p className="text-center text-xs text-[hsl(var(--dan-muted))] mt-2">
-                  {status}
-                </p>
-              </div>
-            )}
+          </div>
+        )}
 
-            {!convo ? (
-              <div className="dan-fade-up flex flex-col items-center text-center mt-4">
-                <h1 className="text-2xl italic font-extrabold tracking-tight">Dan AI</h1>
-                <p className="text-sm text-[hsl(var(--dan-muted))] mt-1 mb-6">Ask me anything about your business.</p>
-                {box}
-              </div>
-            ) : (
-              <>
-                <div className="flex-1 w-full max-w-[680px] mx-auto space-y-6 py-6">
-                  {messages.map((m, idx) => m.role === 'user' ? (
-                    <div key={m.id} className="flex justify-end dan-msg-in">
-                      <p className="max-w-[85%] bg-[hsl(var(--dan-violet)/0.1)] rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] whitespace-pre-wrap">{m.content}</p>
-                    </div>
-                  ) : (
-                    <div key={m.id} className="group space-y-3 dan-msg-in">
-                      <p className="text-[15px] whitespace-pre-wrap break-words leading-7 font-medium">{m.parsed?.answer}</p>
-                      {!!m.parsed?.points.length && (
-                        <ul className="space-y-2 text-[15px] leading-7">
-                          {m.parsed.points.map((pt, i) => (
-                            <li key={i} className="flex gap-2.5">
-                              <span className="mt-[11px] w-1.5 h-1.5 rounded-full shrink-0 bg-[hsl(var(--dan-violet))]" />
-                              <span>{pt.do}{pt.why && <span className="text-[hsl(var(--dan-muted))]"> — {pt.why}</span>}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {m.parsed?.note && (
-                        <p className="text-xs text-[hsl(var(--dan-muted))]">{m.parsed.note}</p>
-                      )}
-                      {m.parsed?.resource && (
-                        <ResourceLink line={m.parsed.resource} />
-                      )}
-                      {isAdmin && m.debug && (
-                        <details className="text-[11px] text-[hsl(var(--dan-muted))] rounded-lg border border-[hsl(var(--dan-ink)/0.1)] px-3 py-2">
-                          <summary className="cursor-pointer select-none">Context used</summary>
-                          <div className="mt-2 space-y-2">
-                             {m.debug.timing && <TimingSummary timing={m.debug.timing} />}
-                            <p><b>Mode:</b> {m.debug.mode ?? '–'} · <b>Member ID:</b> {m.debug.member_id ?? 'none'}</p>
-                            {m.debug.brain && <p><b>Brain:</b> {m.debug.brain_loaded === false ? 'NOT LOADED' : `${m.debug.brain.docs} docs loaded, ${m.debug.brain.words.toLocaleString()} words`}</p>}
-                            <p><b>Monthly totals:</b> {m.debug.monthly_totals.count} found{m.debug.monthly_totals.months.length ? ` (${m.debug.monthly_totals.months.join(', ')})` : ''} · <b>Freshness:</b> {m.debug.data_freshness ?? '–'} · <b>Goal:</b> {m.debug.goal ?? '–'}</p>
-                            <p><b>Context Room:</b> {m.debug.context_room.fields_filled} fields filled{m.debug.context_room.missing?.length ? ` · missing: ${m.debug.context_room.missing.join(', ')}` : ''}</p>
-                            {m.debug.derived && <div><b>Derived:</b><pre className="whitespace-pre-wrap mt-1">{JSON.stringify(m.debug.derived, null, 2)}</pre></div>}
-                            {m.debug.plan != null && <div><b>Plan:</b><pre className="whitespace-pre-wrap mt-1">{JSON.stringify(m.debug.plan, null, 2)}</pre></div>}
-                            <div><b>Passages ({m.debug.passages?.length ?? m.debug.passage_titles?.length ?? 0}):</b>
-                              <ul className="list-disc pl-4">
-                                {m.debug.passages?.map((p, i) => <li key={i}>[{p.source_type}] {p.title} — {p.score}</li>)}
-                                {!m.debug.passages && m.debug.passage_titles?.map((t, i) => <li key={i}>{t}</li>)}
-                              </ul>
-                            </div>
-                            {!!m.debug.checker_issues?.length && <div><b>Checker issues:</b><ul className="list-disc pl-4">{m.debug.checker_issues.map((x, i) => <li key={i}>{x.type}: {x.note}</li>)}</ul></div>}
-                            {!!m.debug.guardrails?.length && <div><b>Guardrails:</b><ul className="list-disc pl-4">{m.debug.guardrails.map((x, i) => <li key={i}>{x.note}</li>)}</ul></div>}
-                            <div><b>About this member:</b>
-                              <pre className="whitespace-pre-wrap font-sans mt-1">{m.debug.about_member}</pre>
-                            </div>
-                          </div>
-                        </details>
-                      )}
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <Link to="/settings" className="text-[11px] text-[hsl(var(--dan-muted))] hover:underline">
-                          {m.parsed?.context_used === false ? 'Fill in your Context Room for more personal answers →' : 'Personalised using your Context Room and monthly totals'}
-                        </Link>
+        {chatTab && convo && (
+          <>
+            <div className="sticky top-0 z-10 flex justify-center py-1">
+              <div className={`transition-all duration-500 ${pending ? 'w-20 h-20' : 'w-14 h-14'}`}><DanAiOrb state={orbState} /></div>
+            </div>
+
+            <div className="flex-1 w-full max-w-[720px] mx-auto space-y-5 py-4">
+              {messages.map((m, idx) => m.role === 'user' ? (
+                <div key={m.id} className="flex justify-end dan-msg-in">
+                  <p className="max-w-[85%] rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] whitespace-pre-wrap dan-glass bg-[hsl(var(--dan-violet)/0.1)]">{m.content}</p>
+                </div>
+              ) : (
+                <div key={m.id} className="group dan-msg-in">
+                  {m.parsed && (
+                    <AnswerCard a={m.parsed} animate={!!m.fresh} footer={
+                      <div className="flex items-center gap-3 flex-wrap pt-1">
+                        {!m.parsed.all_clients && m.parsed.context_used === false && (
+                          <Link to="/settings" className="text-[11px] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] hover:underline">
+                            Fill in your Context Room →
+                          </Link>
+                        )}
                         {isAdmin && (
-                          <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="flex gap-3 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => save(messages[idx - 1]?.content ?? '', m.parsed?.answer ?? '')}
                               className="flex items-center gap-1 text-[11px] text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))]">
                               <BookmarkPlus className="w-3 h-3" /> Save
@@ -336,15 +296,43 @@ export default function DanAI() {
                           </span>
                         )}
                       </div>
-                    </div>
-                  ))}
-                  <div ref={endRef} />
+                    } />
+                  )}
+                  {isAdmin && m.debug && (
+                    <details className="mt-2 text-[11px] text-[hsl(var(--dan-muted))] rounded-lg dan-glass px-3 py-2">
+                      <summary className="cursor-pointer select-none">Context used</summary>
+                      <div className="mt-2 space-y-2">
+                        {m.debug.timing && <TimingSummary timing={m.debug.timing} />}
+                        <p><b>Mode:</b> {m.debug.mode ?? '–'} · <b>Member ID:</b> {m.debug.member_id ?? 'none'}</p>
+                        {m.debug.roster_clients != null && <p><b>Clients read:</b> {m.debug.roster_clients} · {m.debug.roster_words?.toLocaleString()} words</p>}
+                        {m.debug.brain && <p><b>Brain:</b> {m.debug.brain_loaded === false ? 'NOT LOADED' : `${m.debug.brain.docs} docs loaded, ${m.debug.brain.words.toLocaleString()} words`}</p>}
+                        {m.debug.monthly_totals && <p><b>Monthly totals:</b> {m.debug.monthly_totals.count} found{m.debug.monthly_totals.months.length ? ` (${m.debug.monthly_totals.months.join(', ')})` : ''} · <b>Freshness:</b> {m.debug.data_freshness ?? '–'} · <b>Goal:</b> {m.debug.goal ?? '–'}</p>}
+                        {m.debug.context_room && <p><b>Context Room:</b> {m.debug.context_room.fields_filled} fields filled{m.debug.context_room.missing?.length ? ` · missing: ${m.debug.context_room.missing.join(', ')}` : ''}</p>}
+                        {m.debug.derived && <div><b>Derived:</b><pre className="whitespace-pre-wrap mt-1">{JSON.stringify(m.debug.derived, null, 2)}</pre></div>}
+                        {m.debug.plan != null && <div><b>Plan:</b><pre className="whitespace-pre-wrap mt-1">{JSON.stringify(m.debug.plan, null, 2)}</pre></div>}
+                        {(m.debug.passages || m.debug.passage_titles) && (
+                          <div><b>Passages ({m.debug.passages?.length ?? m.debug.passage_titles?.length ?? 0}):</b>
+                            <ul className="list-disc pl-4">
+                              {m.debug.passages?.map((p, i) => <li key={i}>[{p.source_type}] {p.title} — {p.score}</li>)}
+                              {!m.debug.passages && m.debug.passage_titles?.map((t, i) => <li key={i}>{t}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        {!!m.debug.checker_issues?.length && <div><b>Checker issues:</b><ul className="list-disc pl-4">{m.debug.checker_issues.map((x, i) => <li key={i}>{x.type}: {x.note}</li>)}</ul></div>}
+                        {!!m.debug.guardrails?.length && <div><b>Guardrails:</b><ul className="list-disc pl-4">{m.debug.guardrails.map((x, i) => <li key={i}>{x.note}</li>)}</ul></div>}
+                        {m.debug.about_member && <div><b>About this member:</b><pre className="whitespace-pre-wrap font-sans mt-1">{m.debug.about_member}</pre></div>}
+                      </div>
+                    </details>
+                  )}
                 </div>
-                <div className="sticky bottom-0 pb-4 pt-8 bg-gradient-to-t from-[hsl(var(--dan-bg))] via-[hsl(var(--dan-bg))] to-transparent">
-                  {box}
-                </div>
-              </>
-            )}
+              ))}
+              {pending && <div className="dan-msg-in"><ThinkingTrace steps={steps} /></div>}
+              <div ref={endRef} />
+            </div>
+            <div className="sticky bottom-0 pb-4 pt-8 bg-gradient-to-t from-[hsl(var(--dan-bg))] via-[hsl(var(--dan-bg)/0.92)] to-transparent">
+              {box}
+              <div className="mt-2">{contextPicker}</div>
+            </div>
           </>
         )}
       </div>

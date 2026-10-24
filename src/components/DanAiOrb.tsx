@@ -4,8 +4,8 @@ export type OrbState = 'idle' | 'thinking' | 'checking' | 'answered';
 
 interface Props { state?: OrbState; intro?: boolean; className?: string }
 
-// Violet palette (rgb triplets), dark enough to read on the light glass canvas.
-const COLORS = [[133, 54, 245], [155, 92, 255], [75, 23, 176]];
+// Violet and cyan light (rgb triplets) that glows on the dark Dan AI canvas.
+const COLORS = [[170, 120, 255], [110, 225, 255], [215, 175, 255]];
 
 export default function DanAiOrb({ state = 'idle', intro = false, className = '' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -67,7 +67,7 @@ export default function DanAiOrb({ state = 'idle', intro = false, className = ''
 
       // glow
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.5);
-      g.addColorStop(0, 'rgba(133,54,245,0.22)'); g.addColorStop(1, 'rgba(133,54,245,0)');
+      g.addColorStop(0, 'rgba(140,80,255,0.32)'); g.addColorStop(0.6, 'rgba(80,200,255,0.06)'); g.addColorStop(1, 'rgba(140,80,255,0)');
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
 
       const cr = Math.cos(rot), sr = Math.sin(rot);
@@ -89,7 +89,7 @@ export default function DanAiOrb({ state = 'idle', intro = false, className = ''
 
       // neural lines on front side
       ctx.lineWidth = 0.5;
-      ctx.strokeStyle = 'rgba(133,54,245,0.08)';
+      ctx.strokeStyle = s === 'thinking' ? 'rgba(120,220,255,0.16)' : 'rgba(170,130,255,0.12)';
       ctx.beginPath();
       const md = (R * 0.16) ** 2;
       for (let i = 0; i < N; i += 3) {
@@ -119,15 +119,15 @@ export default function DanAiOrb({ state = 'idle', intro = false, className = ''
 
       if (s === 'checking') {
         const a = now / 700;
-        ctx.strokeStyle = 'rgba(133,54,245,0.55)'; ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(110,225,255,0.6)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.ellipse(cx, cy, R * 1.25, R * 0.35, Math.sin(a * 0.5) * 0.6, 0, Math.PI * 2); ctx.stroke();
         const ox = cx + Math.cos(a) * R * 1.25, oy = cy + Math.sin(a) * R * 0.35;
-        ctx.fillStyle = 'rgba(133,54,245,0.9)'; ctx.beginPath(); ctx.arc(ox, oy, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(160,240,255,1)'; ctx.beginPath(); ctx.arc(ox, oy, 2.5, 0, Math.PI * 2); ctx.fill();
       }
 
       const rp = (now - rippleRef.current) / 1200;
       if (rippleRef.current && rp < 1) {
-        ctx.strokeStyle = `rgba(133,54,245,${0.4 * (1 - rp)})`; ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(110,225,255,${0.5 * (1 - rp)})`; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(cx, cy, R * (1 + rp * 0.6), 0, Math.PI * 2); ctx.stroke();
       }
 

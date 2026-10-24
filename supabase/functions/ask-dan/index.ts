@@ -18,6 +18,7 @@ import { persona } from "./testPersonas.ts";
 import { gateFromLabel, missingRules, mustSay } from "./mustSay.ts";
 import { signals } from "./signals.ts";
 import { prescribe, workshopGuideText } from "./workshops.ts";
+import { loadRoster, ROSTER_PROMPT } from "./roster.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
@@ -342,7 +343,11 @@ async function answerPipeline(p: PipelineInput) {
   ]);
   const voiceText = (voice as { content: string } | null)?.content?.trim() ? `\n\nDAN'S VOICE PROFILE (built from his real messages; match it):\n${(voice as { content: string }).content.trim().slice(0, 4000)}` : "";
   const askerName = member?.name ?? null;
-  p.status?.("Thinking…");
+  // Live progress for the member, naming what was actually read (their own data and counts only).
+  const buildDone = (member?.extras?.build ?? []).filter(t => t.status === "approved").length;
+  p.status?.(member
+    ? `Read ${member.totals.length} month${member.totals.length === 1 ? "" : "s"} of your numbers, your Context Room${member.gate ? `, your ${member.gate} build list (${buildDone}/${member.extras?.build.length ?? 0} done)` : ""}${member.extras?.memory ? " and your history with Dan" : ""}`
+    : "Loaded Dan's playbook");
   // Admins (Dan and Emily) aren't other members: "I'll flag it to Dan and Emily" is a normal reply, not a privacy leak.
   const otherNames = ((allProfiles ?? []) as { id: string; full_name: string | null; is_admin: boolean | null }[])
     .filter(x => x.id !== p.memberId && x.full_name && !x.is_admin).map(x => x.full_name ?? "");
@@ -350,7 +355,9 @@ async function answerPipeline(p: PipelineInput) {
 
   const block = member ? buildMemberBlock(member) : { text: "ABOUT THIS MEMBER: none (general answer, no member selected).", derived: null, hasContext: false, summary: "no member" };
   const { plan, fallback: planFallback } = await planned;
+  p.status?.("Searching Dan's workshops, calls and notes…");
   const passages = await clock.measure("retrieval", () => retrieve(p.admin, p.question, plan, { privacy, askerName, otherTokens: tokens }));
+  p.status?.(`Found ${passages.length} moments where Dan's covered this`);
   // Dan's own saved answers to similar questions go first: they're his exact words.
   const { data: saved } = await p.admin.rpc("search_saved_answers", { q: p.question, limit_n: 3 }).then((r: { data: unknown }) => r, () => ({ data: [] }));
   const savedText = ((saved ?? []) as { question: string; answer: string }[]).map(a => `[Dan's saved answer] Q: ${a.question}\n${a.answer}`).join("\n\n---\n\n");
@@ -386,6 +393,7 @@ async function answerPipeline(p: PipelineInput) {
   const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
 
   // DRAFT (retry once on invalid JSON)
+  p.status?.(memberSignals.length ? `Spotted ${memberSignals.length} thing${memberSignals.length === 1 ? "" : "s"} in your numbers. Writing your answer…` : "Writing your answer in Dan's words…");
   let draft: Answer | null = null;
   for (let i = 0; i < 2 && !draft; i++) draft = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(draftSystem, [{ role: "user", content: userTurn + (i ? '\nReturn valid JSON only. Escape newlines inside strings. Use answer, points [{do, why}], note and resource.' : '') }], clock.data, "draft"))));
   if (!draft) {
@@ -395,7 +403,7 @@ async function answerPipeline(p: PipelineInput) {
   }
 
   // CHECK
-  p.status?.("Checking with Dan's Growth Hub…");
+  p.status?.(`Checking it like Dan would: privacy, your gate, his exact numbers${must.length ? ` and ${must.length} of his rules` : ""}…`);
   const checkSystem: Block[] = [...brainBlock, { type: "text", text: CHECKER_PROMPT + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
   const checkBase = `RESOURCES\n${catalogue}\n\n${workshopText ? `${workshopText}\n\n` : ""}PASSAGES\n${passageText}\n\n${buildText}${mustText}${block.text}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nQUESTION\n${p.question}\n\n=====\n\nPLAN\n${JSON.stringify(plan)}`;
   const runCheck = async (current: Answer, extra = ""): Promise<{ final: Answer; pass: boolean; issues: { type: string; note: string }[] } | null> => {
@@ -414,6 +422,7 @@ async function answerPipeline(p: PipelineInput) {
   if (checked) { final = checked.final; pass = checked.pass; issues.push(...checked.issues); }
   else { issues.push({ type: "guardrail", note: "Checker unavailable — safe fallback; unchecked draft withheld" }); final = { answer: FLAG_REPLY, points: [], note: null, resource: null }; }
 
+  p.status?.("Final safety checks…");
   const guardStarted = performance.now();
   const retryBefore = clock.data.steps.check_retry ?? 0;
   // GUARDRAILS — deterministic repairs first; only privacy gets another checker call.
@@ -576,6 +585,31 @@ async function answerPipeline(p: PipelineInput) {
   return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short) };
 }
 
+/**
+ * What the answer was built from, safe for the member to see: their own data and
+ * counts only. Never passage titles (1:1 calls can name other members).
+ */
+function buildSources(r: Awaited<ReturnType<typeof answerPipeline>>) {
+  const m = r.member;
+  const short = !r.final.points.length;
+  const byType: Record<string, number> = {};
+  for (const p of r.passages) byType[p.source_type] = (byType[p.source_type] ?? 0) + 1;
+  const build = m?.extras?.build ?? [];
+  return {
+    months: m?.totals.length ?? 0,
+    latest_month: r.block.derived?.latest_month ?? null,
+    gate: m?.gate ?? null,
+    build: build.length ? { done: build.filter(t => t.status === "approved").length, total: build.length } : null,
+    context_fields: r.block.derived?.context_room_filled ?? 0,
+    memory: !!m?.extras?.memory,
+    passages: r.passages.length,
+    library: { workshops: (byType.teaching ?? 0) + (byType.transcript ?? 0), calls: byType.call ?? 0, notes: (byType.note ?? 0) + (byType.whatsapp ?? 0) },
+    checks: r.issues.filter(i => i.type !== "guardrail").length,
+    rules: r.must.length,
+    noticed: short ? [] : r.signals.slice(0, 3).map(s => s.problem),
+  };
+}
+
 function buildDebug(mode: string, memberId: string | null, member: MemberInput | null, r: Awaited<ReturnType<typeof answerPipeline>>) {
   return {
     mode, member_id: memberId, timing: r.timing,
@@ -618,7 +652,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.13";
+const VERSION = "2026-10-24.14";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -928,6 +962,46 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
 
     let mode: "member" | "admin" = "member";
     let memberId: string | null = userId;
+    // Admin command centre: one question across every active client.
+    const allClients = isAdmin && body.member_id === "all";
+    if (allClients) {
+      const runRoster = async (status?: (status: string) => void) => {
+        status?.("Reading every client's numbers, gates and memory…");
+        const [{ data: past }, roster, brain] = await Promise.all([
+          admin.from("dan_ai_messages").select("role, content").eq("user_id", userId).eq("thread_id", threadId).order("created_at", { ascending: false }).limit(10),
+          loadRoster(admin), loadBrain(admin),
+        ]);
+        const history = ((past ?? []) as Turn[]).reverse().map(m => {
+          const a = m.role === "assistant" ? toAnswer(parseJson(m.content)) : null;
+          return `${m.role === "user" ? "DAN" : "ANALYST"}: ${a ? fullText(a) : m.content}`;
+        }).join("\n\n") || "(none)";
+        status?.(`Cross-checking ${roster.clients} clients against Dan's playbook…`);
+        const sys: Block[] = [
+          ...(brain.text ? [{ type: "text" as const, text: `${BRAIN_HEADER}\n\n${brain.text}`, cache_control: { type: "ephemeral" as const } }] : []),
+          { type: "text", text: ROSTER_PROMPT },
+        ];
+        let answer: Answer | null = null;
+        for (let i = 0; i < 2 && !answer; i++) {
+          answer = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(sys, [{ role: "user", content: `${roster.text}\n\n=====\n\nCONVERSATION SO FAR\n${history}\n\n=====\n\nDAN ASKS: ${question}${i ? "\nReturn valid JSON only." : ""}` }], clock.data, "draft"))));
+        }
+        const final: Answer = answer ? { ...answer, points: answer.points.slice(0, 8), resource: null } : { answer: "Couldn't read the client list just now — try again.", points: [], note: null, resource: null };
+        await admin.from("dan_ai_messages").insert([
+          { user_id: userId, thread_id: threadId, role: "user", content: question },
+          { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...final, all_clients: true }) },
+        ]);
+        return { ...final, thread_id: threadId, all_clients: true, sources: { clients: roster.clients }, debug: { mode: "all_clients", member_id: null, timing: clock.finish(), roster_clients: roster.clients, roster_words: roster.text.split(/\s+/).length } };
+      };
+      if (body.stream === true) {
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({ start(controller) {
+          let connected = true;
+          const emit = (event: string, data: unknown) => { if (connected) { try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch { connected = false; } } };
+          runRoster(status => emit("status", { status })).then(result => emit("answer", result)).catch(() => emit("error", { error: "Could not read your clients — try again" })).finally(() => { if (connected) controller.close(); });
+        } });
+        return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+      }
+      return json(await runRoster());
+    }
     if (isAdmin) {
       mode = "admin";
       memberId = typeof body.member_id === "string" && uuidRe.test(body.member_id) ? body.member_id : null;
@@ -946,18 +1020,19 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
     });
     const r = await answerPipeline({ admin, question, history, catalogue, vaultSources, mode, member: memberPromise, memberId, clock, status });
     const member = r.member;
+    const sources = buildSources(r);
     await Promise.all([
       admin.from("dan_ai_checks").insert({ user_id: userId, question, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues, timing: r.timing }),
       admin.from("dan_ai_messages").insert([
         { user_id: userId, thread_id: threadId, role: "user", content: question },
-        { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...r.final, context_used: r.block.hasContext }) },
+        { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...r.final, context_used: r.block.hasContext, sources }) },
       ]),
       admin.from("client_questions").insert({ user_id: userId, question, answer: r.final.answer, next_steps: r.final.points.map(pt => pt.why ? `${pt.do} — ${pt.why}` : pt.do), resource: r.final.resource }),
     ]);
 
     if (memberId && mode === "member") refreshInBackground(admin, memberId, member);
     return {
-      ...r.final, thread_id: threadId, context_used: r.block.hasContext,
+      ...r.final, thread_id: threadId, context_used: r.block.hasContext, sources,
       ...(isAdmin ? { debug: buildDebug(mode, memberId, member, r) } : {}),
     };
     };

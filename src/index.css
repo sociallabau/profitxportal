@@ -375,64 +375,124 @@ select:focus {
   .page-enter { animation: none; }
 }
 
-/* Dan AI page canvas (light ProfitX paper scoped to /dan-ai) */
+/* Dan AI page: dark futuristic control room with liquid glass, scoped to /dan-ai */
 .dan-canvas {
-  --dan-bg: 36 45% 97%;
-  --dan-paper: 0 0% 100%;
-  --dan-ink: 300 14% 9%;
-  --dan-muted: 266 9% 52%;
-  --dan-violet: 270 100% 62%;
+  --dan-bg: 252 45% 4%;
+  --dan-paper: 252 40% 10%;
+  --dan-ink: 240 30% 96%;
+  --dan-muted: 250 18% 66%;
+  --dan-violet: 268 100% 68%;
   --dan-violet-fg: 0 0% 100%;
-  background: transparent;
+  --dan-cyan: 188 100% 62%;
+  --dan-line: 255 60% 80%;
+  background:
+    radial-gradient(60rem 40rem at 50% -10%, hsl(268 90% 30% / 0.45), transparent 70%),
+    radial-gradient(40rem 30rem at 100% 100%, hsl(188 90% 30% / 0.18), transparent 70%),
+    hsl(var(--dan-bg));
   color: hsl(var(--dan-ink));
+  color-scheme: dark;
   position: relative;
   isolation: isolate;
 }
-.dan-canvas::before, .dan-canvas::after {
+/* Slow liquid light drifting behind the glass */
+.dan-canvas::before, .dan-canvas::after, .dan-liquid {
   content: ""; position: fixed; z-index: -1; pointer-events: none;
-  border-radius: 9999px; filter: blur(90px); opacity: 0.28;
+  border-radius: 9999px; filter: blur(90px);
 }
 .dan-canvas::before {
-  width: 520px; height: 520px; top: -120px; left: 20%;
-  background: radial-gradient(circle, hsl(var(--dan-violet)) 0%, transparent 70%);
-  animation: dan-orb-a 22s ease-in-out infinite alternate;
+  width: 40vw; height: 40vw; top: -10vw; left: 10vw; opacity: 0.35;
+  background: radial-gradient(circle, hsl(268 100% 60%) 0%, transparent 70%);
+  animation: dan-liquid-a 24s ease-in-out infinite alternate;
 }
 .dan-canvas::after {
-  width: 440px; height: 440px; bottom: -140px; right: 5%;
-  background: radial-gradient(circle, hsl(285 90% 55%) 0%, transparent 70%);
-  animation: dan-orb-b 28s ease-in-out infinite alternate;
+  width: 34vw; height: 34vw; bottom: -12vw; right: 4vw; opacity: 0.25;
+  background: radial-gradient(circle, hsl(188 100% 50%) 0%, transparent 70%);
+  animation: dan-liquid-b 30s ease-in-out infinite alternate;
 }
-@keyframes dan-orb-a { from { transform: translate(0,0) scale(1); } to { transform: translate(260px,220px) scale(1.25); } }
-@keyframes dan-orb-b { from { transform: translate(0,0) scale(1.1); } to { transform: translate(-320px,-260px) scale(0.85); } }
-@media (prefers-reduced-motion: reduce) { .dan-canvas::before, .dan-canvas::after { animation: none; } }
+.dan-liquid {
+  width: 28vw; height: 28vw; top: 35%; left: 50%; opacity: 0.18;
+  background: radial-gradient(circle, hsl(310 100% 60%) 0%, transparent 70%);
+  animation: dan-liquid-c 36s ease-in-out infinite alternate;
+}
+@keyframes dan-liquid-a { from { transform: translate(0,0) scale(1); } to { transform: translate(22vw,18vh) scale(1.25); } }
+@keyframes dan-liquid-b { from { transform: translate(0,0) scale(1.1); } to { transform: translate(-26vw,-22vh) scale(0.85); } }
+@keyframes dan-liquid-c { from { transform: translate(0,0) scale(0.9); } to { transform: translate(-20vw,16vh) scale(1.2); } }
+
+/* Perspective grid floor, drifting toward the viewer */
+.dan-grid {
+  position: fixed; left: -50%; right: -50%; bottom: -10%; height: 55vh; z-index: -1; pointer-events: none;
+  background-image:
+    linear-gradient(hsl(var(--dan-violet) / 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--dan-violet) / 0.22) 1px, transparent 1px);
+  background-size: 56px 56px;
+  transform: perspective(520px) rotateX(62deg);
+  transform-origin: center top;
+  mask-image: linear-gradient(to top, black 10%, transparent 85%);
+  -webkit-mask-image: linear-gradient(to top, black 10%, transparent 85%);
+  animation: dan-grid-move 6s linear infinite;
+}
+@keyframes dan-grid-move { from { background-position: 0 0, 0 0; } to { background-position: 0 56px, 0 0; } }
+
+/* Liquid glass, dark: heavy blur, rim light top and bottom, violet depth */
+.dan-glass {
+  background: linear-gradient(150deg, hsl(0 0% 100% / 0.09), hsl(0 0% 100% / 0.025) 45%, hsl(268 100% 70% / 0.05));
+  border: 1px solid hsl(0 0% 100% / 0.12);
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.18),
+    inset 0 -1px 0 hsl(0 0% 100% / 0.05),
+    0 30px 60px -30px hsl(268 100% 20% / 0.9);
+  -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%);
+}
+
+/* Violet→cyan light running around the rim while Dan AI works */
+@property --dan-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.dan-ring { position: relative; isolation: isolate; }
+.dan-ring::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; z-index: -1; opacity: 0.35;
+  background: conic-gradient(from var(--dan-angle), transparent 0 55%, hsl(var(--dan-violet)), hsl(var(--dan-cyan)), transparent 95%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: dan-spin 6s linear infinite; transition: opacity 0.4s;
+}
+.dan-ring-on::before { opacity: 1; animation-duration: 1.6s; }
+@keyframes dan-spin { to { --dan-angle: 360deg; } }
+
+.dan-chip {
+  display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;
+  font-size: 11px; padding: 0.3rem 0.65rem; border-radius: 9999px;
+  color: hsl(var(--dan-ink) / 0.85);
+  background: hsl(0 0% 100% / 0.06);
+  border: 1px solid hsl(0 0% 100% / 0.12);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.dan-chip-dot { width: 6px; height: 6px; border-radius: 9999px; background: hsl(var(--dan-cyan)); box-shadow: 0 0 8px hsl(var(--dan-cyan)); }
+
 @keyframes dan-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.dan-fade-up { animation: dan-fade-up 0.5s ease-out 1s both; }
-@media (prefers-reduced-motion: reduce) { .dan-fade-up { animation: none; } }
+.dan-fade-up { animation: dan-fade-up 0.6s ease-out 0.8s both; }
 
 /* Chat message entrance */
 @keyframes dan-msg-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
 .dan-msg-in { animation: dan-msg-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
-@media (prefers-reduced-motion: reduce) { .dan-msg-in { animation: none; } }
 
-/* Thinking prism bar: fills to ~92% over ~18s, with a moving sheen */
-@keyframes dan-prism-fill { from { width: 4%; } to { width: 92%; } }
-@keyframes dan-prism-sheen { from { transform: translateX(-100%); } to { transform: translateX(320%); } }
-.dan-prism {
-  position: relative; overflow: hidden; height: 4px; border-radius: 9999px;
-  background: hsl(var(--dan-ink) / 0.08);
+/* Thinking steps */
+@keyframes dan-step-in { from { opacity: 0; transform: translateX(-8px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.dan-step { animation: dan-step-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Answer reveal: words, then each move, staggered by --i */
+@keyframes dan-word { from { opacity: 0; filter: blur(6px); transform: translateY(4px); } to { opacity: 1; filter: none; transform: none; } }
+.dan-word { display: inline-block; animation: dan-word 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--i, 0) * 35ms); }
+.dan-move { animation: dan-msg-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(300ms + var(--i, 0) * 140ms); }
+.dan-num {
+  font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: linear-gradient(135deg, hsl(var(--dan-cyan)), hsl(var(--dan-violet)));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.dan-prism-fill {
-  height: 100%; border-radius: 9999px; overflow: hidden; position: relative;
-  background: linear-gradient(90deg, hsl(var(--dan-violet) / 0.55), hsl(var(--dan-violet)), hsl(290 100% 72%));
-  box-shadow: 0 0 12px hsl(var(--dan-violet) / 0.6);
-  animation: dan-prism-fill 18s cubic-bezier(0.1, 0.6, 0.3, 1) both;
+.dan-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dan-canvas::before, .dan-canvas::after, .dan-liquid, .dan-grid, .dan-ring::before { animation: none; }
+  .dan-fade-up, .dan-msg-in, .dan-step, .dan-word, .dan-move { animation: none; }
 }
-.dan-prism-fill::after {
-  content: ''; position: absolute; inset: 0; width: 32%;
-  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.55), transparent);
-  animation: dan-prism-sheen 1.4s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) { .dan-prism-fill, .dan-prism-fill::after { animation: none; } .dan-prism-fill { width: 60%; } }
 
 /* ---------------------------------------------------------------------------
    Liquid glass (light). Same content on every page; surfaces become frosted
