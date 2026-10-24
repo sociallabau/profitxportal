@@ -251,7 +251,7 @@ export default function Dashboard() {
   const dataUserId = user?.id;
   const example = isExampleDashboard(dataUserId);
   const dashboardProfile = example ? EXAMPLE_PROFILE : profile;
-  // The build list drives "what to do next" everywhere, so Dashboard and Playbooks always agree.
+  // The build list drives "what to do next" everywhere, so Dashboard and Growth Hub always agree.
   const gate = example ? null : gateNumber(profile?.gate);
   const { tasks: buildTasks } = useGateBuild(example ? null : user?.id, gate);
   const next = nextTask(buildTasks);

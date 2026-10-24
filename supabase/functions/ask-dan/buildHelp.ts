@@ -6,7 +6,7 @@
 
 const HELP_RE = /^Help me do this build task step by step: "(.+?)"/;
 
-/** The task title from the Playbook's "Help me do this" question, or null. */
+/** The task title from the Growth Hub "Help me do this" question, or null. */
 export function buildTaskTitle(question: string): string | null {
   return question.trim().match(HELP_RE)?.[1] ?? null;
 }

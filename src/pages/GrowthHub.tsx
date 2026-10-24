@@ -21,7 +21,7 @@ function daysToCheckIn(today = new Date()) {
   return Math.max(0, Math.ceil((end.getTime() - today.getTime()) / 86400000));
 }
 
-/** Celebrates once, the first time a member opens Playbooks after Dan moves them up. */
+/** Celebrates once, the first time a member opens Growth Hub after Dan moves them up. */
 function useUnlock(userId: string | undefined, gate: GateNumber | null) {
   const [unlocked, setUnlocked] = useState<GateNumber | null>(null);
   useEffect(() => {
@@ -36,16 +36,16 @@ function useUnlock(userId: string | undefined, gate: GateNumber | null) {
   return { unlocked, dismiss: () => setUnlocked(null) };
 }
 
-export default function Playbooks() {
+export default function GrowthHub() {
   const { user } = useRequireAuth();
   usePageTracking('growth-hub');
   const { data: profile } = useProfile();
   const isAdmin = Boolean(profile?.is_admin);
 
-  // Admins preview any member's playbook; members only ever see their own.
+  // Admins preview any member's Growth Hub; members only ever see their own.
   const [viewAs, setViewAs] = useState('');
   const { data: members } = useQuery({
-    queryKey: ['playbook-members'],
+    queryKey: ['growth-hub-members'],
     enabled: isAdmin,
     queryFn: async () => (await supabase.from('profiles').select('id, full_name, gate').eq('is_admin', false).is('archived_at', null).order('full_name')).data ?? [],
   });
@@ -57,7 +57,7 @@ export default function Playbooks() {
   const { tasks, content, member, isLoading } = useGateBuild(memberId, current);
   const brief = useDanBrief(memberId, !!viewed);
   const { data: months } = useQuery({
-    queryKey: ['playbook-months', memberId],
+    queryKey: ['growth-hub-months', memberId],
     enabled: !!memberId,
     queryFn: async () => (await supabase.from('monthly_totals').select('month, content_posts, leads_generated, new_clients, mrr, mrr_manual')
       .eq('user_id', memberId!).order('month', { ascending: false }).limit(6)).data ?? [],

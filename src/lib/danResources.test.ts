@@ -37,7 +37,7 @@ describe('Dan AI recording links', () => {
 
 
 describe('Dan AI build-task help', () => {
-  it('recognises the Playbook "Help me do this" question', () => {
+  it('recognises the Growth Hub "Help me do this" question', () => {
     const q = helpPrompt({ title: 'Post 8 times on your own Instagram', module_codes: ['C1'], training_label: null });
     expect(buildTaskTitle(q)).toBe('Post 8 times on your own Instagram');
     expect(buildTaskTitle('How do I get more leads?')).toBeNull();

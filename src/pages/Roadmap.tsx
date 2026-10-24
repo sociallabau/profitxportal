@@ -250,7 +250,7 @@ const ONBOARDING_COVERED_CODES = new Set(['O1', 'O2', 'O3', 'C3']);
 // Opens a WhatsApp chat with Dan so members can book a call to cover the module.
 const DAN_WHATSAPP_URL = 'https://wa.me/61429662984?text=' + encodeURIComponent("Hey Dan — can we book a call to cover this module?");
 
-/** Which gate a module first opens at, matching the Playbooks page. */
+/** Which gate a module first opens at, matching the Growth Hub page. */
 function GateBadge({ code }: { code: string }) {
   const gate = MODULE_GATE[code];
   if (!gate) return null;

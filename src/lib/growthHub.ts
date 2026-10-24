@@ -1,5 +1,5 @@
 /**
- * Playbooks: the four gates, each gate's build list, and a member's progress.
+ * Growth Hub: the four gates, each gate's build list, and a member's progress.
  *
  * profiles.gate is the source of truth for where a member is (labels like
  * "Gate 2 (Fuel)"). Build tasks live in playbook_tasks; ticks + proof live in
