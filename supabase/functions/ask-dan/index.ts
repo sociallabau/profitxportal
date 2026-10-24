@@ -18,6 +18,8 @@ import { findBanned, findNames, hasCostPerClient, looksTruncated, matchResource,
 
 const SONNET = "claude-sonnet-5-5";
 const HAIKU = "claude-haiku-5-5";
+// Thinking off for speed. Sonnet 5.5 rejects "disabled" (400); "between_tools" is its off switch.
+const THINKING_OFF: Record<string, { type: string }> = { [SONNET]: { type: "between_tools" } };
 const SOURCE_TAGS: Record<string, string> = {
   teaching: "Workshop/Q&A", transcript: "Training", note: "Note", whatsapp: "Dan in WhatsApp", call: "1:1 call",
 };
@@ -82,7 +84,7 @@ async function callAnthropic(model: string, system: Block[], messages: Turn[], r
     signal,
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model, max_tokens: stage === "plan" ? 400 : stage === "other" ? 4000 : 1200, thinking: { type: "disabled" }, system, messages }),
+    body: JSON.stringify({ model, max_tokens: stage === "plan" ? 400 : stage === "other" ? 4000 : 1200, thinking: THINKING_OFF[model] ?? { type: "disabled" }, system, messages }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   const data = await res.json();
