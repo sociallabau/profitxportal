@@ -314,7 +314,7 @@ async function answerPipeline(p: PipelineInput) {
     return { out, names };
   };
   const shortReply = !!plan.is_boundary || !!plan.asks_about_other_member;
-  const maximum = shortReply ? 60 : 170;
+  const maximum = shortReply ? 60 : 220;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = { ...final, answer: clean(final.answer), next_steps: final.next_steps.map(clean).filter(Boolean) };
   // Code may append only precomputed member facts or the exact fixed sequence rule, never invent coaching.
