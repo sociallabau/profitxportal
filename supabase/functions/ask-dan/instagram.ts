@@ -13,7 +13,10 @@ export function cleanHandle(raw: unknown): string | null {
 }
 
 export async function fetchRecentPosts(handle: string, limit = 12): Promise<IgPost[] | null> {
-  const token = Deno.env.get("APIFY_API_TOKEN");
+  // Read through globalThis so the file type-checks under any checker (deno or tsc).
+  const getEnv = (key: string): string | undefined =>
+    (globalThis as { Deno?: { env: { get(k: string): string | undefined } } }).Deno?.env.get(key);
+  const token = getEnv("APIFY_API_TOKEN");
   if (!token) return null;
   const res = await fetch(`https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}&timeout=90&memory=512`, {
     method: "POST",
