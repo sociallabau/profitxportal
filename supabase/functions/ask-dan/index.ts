@@ -374,7 +374,14 @@ async function answerPipeline(p: PipelineInput) {
       final = { ...final, points: pts, note };
     }
   }
-  if (looksTruncated(final.answer) && /[A-Za-z0-9]$/.test(final.answer.trim())) final.answer = final.answer.trim() + ".";
+  // Close every visible line cleanly: stance, each point, and the note.
+  const close = (s: string) => looksTruncated(s) && /[A-Za-z0-9]$/.test(s.trim()) ? s.trim() + "." : s;
+  final = {
+    ...final,
+    answer: close(final.answer),
+    points: final.points.map(pt => ({ do: close(pt.do), why: close(pt.why) })),
+    note: final.note ? close(final.note) : null,
+  };
   let probs = problems(final);
   if (probs.names.length) {
     issues.push({ type: "guardrail", note: "Privacy re-check" });
@@ -382,7 +389,7 @@ async function answerPipeline(p: PipelineInput) {
     if (again) { final = again.final; issues.push(...again.issues); }
     probs = problems(final);
   }
-  if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 15 : 30)) {
+  if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 5 : 30)) {
     // Never publish an answer still violating privacy, semantics, voice or the word limits.
     issues.push({ type: "guardrail", note: `Unsafe final withheld: ${probs.out.join("; ") || "length"}` });
     final = { answer: probs.names.length ? NAME_FALLBACK : FLAG_REPLY, points: [], note: null, resource: null };
