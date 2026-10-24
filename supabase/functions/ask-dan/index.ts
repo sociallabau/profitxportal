@@ -439,6 +439,12 @@ async function answerPipeline(p: PipelineInput) {
     const fix = (s: string) => s.replace(/[^.!?\n]*\bscal[^.!?\n]*[.!?]?/gi, "You can scale, but only once you're calling every lead within 15–30 mins.");
     final = { ...final, answer: fix(final.answer), points: final.points.map(pt => ({ do: fix(pt.do), why: fix(pt.why) })) };
   }
+  // Over the limit: the checker tightens the wording first, so trimming below never drops a rule, a computed number or the data nudge.
+  if (checked && wordCount(fullText(final)) > maximum) {
+    const target = shortReply ? 60 : buildHelp ? 160 : 110;
+    const tighter = await runCheck(final, `cut to under ~${target} words by tightening the wording of every line. Keep every point, number and rule of Dan's, and keep the note if it asks them to update their numbers or Context Room.`);
+    if (tighter && wordCount(fullText(tighter.final)) < wordCount(fullText(final))) { final = tighter.final; issues.push(...tighter.issues); }
+  }
   if (wordCount(fullText(final)) > maximum) {
     if (shortReply) {
       const sentences = final.answer.split(/(?<=[.!?])\s+|\n+/);
@@ -446,11 +452,18 @@ async function answerPipeline(p: PipelineInput) {
       for (const sentence of sentences) { if (wordCount(kept + " " + sentence) > maximum) break; kept += (kept ? "\n" : "") + sentence; }
       if (kept) final = { ...final, answer: kept };
     } else {
-      // Drop the lowest-priority points (and the note) until the total fits.
+      // Last resort: drop the lowest-priority points (and a plain note) until the total fits,
+      // keeping a data/Context Room nudge and the point that carries their cost per client.
       let pts = [...final.points];
       let note = final.note;
-      while (note && wordCount(fullText({ ...final, points: pts, note })) > maximum) note = null;
-      while (pts.length > 2 && wordCount(fullText({ ...final, points: pts, note })) > maximum) pts = pts.slice(0, -1);
+      const over = () => wordCount(fullText({ ...final, points: pts, note })) > maximum;
+      const dataNudge = !!note && /context room|latest totals|submit|90-day goal/i.test(note);
+      while (note && !dataNudge && over()) note = null;
+      const carriesCost = (pt: Point) => typeof cpc === "number" && Number.isFinite(cpc) && hasCostPerClient(`${pt.do} ${pt.why}`, cpc);
+      while (pts.length > 2 && over()) {
+        const drop = pts.map((pt, i) => ({ pt, i })).reverse().find(x => !carriesCost(x.pt))?.i ?? pts.length - 1;
+        pts = pts.filter((_, i) => i !== drop);
+      }
       final = { ...final, points: pts, note };
     }
   }
