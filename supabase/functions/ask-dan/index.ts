@@ -714,7 +714,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.26";
+const VERSION = "2026-10-24.27";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
