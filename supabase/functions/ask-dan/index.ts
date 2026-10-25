@@ -624,8 +624,8 @@ async function answerPipeline(p: PipelineInput) {
   if (staleMonth && !shortAnswer && !/based on your \w+ numbers/i.test(fullText(final))) {
     final = { ...final, note: `Based on your ${staleMonth} numbers.${final.note ? ` ${final.note}` : " Submit your latest Monthly Check-In."}` };
   }
-  // "bro" stays occasional: at most one, and none if either of Dan's last two answers in this thread used it.
-  final = limitBro(final, !p.history.filter(t => t.role === "assistant").slice(-2).some(t => /\bbro\b/i.test(t.content)));
+  // Dan doesn't want "bro" in answers at all.
+  final = limitBro(final, false);
   // Length is fixed by trimming above, so only real problems (privacy, voice, a cut-off, a missing number) withhold the answer.
   probs = { ...probs, out: probs.out.filter(o => !/^cut to under/.test(o)) };
   if (probs.out.length || !final.answer.trim() || wordCount(fullText(final)) < (shortReply ? 15 : 30)) {
@@ -726,7 +726,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.29";
+const VERSION = "2026-10-24.30";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
@@ -1058,7 +1058,7 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
         for (let i = 0; i < 2 && !answer; i++) {
           answer = toAnswer(parseJson(await clock.measure(i ? "draft_retry" : "draft", () => callMain(sys, [{ role: "user", content: `${roster.text}\n\n=====\n\nCONVERSATION SO FAR\n${history}\n\n=====\n\nDAN ASKS: ${question}${i ? "\nReturn valid JSON only." : ""}` }], clock.data, "draft"))));
         }
-        const final: Answer = answer ? { ...answer, points: answer.points.slice(0, 8), resource: null } : { answer: "Couldn't read the client list just now — try again.", points: [], note: null, resource: null };
+        const final: Answer = answer ? limitBro({ ...answer, points: answer.points.slice(0, 8), resource: null }, false) : { answer: "Couldn't read the client list just now — try again.", points: [], note: null, resource: null };
         await admin.from("dan_ai_messages").insert([
           { user_id: userId, thread_id: threadId, role: "user", content: question },
           { user_id: userId, thread_id: threadId, role: "assistant", content: JSON.stringify({ ...final, all_clients: true }) },

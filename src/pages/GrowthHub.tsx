@@ -10,7 +10,6 @@ import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { usePageTracking } from '@/hooks/usePageTracking';
 import { useGateBuild } from '@/hooks/useGrowthHub';
-import { useDanBrief } from '@/hooks/useDanBrief';
 import { GATES, ROMAN, buildProgress, gateNumber, nextTask, type GateNumber } from '@/lib/growthHub';
 
 const money = (n: number) => `$${n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : n}`;
@@ -55,7 +54,6 @@ export default function GrowthHub() {
   const current: GateNumber = gate ?? 1;
 
   const { tasks, content, member, isLoading } = useGateBuild(memberId, current);
-  const brief = useDanBrief(memberId, !!viewed);
   const { data: months } = useQuery({
     queryKey: ['growth-hub-months', memberId],
     enabled: !!memberId,
@@ -122,7 +120,7 @@ export default function GrowthHub() {
           </section>
         </div>
         <div className="order-1 lg:order-2 space-y-5">
-          <NextMove task={next} brief={brief} isAdmin={isAdmin} userId={viewed ? undefined : user?.id} />
+          <NextMove task={next} isAdmin={isAdmin} userId={viewed ? undefined : user?.id} />
           <section className="glass rounded-[1.75rem] p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="mono-label text-[12px] font-bold text-primary">Gate goals</h2>

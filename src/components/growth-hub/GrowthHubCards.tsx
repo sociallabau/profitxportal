@@ -51,8 +51,8 @@ function useTicking(userId?: string) {
   };
 }
 
-/** The one thing to do next. Dan AI's brief when there is one, the task either way. */
-export function NextMove({ task, brief, isAdmin, userId, compact = false, noGate = false }: { task: TaskWithStatus | null; brief: string | null; isAdmin: boolean; userId?: string; compact?: boolean; noGate?: boolean }) {
+/** The one thing to do next: the next build task on their list, with why it matters. */
+export function NextMove({ task, isAdmin, userId, compact = false, noGate = false }: { task: TaskWithStatus | null; isAdmin: boolean; userId?: string; compact?: boolean; noGate?: boolean }) {
   const hasPage = useModulePages();
   const canAsk = useCanUseDanAi(isAdmin);
   const training = task ? trainingLink(task, hasPage) : null;
@@ -65,8 +65,8 @@ export function NextMove({ task, brief, isAdmin, userId, compact = false, noGate
       <p className="relative mono-label text-[10.5px] font-bold opacity-85">Your next move</p>
       {task ? (
         <>
-          <p className={`relative font-bold leading-snug mt-2.5 pr-16 sm:pr-20 ${compact ? 'text-lg' : 'text-xl sm:text-[22px]'}`}>{brief || task.title}</p>
-          {brief && <p className="relative text-sm opacity-85 mt-2 pr-16">{task.title}</p>}
+          <p className={`relative font-bold leading-snug mt-2.5 pr-16 sm:pr-20 ${compact ? 'text-lg' : 'text-xl sm:text-[22px]'}`}>{task.title}</p>
+          {task.why && <p className="relative text-sm opacity-85 mt-2 pr-16">{task.why}</p>}
           {task.status === 'needs_changes' && task.progress?.review_note && (
             <p className="relative text-sm mt-2 bg-white/15 rounded-xl px-3 py-2">Dan: "{task.progress.review_note}"</p>
           )}
@@ -83,7 +83,7 @@ export function NextMove({ task, brief, isAdmin, userId, compact = false, noGate
           </div>
         </>
       ) : (
-        <p className="relative font-bold text-xl mt-2.5 pr-16">{brief || (noGate ? 'Dan sets your gate on your kickoff call. Your build list and next move show up here once he does.' : 'Build list clear for this month. Hold your numbers and Dan will move you up.')}</p>
+        <p className="relative font-bold text-xl mt-2.5 pr-16">{noGate ? 'Dan sets your gate on your kickoff call. Your build list and next move show up here once he does.' : 'Build list clear for this month. Hold your numbers and Dan will move you up.'}</p>
       )}
     </div>
   );

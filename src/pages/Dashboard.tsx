@@ -16,9 +16,8 @@ import ExampleLabel from '@/components/ExampleLabel';
 import { NextMove } from '@/components/growth-hub/GrowthHubCards';
 import DanAiButton from '@/components/DanAiButton';
 import { useGateBuild } from '@/hooks/useGrowthHub';
-import { useDanBrief } from '@/hooks/useDanBrief';
 import { gateNumber, nextTask } from '@/lib/growthHub';
-import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS, EXAMPLE_NEXT, EXAMPLE_BRIEF } from '@/lib/dashboardExample';
+import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS, EXAMPLE_NEXT } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------
 type Phase = 'Build' | 'Implement' | 'Reflect';
@@ -256,7 +255,6 @@ export default function Dashboard() {
   const gate = example ? null : gateNumber(profile?.gate);
   const { tasks: buildTasks } = useGateBuild(example ? null : user?.id, gate);
   const next = nextTask(buildTasks);
-  const brief = useDanBrief(example ? null : user?.id);
 
   const { calls: allUpcoming } = useUpcomingCalls();
   const upcomingCalls = (example ? EXAMPLE_CALLS : allUpcoming).slice(0, 2);
@@ -325,8 +323,8 @@ export default function Dashboard() {
 
       <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} moveUp={dashboardProfile?.gate_move_up} keyTask={dashboardProfile?.gate_key_task}
         nextMove={example
-          ? <NextMove task={EXAMPLE_NEXT} brief={EXAMPLE_BRIEF} isAdmin={Boolean(profile?.is_admin)} compact />
-          : <NextMove task={next} brief={brief} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact noGate={!gate} />} />
+          ? <NextMove task={EXAMPLE_NEXT} isAdmin={Boolean(profile?.is_admin)} compact />
+          : <NextMove task={next} isAdmin={Boolean(profile?.is_admin)} userId={user?.id} compact noGate={!gate} />} />
 
       {/* Upcoming calls bar */}
       <div className="mb-6">

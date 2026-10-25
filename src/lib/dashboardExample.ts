@@ -47,4 +47,3 @@ export const EXAMPLE_BUILD: TaskWithStatus[] = [
   exampleTask(5, 'Post 4 case studies on your own account', 'Proof that sells the retainer for you', ['C3'], 'open'),
 ];
 export const EXAMPLE_NEXT = EXAMPLE_BUILD[3];
-export const EXAMPLE_BRIEF = '4 conversations down, 2 to go this month. DM everyone who engaged with your last BTS.';
