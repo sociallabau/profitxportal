@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
-import { TrendingUp, CheckCircle2, AlertTriangle, ArrowRight, Eye } from 'lucide-react';
+import { TrendingUp, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
-import FinancialAudit from '@/components/FinancialAudit';
-import GrowthEngine from '@/components/GrowthEngine';
 import MonthlyReview from '@/components/MonthlyReview';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
@@ -126,20 +124,15 @@ export default function Financials() {
 
   const historyData = isExample ? EXAMPLE_HISTORY : realHistory;
 
-  let revenue = 0, mrr = 0, expenses = 0, adSpend = 0, content = 0, leads = 0, meetings = 0, newClients = 0, newClientVal = 0, monthLabel = '';
+  let revenue = 0, mrr = 0, expenses = 0, adSpend = 0, monthLabel = '';
   if (isExample) {
-    ({ revenue, mrr, expenses, adSpend, content, leads, meetings, newClients, newClientVal, monthLabel } = EXAMPLE_LATEST);
+    ({ revenue, mrr, expenses, adSpend, monthLabel } = EXAMPLE_LATEST);
   } else if (realLatest) {
     mrr = Number(realLatest.mrr_manual || realLatest.mrr || 0);
     const oneoffs = Number(realLatest.oneoff_revenue || 0);
     revenue = Number(realLatest.total_revenue || 0) || (mrr + oneoffs);
     expenses = Number(realLatest.expenses || 0);
     adSpend = Number(realLatest.ad_spend || 0);
-    content = Number(realLatest.content_posts || 0);
-    leads = Number(realLatest.leads_generated || 0);
-    meetings = Number(realLatest.meetings || 0);
-    newClients = Number(realLatest.new_clients || 0);
-    newClientVal = Number(realLatest.new_clients_total_value || 0);
     monthLabel = new Date(realLatest.month).toLocaleString('default', { month: 'long', year: 'numeric' });
   }
 
@@ -147,7 +140,6 @@ export default function Financials() {
   const netProfit = revenue - expenses;
   const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
   const netMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-  const revenuePerPost = content > 0 ? newClientVal / content : 0;
 
   const hasData = isExample || !!realLatest;
 
@@ -161,10 +153,9 @@ export default function Financials() {
         </div>
         <div className="bg-card border border-border border-dashed rounded-xl p-10 text-center">
           <p className="text-base font-semibold text-foreground mb-2">No financial data yet</p>
-          <p className="text-sm text-muted-foreground">Submit your monthly check-in to see your real numbers, margins, and growth funnel here.</p>
+          <p className="text-sm text-muted-foreground">Submit your monthly check-in to see your real numbers and margins here.</p>
         </div>
         <MonthlyReview />
-        <FinancialAudit />
       </PageLayout>
     );
   }
@@ -255,37 +246,6 @@ export default function Financials() {
         </div>
       )}
 
-      <div className={`bg-card border ${accentBorder} rounded-xl p-5 mb-5`}>
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-foreground">Growth Funnel</h2>
-          {isExample && <ExampleBadge />}
-        </div>
-        <p className="text-xs text-muted-foreground mb-4">How content and activity converts to revenue.</p>
-        <div className="flex flex-wrap items-center gap-2 mb-5">
-          {[
-            { label: 'Content Posts', value: content || '—', subValue: revenuePerPost > 0 ? `$${Math.round(revenuePerPost).toLocaleString()}/post` : null },
-            { label: 'Ad Spend', value: adSpend > 0 ? `$${adSpend.toLocaleString()}` : '—', subValue: null },
-            { label: 'Leads', value: leads || '—', subValue: null },
-            { label: 'Meetings', value: meetings || '—', subValue: null },
-            { label: 'New Clients', value: newClients || '—', subValue: newClients > 0 ? `$${Math.round(newClientVal / newClients).toLocaleString()}/client` : null },
-          ].map(({ label, value, subValue }, i, arr) => (
-            <div key={label} className="flex items-center gap-2">
-              <div className={`flex flex-col items-center px-3 py-2 rounded-xl border text-center min-w-[80px] ${isExample ? 'bg-blue-500/15 text-blue-600 border-blue-500/30' : 'bg-primary/15 text-primary border-primary/30'}`}>
-                <span className="text-lg font-bold leading-tight">{value}</span>
-                <span className="text-xs font-medium opacity-80">{label}</span>
-                {subValue && <span className="text-xs font-bold mt-1 opacity-100">{subValue}</span>}
-              </div>
-              {i < arr.length - 1 && <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-            </div>
-          ))}
-        </div>
-        {revenuePerPost > 0 && (
-          <div className={`p-4 rounded-xl border ${isExample ? 'bg-blue-500/10 border-blue-500/30' : 'bg-primary/10 border-primary/30'}`}>
-            <p className={`text-sm font-semibold mb-1 ${accent}`}>💡 Each piece of content was worth ~${Math.round(revenuePerPost).toLocaleString()}{isExample ? ' *example*' : ''}</p>
-            <p className="text-xs text-muted-foreground">Based on ${newClientVal.toLocaleString()} in new business from {content} pieces of content.</p>
-          </div>
-        )}
-      </div>
 
       {historyData.length > 0 && (
         <div className={`bg-card border ${accentBorder} rounded-xl p-5`}>
@@ -318,8 +278,6 @@ export default function Financials() {
         </div>
       )}
       <MonthlyReview />
-      <GrowthEngine />
-      <FinancialAudit />
     </PageLayout>
   );
 }
