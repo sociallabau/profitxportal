@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Check, Lock, MessageCircle, Play, Sparkles } from 'lucide-react';
+import { Check, Lock, MessageCircle, Minus, Play, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { moduleName } from '@/data/modules';
 import { useCanUseDanAi } from '@/lib/danAccess';
 import {
-  GATE_GOALS, goalStatus, helpPrompt, trainingLink,
+  GATE_GOALS, goalStatus, helpPrompt, isWorking, taskTarget, trainingLink,
   type GateNumber, type TaskStatus, type TaskWithStatus,
 } from '@/lib/growthHub';
-import { useModulePages, useTickTask, useUntickTask, type GateModule } from '@/hooks/useGrowthHub';
+import { useModulePages, useTickTask, useTrackTask, useUntickTask, type GateModule } from '@/hooks/useGrowthHub';
 
 const STATUS: Record<TaskStatus, { label: string; cls: string }> = {
   approved: { label: 'Approved', cls: 'violet-grad text-white' },
@@ -51,12 +51,62 @@ function useTicking(userId?: string) {
   };
 }
 
+/** Monthly tasks the member keeps a running tally on between ticks ("working on it", 5 of 8). */
+const canTrack = (task: TaskWithStatus) => task.kind === 'monthly' && (task.status === 'open' || task.status === 'needs_changes');
+const WORKING = { label: 'Working on it', cls: 'bg-amber-400/20 text-amber-800' };
+
+function useTracking(userId?: string) {
+  const track = useTrackTask(userId);
+  const save = (task: TaskWithStatus, working: boolean, count: number) => track.mutate(
+    { task_id: task.id, period: task.period, working, count },
+    { onError: (e: Error) => toast.error(e.message) },
+  );
+  return {
+    busy: track.isPending,
+    setWorking: (task: TaskWithStatus, working: boolean) => save(task, working, task.tracking?.count ?? 0),
+    // Logging a number means they're on it.
+    setCount: (task: TaskWithStatus, count: number) => save(task, true, Math.max(0, Math.min(999, count))),
+  };
+}
+
+/** "Working on it" toggle plus a running count toward the task's monthly number. */
+function Tracker({ task, tracking, onTick }: { task: TaskWithStatus; tracking: ReturnType<typeof useTracking>; onTick?: () => void }) {
+  const target = taskTarget(task);
+  const working = isWorking(task);
+  const count = task.tracking?.count ?? 0;
+  const hit = target != null && count >= target;
+  const step = `w-7 h-7 rounded-lg grid place-items-center border border-primary/30 bg-white/70 text-primary enabled:hover:bg-primary/10 disabled:opacity-40`;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-2.5">
+      <button type="button" disabled={tracking.busy} onClick={() => tracking.setWorking(task, !working)}
+        aria-pressed={working}
+        className={`text-[11.5px] font-bold rounded-full px-3 py-1.5 border transition-colors disabled:opacity-60 ${working ? 'bg-amber-400/25 border-amber-500/50 text-amber-800' : 'border-primary/30 text-primary hover:bg-primary/5'}`}>
+        {working ? '✓ Working on it' : "I'm working on it"}
+      </button>
+      {target != null && (
+        <div className="inline-flex items-center gap-1.5">
+          <button type="button" className={step} disabled={tracking.busy || count <= 0} onClick={() => tracking.setCount(task, count - 1)} aria-label="One less"><Minus className="w-3.5 h-3.5" strokeWidth={3} /></button>
+          <span className="text-[13px] font-bold tabular-nums min-w-[3.5rem] text-center">{count} / {target}</span>
+          <button type="button" className={step} disabled={tracking.busy} onClick={() => tracking.setCount(task, count + 1)} aria-label="One more"><Plus className="w-3.5 h-3.5" strokeWidth={3} /></button>
+          <span className="h-1.5 w-16 rounded-full bg-foreground/[0.08] overflow-hidden" aria-hidden>
+            <span className="block h-full violet-grad" style={{ width: `${Math.min(100, (count / target) * 100)}%` }} />
+          </span>
+        </div>
+      )}
+      {hit && onTick && (
+        <button type="button" onClick={onTick} className="text-[11.5px] font-bold rounded-full px-3 py-1.5 violet-grad text-white inline-flex items-center gap-1"><Check className="w-3 h-3" strokeWidth={3} />Hit it, tick it off</button>
+      )}
+    </div>
+  );
+}
+
 /** The one thing to do next: the next build task on their list, with why it matters. */
 export function NextMove({ task, isAdmin, userId, compact = false, noGate = false }: { task: TaskWithStatus | null; isAdmin: boolean; userId?: string; compact?: boolean; noGate?: boolean }) {
   const hasPage = useModulePages();
   const canAsk = useCanUseDanAi(isAdmin);
   const training = task ? trainingLink(task, hasPage) : null;
   const ticking = useTicking(userId);
+  const tracking = useTracking(userId);
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 text-white violet-grad shadow-[0_30px_60px_-20px_rgb(133_54_245/0.7)]">
       <div className="absolute inset-0 bg-gradient-to-br from-white/35 via-transparent to-transparent pointer-events-none" aria-hidden />
@@ -80,6 +130,9 @@ export function NextMove({ task, isAdmin, userId, compact = false, noGate = fals
             {userId && canTickTask(task) && (
               <button type="button" disabled={ticking.busy} onClick={() => ticking.tick(task)} className={`${pill} bg-white/15 border border-white/40 disabled:opacity-60`}><Check className="w-3.5 h-3.5" strokeWidth={3} />Tick it off</button>
             )}
+            {userId && canTrack(task) && !isWorking(task) && (
+              <button type="button" disabled={tracking.busy} onClick={() => tracking.setWorking(task, true)} title="Marks it in progress so your next move moves to the task below" className={`${pill} bg-white/15 border border-white/40 disabled:opacity-60`}>I'm working on it</button>
+            )}
           </div>
         </>
       ) : (
@@ -89,10 +142,10 @@ export function NextMove({ task, isAdmin, userId, compact = false, noGate = fals
   );
 }
 
-function TaskRow({ task, isAdmin, ticking, canTick }: {
-  task: TaskWithStatus; isAdmin: boolean; ticking: ReturnType<typeof useTicking>; canTick: boolean;
+function TaskRow({ task, isAdmin, ticking, tracking, canTick }: {
+  task: TaskWithStatus; isAdmin: boolean; ticking: ReturnType<typeof useTicking>; tracking: ReturnType<typeof useTracking>; canTick: boolean;
 }) {
-  const s = STATUS[task.status];
+  const s = isWorking(task) ? WORKING : STATUS[task.status];
   const canAsk = useCanUseDanAi(isAdmin);
   const kickoff = task.kind === 'kickoff';
   const ticked = task.status === 'submitted' || task.status === 'approved';
@@ -123,6 +176,10 @@ function TaskRow({ task, isAdmin, ticking, canTick }: {
           )}
           <span className={`sm:hidden mono-label text-[10px] font-bold rounded-full px-2.5 py-1 ${s.cls}`}>{s.label}</span>
         </div>
+        {canTick && canTrack(task) && <Tracker task={task} tracking={tracking} onTick={tickable ? () => ticking.tick(task) : undefined} />}
+        {!canTick && task.tracking && task.status === 'open' && (task.tracking.working || task.tracking.count > 0) && (
+          <p className="text-[12px] text-muted-foreground mt-1.5">Tracking: {task.tracking.count}{taskTarget(task) ? ` / ${taskTarget(task)}` : ''}{task.tracking.working ? ' · working on it' : ''}</p>
+        )}
       </div>
       <span className={`hidden sm:inline mono-label text-[10px] font-bold rounded-full px-3 py-1.5 whitespace-nowrap ${s.cls}`}>{s.label}</span>
     </li>
@@ -132,10 +189,11 @@ function TaskRow({ task, isAdmin, ticking, canTick }: {
 /** The gate's build list. Members tick tasks off right here and send proof on WhatsApp; Dan reviews from Client Health. */
 export function BuildList({ tasks, isAdmin, userId }: { tasks: TaskWithStatus[]; isAdmin: boolean; userId?: string }) {
   const ticking = useTicking(userId);
+  const tracking = useTracking(userId);
   if (!tasks.length) return <p className="text-sm text-muted-foreground">Your build list appears once Dan sets your gate.</p>;
   return (
     <ul className="space-y-2.5">
-      {tasks.map(task => <TaskRow key={task.id} task={task} isAdmin={isAdmin} ticking={ticking} canTick={!!userId} />)}
+      {tasks.map(task => <TaskRow key={task.id} task={task} isAdmin={isAdmin} ticking={ticking} tracking={tracking} canTick={!!userId} />)}
     </ul>
   );
 }

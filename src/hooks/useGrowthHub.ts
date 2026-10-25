@@ -2,8 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import {
   GATES, monthKey, withStatus,
-  type GateNumber, type GrowthHubGate, type GrowthHubTask, type TaskProgress, type TaskWithStatus,
+  type GateNumber, type GrowthHubGate, type GrowthHubTask, type TaskProgress, type TaskTracking, type TaskWithStatus,
 } from '@/lib/growthHub';
+
+// member_task_tracking is newer than the generated Supabase types; Lovable regenerates them after the migration.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const trackingTable = () => (supabase as any).from('member_task_tracking');
 
 export type GateModule = { gate: GateNumber; module_code: string; note: string | null; position: number };
 export type MemberGrowthHub = { fast_track_lead_gen: boolean; fast_track_since: string | null; extra_modules: string[] };
@@ -44,12 +48,15 @@ export function useMemberGrowthHub(userId?: string | null) {
     queryKey: ['member-growth-hub', userId],
     enabled: !!userId,
     queryFn: async () => {
-      const [progress, settings] = await Promise.all([
+      const [progress, settings, tracking] = await Promise.all([
         supabase.from('member_task_progress').select('*').eq('user_id', userId!),
         supabase.from('member_playbook').select('fast_track_lead_gen, fast_track_since, extra_modules').eq('user_id', userId!).maybeSingle(),
+        // Before the tracking migration runs this table doesn't exist; the build list just shows no tallies.
+        trackingTable().select('task_id, period, working, count').eq('user_id', userId!),
       ]);
       return {
         progress: (progress.data ?? []) as TaskProgress[],
+        tracking: (tracking.data ?? []) as TaskTracking[],
         settings: (settings.data ?? { fast_track_lead_gen: false, fast_track_since: null, extra_modules: [] }) as MemberGrowthHub,
       };
     },
@@ -61,7 +68,7 @@ export function useGateBuild(userId: string | null | undefined, gate: GateNumber
   const content = useGrowthHubContent();
   const member = useMemberGrowthHub(userId);
   const tasks: TaskWithStatus[] = gate && content.data
-    ? withStatus(content.data.tasks.filter(t => t.gate === gate), member.data?.progress ?? [], month)
+    ? withStatus(content.data.tasks.filter(t => t.gate === gate), member.data?.progress ?? [], month, member.data?.tracking ?? [])
     : [];
   return { tasks, content: content.data, member: member.data, isLoading: content.isLoading || member.isLoading };
 }
@@ -75,6 +82,19 @@ export function useTickTask(userId?: string | null) {
     mutationFn: async (t: TickTask) => {
       const { error } = await supabase.from('member_task_progress')
         .upsert({ ...t, user_id: userId!, status: 'submitted' }, { onConflict: 'user_id,task_id,period' });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-growth-hub', userId] }),
+  });
+}
+
+/** Member updates their running tally or "working on it" on a monthly task (not a tick; Dan doesn't review it). */
+export function useTrackTask(userId?: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (t: { task_id: string; period: string; working: boolean; count: number }) => {
+      const { error } = await trackingTable()
+        .upsert({ ...t, user_id: userId!, updated_at: new Date().toISOString() }, { onConflict: 'user_id,task_id,period' });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['member-growth-hub', userId] }),

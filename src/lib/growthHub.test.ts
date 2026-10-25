@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildProgress, gateLabel, gateNumber, goalStatus, helpPrompt, nextTask, trainingLink, withStatus,
-  GATE_GOALS, type GrowthHubTask, type TaskProgress,
+  buildProgress, gateLabel, gateNumber, goalStatus, helpPrompt, isWorking, nextTask, taskTarget, trainingLink, withStatus,
+  GATE_GOALS, type GrowthHubTask, type TaskProgress, type TaskTracking,
 } from './growthHub';
 
 const task = (over: Partial<GrowthHubTask>): GrowthHubTask => ({
@@ -52,9 +52,44 @@ describe('nextTask', () => {
     const rows = withStatus([task({ id: 'k', position: 1, kind: 'kickoff' }), task({ id: 'b', position: 2 })], []);
     expect(nextTask(rows)?.id).toBe('b');
   });
+  const track = (task_id: string, working: boolean, count = 0, period = '2026-10'): TaskTracking => ({ task_id, period, working, count });
+  it('moves past a monthly task the member is working on', () => {
+    const tasks = [task({ id: 'posts', position: 1, kind: 'monthly' }), task({ id: 'convos', position: 2, kind: 'monthly' })];
+    const rows = withStatus(tasks, [], '2026-10', [track('posts', true, 5)]);
+    expect(isWorking(rows[0])).toBe(true);
+    expect(rows[0].tracking?.count).toBe(5);
+    expect(nextTask(rows)?.id).toBe('convos');
+  });
+  it('a count logged last month does not carry over', () => {
+    const rows = withStatus([task({ id: 'posts', kind: 'monthly' })], [], '2026-10', [track('posts', true, 8, '2026-09')]);
+    expect(isWorking(rows[0])).toBe(false);
+  });
+  it('falls back to a task being worked on when every open task is', () => {
+    const rows = withStatus([task({ id: 'posts', kind: 'monthly' })], [], '2026-10', [track('posts', true)]);
+    expect(nextTask(rows)?.id).toBe('posts');
+  });
   it('is null when everything is in or approved', () => {
     const rows = withStatus([task({ id: 'a' })], [done('a', 'once', 'submitted')]);
     expect(nextTask(rows)).toBeNull();
+  });
+});
+
+describe('taskTarget', () => {
+  it('reads the monthly number from the title', () => {
+    expect(taskTarget({ kind: 'monthly', title: 'Post 8 times a month' })).toBe(8);
+    expect(taskTarget({ kind: 'monthly', title: 'Have 6 retainer conversations' })).toBe(6);
+    expect(taskTarget({ kind: 'monthly', title: 'Start 10 DMs with ideal clients' })).toBe(10);
+    // The real build-list titles.
+    expect(taskTarget({ kind: 'monthly', title: 'Post 4 BTS videos on your Instagram and put a $50 profile-visit boost behind each' })).toBe(4);
+    expect(taskTarget({ kind: 'monthly', title: 'Have 4 retainer conversations (1 a week) and log them in your Hot List' })).toBe(4);
+    expect(taskTarget({ kind: 'monthly', title: 'Post 8 times on your own Instagram (2 a week) and add your best ones to awareness' })).toBe(8);
+    expect(taskTarget({ kind: 'monthly', title: 'Have 6 retainer conversations using the DM scripts and log them in your Hot List' })).toBe(6);
+    expect(taskTarget({ kind: 'monthly', title: 'Call every lead within 15–30 mins and update your ad tracking sheet weekly' })).toBeNull();
+  });
+  it('is null for one-off tasks or titles without a count', () => {
+    expect(taskTarget({ kind: 'once', title: 'Post 8 times' })).toBeNull();
+    expect(taskTarget({ kind: 'monthly', title: 'Update your tracker' })).toBeNull();
+    expect(taskTarget({ kind: 'monthly', title: 'Send 1 case study' })).toBeNull();
   });
 });
 

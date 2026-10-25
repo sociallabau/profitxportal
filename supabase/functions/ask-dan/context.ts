@@ -195,7 +195,7 @@ export function extrasLines(x: MemberExtras): string[] {
     const done = x.build.filter(t => t.status === "approved").length;
     L.push(`GATE BUILD LIST (Gate ${x.gate_number}, ${done}/${x.build.length} done; monthly tasks reset each month):`);
     for (const t of x.build) {
-      L.push(`- [${STATUS_LABEL[t.status]}] ${t.title} (${t.kind}${t.training ? `; training: ${t.training}` : ""})${t.review_note ? ` — Dan's note: "${t.review_note}"` : ""}`);
+      L.push(`- [${STATUS_LABEL[t.status]}] ${t.title} (${t.kind}${t.training ? `; training: ${t.training}` : ""})${t.review_note ? ` — Dan's note: "${t.review_note}"` : ""}${t.status === "open" && (t.working || t.count) ? ` — member says: ${t.working ? "working on it" : "started"}${t.count ? `, ${t.count} done so far this month` : ""}` : ""}`);
     }
     const next = nextBuildTask(x.build);
     if (next) L.push(`NEXT BUILD TASK: ${next.title}${next.training ? ` — training: ${next.training}` : ""}${next.status === "needs_changes" ? " (Dan sent it back, fix this first)" : ""}`);

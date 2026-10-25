@@ -24,7 +24,20 @@ export type TaskProgress = {
   proof_url: string | null; member_note: string | null; review_note: string | null;
   submitted_at?: string; reviewed_at?: string | null;
 };
-export type TaskWithStatus = GrowthHubTask & { period: string; status: TaskStatus; progress: TaskProgress | null };
+/** A member's running tally on a task before they tick it (member_task_tracking). */
+export type TaskTracking = { task_id: string; period: string; working: boolean; count: number };
+export type TaskWithStatus = GrowthHubTask & { period: string; status: TaskStatus; progress: TaskProgress | null; tracking?: TaskTracking | null };
+
+/** The number a monthly task counts to, read from its title ("Post 8 times…" → 8). Null when it isn't a count. */
+export function taskTarget(task: Pick<GrowthHubTask, 'kind' | 'title'>): number | null {
+  if (task.kind !== 'monthly') return null;
+  const m = task.title.match(/\b(\d{1,3})\s*(?:x\s*)?(?:[a-z]+\s+){0,2}?(?:times|posts?|reels?|videos?|(?:retainer\s+)?conversations?|convos?|dms?|calls?|outreach(?:es)?|messages?)\b/i);
+  const n = m ? Number(m[1]) : NaN;
+  return n > 1 ? n : null;
+}
+
+/** Open and the member says they're on it: the next move moves to the task below. */
+export const isWorking = (t: TaskWithStatus) => t.status === 'open' && !!t.tracking?.working;
 
 /** Fallback copy if playbook_gates hasn't loaded (or the migration isn't run yet). */
 export const GATES: GrowthHubGate[] = [
@@ -70,21 +83,27 @@ export function periodFor(kind: TaskKind, month = monthKey()): string {
 }
 
 /** Merges a gate's tasks with the member's progress for the current period. */
-export function withStatus(tasks: GrowthHubTask[], progress: TaskProgress[], month = monthKey()): TaskWithStatus[] {
+export function withStatus(tasks: GrowthHubTask[], progress: TaskProgress[], month = monthKey(), tracking: TaskTracking[] = []): TaskWithStatus[] {
   return tasks
     .filter(task => task.active)
     .sort((a, b) => a.position - b.position)
     .map(task => {
       const period = periodFor(task.kind, month);
       const row = progress.find(p => p.task_id === task.id && p.period === period) ?? null;
-      return { ...task, period, status: row?.status ?? 'open', progress: row };
+      const track = tracking.find(t => t.task_id === task.id && t.period === period) ?? null;
+      return { ...task, period, status: row?.status ?? 'open', progress: row, tracking: track };
     });
 }
 
-/** Needs-changes first (Dan sent it back), then the first open task the member can do themselves. */
+/**
+ * Needs-changes first (Dan sent it back), then the first open task the member can do themselves.
+ * Tasks they've marked "working on it" step aside so the next move is the one below; if every open
+ * task is being worked on, it falls back to the first of those.
+ */
 export function nextTask(tasks: TaskWithStatus[]): TaskWithStatus | null {
   return tasks.find(t => t.status === 'needs_changes')
-    ?? tasks.find(t => t.status === 'open' && t.kind !== 'kickoff')
+    ?? tasks.find(t => t.status === 'open' && t.kind !== 'kickoff' && !isWorking(t))
+    ?? tasks.find(t => t.status === 'open' && !isWorking(t))
     ?? tasks.find(t => t.status === 'open')
     ?? null;
 }

@@ -12,6 +12,8 @@ type DB = any;
 export type BuildTask = {
   title: string; kind: "kickoff" | "once" | "monthly"; training: string | null;
   status: "approved" | "submitted" | "needs_changes" | "open"; review_note: string | null;
+  /** The member's own running tally before they tick it (member_task_tracking). */
+  working?: boolean; count?: number;
 };
 export type CheckIn = {
   month: string; biggest_win: string | null; needs_this_month: string | null;
@@ -73,7 +75,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
   const [
     settings, tasks, progress, checkIns, clients, hot, weekly, monday, posts, ads,
     audit, scores, review, notes, health, questions, memory, joined, start, first,
-    checklist, views, finAudit, journeyRows, followers, cashMenu, ideas, chats,
+    checklist, views, finAudit, journeyRows, followers, cashMenu, ideas, chats, tracking,
   ] = await Promise.all([
     q(admin.from("member_playbook").select("fast_track_lead_gen, extra_modules").eq("user_id", memberId).maybeSingle()),
     g ? q(admin.from("playbook_tasks").select("id, title, kind, training_label, module_codes, position").eq("gate", g).eq("active", true).order("position")) : null,
@@ -103,16 +105,22 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     q(admin.from("cash_menu_actions").select("action_key, completed_at").eq("user_id", memberId).not("completed_at", "is", null).limit(50)),
     Promise.resolve(admin.from("saved_ideas").select("id", { count: "exact", head: true }).eq("user_id", memberId)).then((r: { count: number | null }) => r.count ?? 0).catch(() => 0),
     q(admin.from("dan_ai_messages").select("content, created_at").eq("user_id", memberId).eq("role", "user").order("created_at", { ascending: false }).limit(8)),
+    q(admin.from("member_task_tracking").select("task_id, period, working, count").eq("user_id", memberId)),
   ]);
 
   // Build list: the current gate's tasks with this member's status for the right period.
   type P = { task_id: string; period: string; status: BuildTask["status"]; review_note: string | null };
   const prog = (progress ?? []) as P[];
+  const tracked = (tracking ?? []) as { task_id: string; period: string; working: boolean; count: number }[];
   const build: BuildTask[] = ((tasks ?? []) as { id: string; title: string; kind: BuildTask["kind"]; training_label: string | null; module_codes: string[] }[]).map(t => {
     const period = t.kind === "monthly" ? thisMonth : "once";
     const row = prog.find(p => p.task_id === t.id && p.period === period);
+    const track = tracked.find(p => p.task_id === t.id && p.period === period);
     const training = t.module_codes?.length ? t.module_codes.join(" + ") : t.training_label;
-    return { title: t.title, kind: t.kind, training: training || null, status: row?.status ?? "open", review_note: row?.review_note ?? null };
+    return {
+      title: t.title, kind: t.kind, training: training || null, status: row?.status ?? "open", review_note: row?.review_note ?? null,
+      ...(track ? { working: track.working, count: track.count } : {}),
+    };
   });
 
   const cl = (clients ?? []) as { signed_date: string | null; monthly_value: number | null }[];
@@ -196,10 +204,14 @@ function topCounts(items: string[], n: number): string[] {
   return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => `${k} (${v})`);
 }
 
-/** The next build task to work on: needs-changes first, then the first open one. */
+/** Open and the member marked it "working on it": the next move steps past it (mirrors src/lib/growthHub.ts). */
+export const isWorking = (t: BuildTask) => t.status === "open" && !!t.working;
+
+/** The next build task to work on: needs-changes first, then the first open one they aren't already working on. */
 export function nextBuildTask(build: BuildTask[]): BuildTask | null {
   return build.find(t => t.status === "needs_changes")
-    ?? build.find(t => t.status === "open" && t.kind !== "kickoff")
+    ?? build.find(t => t.status === "open" && t.kind !== "kickoff" && !isWorking(t))
+    ?? build.find(t => t.status === "open" && !isWorking(t))
     ?? build.find(t => t.status === "open")
     ?? null;
 }
