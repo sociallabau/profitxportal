@@ -443,7 +443,7 @@ async function answerPipeline(p: PipelineInput) {
   if (!draft) {
     issues.push({ type: "guardrail", note: "Draft JSON invalid twice — flagged to Dan" });
     const final: Answer = { answer: FLAG_REPLY, points: [], note: null, resource: null };
-    return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short) };
+    return { draft: final, final, pass: false, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short), next_step: nextStep };
   }
 
   // CHECK
@@ -638,7 +638,7 @@ async function answerPipeline(p: PipelineInput) {
   const guide = final.resource ? guideFor(final.resource) : null;
   final = { ...final, resource_why: final.resource ? modelWhy ?? (guide ? `Covers ${guide.fixes.split(": ")[1] ?? guide.fixes}.` : null) : null };
 
-  return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short) };
+  return { draft, final, pass, issues, plan, passages, brain, block, planFallback, member, timing: clock.finish(), recording, prescription, signals: memberSignals, must: must.map(m => m.short), next_step: nextStep };
 }
 
 /**
@@ -668,7 +668,7 @@ function buildSources(r: Awaited<ReturnType<typeof answerPipeline>>) {
 
 function buildDebug(mode: string, memberId: string | null, member: MemberInput | null, r: Awaited<ReturnType<typeof answerPipeline>>) {
   return {
-    mode, member_id: memberId, timing: r.timing,
+    mode, member_id: memberId, timing: r.timing, next_step: r.next_step ?? null,
     brain_loaded: r.brain.docs > 0, brain: { docs: r.brain.docs, words: r.brain.words },
     monthly_totals: { count: member?.totals.length ?? 0, months: (member?.totals ?? []).map(t => t.month) },
     data_freshness: r.block.derived?.data_freshness ?? "none",
@@ -714,7 +714,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.25";
+const VERSION = "2026-10-24.26";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
