@@ -4,7 +4,7 @@
 // Loaded with the service role; privacy is enforced by only ever loading the
 // member who is asking (or the one Dan picked in admin mode).
 
-import type { IgPost } from "./instagram.ts";
+import type { IgPost, IgProfile } from "./instagram.ts";
 
 // deno-lint-ignore no-explicit-any
 type DB = any;
@@ -35,7 +35,7 @@ export type MemberExtras = {
   health: string | null;
   recent_questions: string[];
   memory: { summary: string; refreshed_at: string | null; stale: boolean } | null;
-  instagram: { handle: string; posts: IgPost[]; fetched_at: string | null } | null;
+  instagram: { handle: string; posts: IgPost[]; fetched_at: string | null; profile: IgProfile | null } | null;
   journey: { joined: string | null; starting_mrr: number | null; first_month: string | null; first_mrr: number | null };
   modules_done: string[];
   training_viewed: string[];
@@ -91,7 +91,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     q(admin.from("client_notes").select("note, created_at").eq("client_id", memberId).order("created_at", { ascending: false }).limit(5)),
     q(admin.from("client_health").select("health_status, notes").eq("client_user_id", memberId).maybeSingle()),
     q(admin.from("client_questions").select("question, created_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(8)),
-    q(admin.from("member_memory").select("summary, refreshed_at, dirty_at, instagram, instagram_handle, instagram_fetched_at").eq("user_id", memberId).maybeSingle()),
+    q(admin.from("member_memory").select("summary, refreshed_at, dirty_at, instagram, instagram_handle, instagram_fetched_at, instagram_profile").eq("user_id", memberId).maybeSingle()),
     q(admin.from("profiles").select("created_at").eq("id", memberId).maybeSingle()),
     q(admin.from("goals").select("starting_mrr").eq("user_id", memberId).maybeSingle()),
     q(admin.from("monthly_totals").select("month, mrr, mrr_manual").eq("user_id", memberId).order("month", { ascending: true }).limit(1).maybeSingle()),
@@ -137,7 +137,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
   const weak = scoreRows.filter(s => typeof s.score === "number" && s.score <= 2)
     .map(s => `${s.pillar ?? ""} ${s.module_number}`.trim()).slice(0, 6);
 
-  const mem = memory as { summary: string; refreshed_at: string | null; dirty_at: string; instagram: IgPost[] | null; instagram_handle: string | null; instagram_fetched_at: string | null } | null;
+  const mem = memory as { summary: string; refreshed_at: string | null; dirty_at: string; instagram: IgPost[] | null; instagram_handle: string | null; instagram_fetched_at: string | null; instagram_profile: IgProfile | null } | null;
   const s = settings as { fast_track_lead_gen: boolean; extra_modules: string[] } | null;
   const a = audit as { focus: string | null; issue: string | null } | null;
   const h = health as { health_status: string | null; notes: string | null } | null;
@@ -173,7 +173,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     dm_campaign: { ...stageCounts(((followers ?? []) as { stage: string }[]).map(r => r.stage)), qualified: ((followers ?? []) as { qualified: boolean | null }[]).filter(r => r.qualified).length },
     cash_menu_done: ((cashMenu ?? []) as { action_key: string }[]).map(c => c.action_key).slice(0, 20),
     saved_ideas: typeof ideas === "number" ? ideas : 0,
-    instagram: mem?.instagram_handle && Array.isArray(mem.instagram) ? { handle: mem.instagram_handle, posts: mem.instagram, fetched_at: mem.instagram_fetched_at } : null,
+    instagram: mem?.instagram_handle && Array.isArray(mem.instagram) ? { handle: mem.instagram_handle, posts: mem.instagram, fetched_at: mem.instagram_fetched_at, profile: mem.instagram_profile ?? null } : null,
     journey: {
       joined: (joined as { created_at: string } | null)?.created_at?.slice(0, 10) ?? null,
       starting_mrr: (start as { starting_mrr: number | null } | null)?.starting_mrr ?? null,

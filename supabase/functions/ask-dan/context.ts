@@ -212,7 +212,7 @@ export function extrasLines(x: MemberExtras): string[] {
   if (x.clients.count) L.push(`Clients logged: ${x.clients.count}${x.clients.avg_value ? `, avg $${x.clients.avg_value}/mo` : ""}${x.clients.last_signed ? `, last signed ${x.clients.last_signed}` : ""}`);
   if (x.pipeline.total) L.push(`Hot List: ${x.pipeline.total} people (${Object.entries(x.pipeline.by_stage).map(([k, v]) => `${k} ${v}`).join(", ")})${x.pipeline.open_value ? `, ~$${Math.round(x.pipeline.open_value)} open deal value` : ""}`);
   if (x.wins.length) L.push(`Recent wins: ${x.wins.join(" | ")}`);
-  if (x.instagram) L.push(...instagramLines(x.instagram.handle, x.instagram.posts, x.instagram.fetched_at));
+  if (x.instagram) L.push(...instagramLines(x.instagram.handle, x.instagram.posts, x.instagram.fetched_at, undefined, x.instagram.profile));
   // Most members don't log content in the portal, so 0 here means "not logged", not "didn't post".
   if (x.content_30d.posts) L.push(`Content logged in the last 30 days: ${x.content_30d.posts} posts${x.content_30d.best ? `; best: ${x.content_30d.best}` : ""}`);
   if (x.ads.length) L.push(`Ad campaigns: ${x.ads.join(" | ")}`);

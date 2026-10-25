@@ -42,13 +42,45 @@ export async function fetchRecentPosts(handle: string, limit = 12): Promise<IgPo
   }).sort((a: IgPost, b: IgPost) => (b.date ?? "").localeCompare(a.date ?? ""));
 }
 
-/** Plain-English lines for the model: cadence, what's performing, the latest captions. */
-export function instagramLines(handle: string, posts: IgPost[], fetchedAt: string | null, today = new Date()): string[] {
-  if (!posts.length) return [`Instagram @${handle}: no public posts found${fetchedAt ? ` (checked ${fetchedAt.slice(0, 10)})` : ""}.`];
+/** Their profile itself (bio, link, pinned posts), so Dan AI can help optimise it, not just read their posts. */
+export type IgProfile = { name: string | null; bio: string; link: string | null; followers: number | null; pinned: string[] };
+
+export async function fetchProfile(handle: string): Promise<IgProfile | null> {
+  const token = (globalThis as { Deno?: { env: { get(k: string): string | undefined } } }).Deno?.env.get("APIFY_API_TOKEN");
+  if (!token) return null;
+  const res = await fetch(`https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}&timeout=90&memory=512`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "details", resultsLimit: 1, addParentData: false }),
+  });
+  if (!res.ok) throw new Error(`Apify ${res.status}`);
+  const raw = await res.json();
+  // deno-lint-ignore no-explicit-any
+  const p: any = Array.isArray(raw) ? raw[0] : null;
+  if (!p) return null;
+  // deno-lint-ignore no-explicit-any
+  const latest: any[] = Array.isArray(p.latestPosts) ? p.latestPosts : [];
+  return {
+    name: p.fullName ? String(p.fullName) : null,
+    bio: String(p.biography ?? "").trim().slice(0, 300),
+    link: p.externalUrl ? String(p.externalUrl) : null,
+    followers: Number.isFinite(Number(p.followersCount)) ? Number(p.followersCount) : null,
+    pinned: latest.filter(x => x?.isPinned).map(x => String(x.caption ?? "").replace(/\s+/g, " ").trim().slice(0, 120) || "(no caption)").slice(0, 3),
+  };
+}
+
+/** Plain-English lines for the model: their profile, cadence, what's performing, the latest captions. */
+export function instagramLines(handle: string, posts: IgPost[], fetchedAt: string | null, today = new Date(), profile: IgProfile | null = null): string[] {
+  const head = profile ? [
+    `THEIR INSTAGRAM PROFILE @${handle}: ${profile.name ? `name "${profile.name}", ` : ""}${profile.followers != null ? `${profile.followers} followers, ` : ""}bio: "${profile.bio || "(empty)"}"; link: ${profile.link ?? "none"}.`,
+    profile.pinned.length ? `Pinned posts: ${profile.pinned.map(c => `"${c}"`).join("; ")}` : "Pinned posts: none.",
+  ] : [];
+  if (!posts.length) return [...head, `Instagram @${handle}: no public posts found${fetchedAt ? ` (checked ${fetchedAt.slice(0, 10)})` : ""}.`];
   const since = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
   const last30 = posts.filter(p => p.date && p.date >= since);
   const best = [...posts].sort((a, b) => (b.views || b.likes) - (a.views || a.likes))[0];
   const L = [
+    ...head,
     `THEIR INSTAGRAM @${handle} (pulled ${fetchedAt?.slice(0, 10) ?? "recently"}): ${last30.length} posts in the last 30 days (${last30.filter(p => p.type === "reel").length} reels); last post ${posts[0].date ?? "unknown"}.`,
     `Best recent: ${best.type} ${best.date ?? ""} — ${best.views ? `${best.views} views, ` : ""}${best.likes} likes — "${best.caption.slice(0, 90)}"`,
     "Latest posts:",

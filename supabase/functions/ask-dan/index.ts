@@ -10,10 +10,10 @@ import { joinChunks } from "../_shared/danBrain.ts";
 import { isCronCall } from "../_shared/cron.ts";
 import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
-import { loadExtras } from "./dossier.ts";
+import { loadExtras, nextBuildTask } from "./dossier.ts";
 import { bestRecording } from "./recordings.ts";
-import { buildTaskTitle, loadBuildHelp } from "./buildHelp.ts";
-import { IG_REFRESH_MS, cleanHandle, fetchRecentPosts } from "./instagram.ts";
+import { buildTaskTitle, isFocusQuestion, loadBuildHelp } from "./buildHelp.ts";
+import { IG_REFRESH_MS, cleanHandle, fetchProfile, fetchRecentPosts } from "./instagram.ts";
 import { persona } from "./testPersonas.ts";
 import { gateFromLabel, missingRules, mustSay } from "./mustSay.ts";
 import { signals } from "./signals.ts";
@@ -207,7 +207,7 @@ function memorySummary(m: Record<string, unknown>): string {
   ].filter(Boolean).join("\n");
 }
 async function refreshMemory(admin: DB, memberId: string, force = false): Promise<{ ok: boolean; skipped?: string }> {
-  const { data: row } = await admin.from("member_memory").select("memory, refreshed_at, dirty_at, refresh_started_at, instagram_handle, instagram_fetched_at").eq("user_id", memberId).maybeSingle();
+  const { data: row } = await admin.from("member_memory").select("memory, refreshed_at, dirty_at, refresh_started_at, instagram_handle, instagram_fetched_at, instagram_profile").eq("user_id", memberId).maybeSingle();
   const now = Date.now();
   if (!force && row?.refresh_started_at && now - Date.parse(row.refresh_started_at) < 2 * 60 * 1000) return { ok: true, skipped: "in progress" };
   if (!force && row?.refreshed_at && row.dirty_at <= row.refreshed_at) return { ok: true, skipped: "up to date" };
@@ -216,11 +216,18 @@ async function refreshMemory(admin: DB, memberId: string, force = false): Promis
   // Their Instagram: pulled at most every 2 days (or when the handle changes), cached on the memory row.
   const { data: room } = await admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle();
   const handle = cleanHandle((room?.answers as Record<string, unknown> | null)?.instagram_handle);
-  if (handle && (handle !== row?.instagram_handle || !row?.instagram_fetched_at || now - Date.parse(row.instagram_fetched_at) > IG_REFRESH_MS)) {
+  const igDue = !!handle && (handle !== row?.instagram_handle || !row?.instagram_fetched_at || now - Date.parse(row.instagram_fetched_at) > IG_REFRESH_MS);
+  if (handle && igDue) {
     try {
-      const posts = await fetchRecentPosts(handle);
-      if (posts) await admin.from("member_memory").update({ instagram: posts, instagram_handle: handle, instagram_fetched_at: new Date().toISOString() }).eq("user_id", memberId);
+      const [posts, profile] = await Promise.all([fetchRecentPosts(handle), fetchProfile(handle).catch(() => null)]);
+      if (posts) await admin.from("member_memory").update({ instagram: posts, instagram_handle: handle, instagram_fetched_at: new Date().toISOString(), ...(profile ? { instagram_profile: profile } : {}) }).eq("user_id", memberId);
     } catch (err) { console.error("instagram pull failed", handle, err); }
+  } else if (handle && !row?.instagram_profile) {
+    // Posts are fresh but the profile (bio, link, pinned) hasn't been pulled yet.
+    try {
+      const profile = await fetchProfile(handle);
+      if (profile) await admin.from("member_memory").update({ instagram_profile: profile }).eq("user_id", memberId);
+    } catch (err) { console.error("instagram profile pull failed", handle, err); }
   }
   const member = await loadMemberInput(admin, memberId);
   if (member.extras) member.extras.memory = null; // the previous memory goes in separately below
@@ -367,7 +374,11 @@ async function answerPipeline(p: PipelineInput) {
   const block = member ? buildMemberBlock(member) : { text: "ABOUT THIS MEMBER: none (general answer, no member selected).", derived: null, hasContext: false, summary: "no member" };
   const { plan, fallback: planFallback } = await planned;
   p.status?.("Searching Dan's workshops, calls and notes…");
-  const passages = await clock.measure("retrieval", () => retrieve(p.admin, p.question, plan, { privacy, askerName, otherTokens: tokens }));
+  // A build-task question searches Dan's knowledge for that task, not the words "what should I focus on".
+  const taskTitle = plan.is_boundary || plan.asks_about_other_member ? null
+    : buildTaskTitle(p.question) ?? (isFocusQuestion(p.question) ? nextBuildTask(member?.extras?.build ?? [])?.title ?? null : null);
+  const searchPlan = taskTitle ? { ...plan, search_terms: [...keywordTerms(taskTitle), ...(plan.search_terms ?? [])] } : plan;
+  const passages = await clock.measure("retrieval", () => retrieve(p.admin, taskTitle ? `${p.question} ${taskTitle}` : p.question, searchPlan, { privacy, askerName, otherTokens: tokens }));
   p.status?.(`Found ${passages.length} moments where Dan's covered this`);
   // Dan's own saved answers to similar questions go first: they're his exact words.
   const { data: saved } = await p.admin.rpc("search_saved_answers", { q: p.question, limit_n: 3 }).then((r: { data: unknown }) => r, () => ({ data: [] }));
@@ -466,7 +477,7 @@ async function answerPipeline(p: PipelineInput) {
       }
       if (a.points.some(pt => !pt.why.trim())) out.push("each point needs one short reason");
       if (wordCount(a.answer) > 18) out.push("stance must be max ~15 words");
-      if (wordCount(text) > (buildHelp ? 185 : 130)) out.push(buildHelp ? "cut to under ~160 words total" : "cut to under ~110 words total");
+      if (wordCount(text) > (buildHelp ? (focus ? 230 : 185) : 130)) out.push(buildHelp ? `cut to under ~${focus ? 200 : 160} words total` : "cut to under ~110 words total");
     }
     // Ads/scaling/pricing questions must use the member's cost per client — only when it was actually computed.
     const cpc = block.derived?.cost_per_client;
@@ -482,7 +493,7 @@ async function answerPipeline(p: PipelineInput) {
     return { out, names };
   };
   const shortReply = shortAnswer;
-  const maximum = shortReply ? 60 : buildHelp ? 170 : 115;
+  const maximum = shortReply ? 60 : buildHelp ? (focus ? 215 : 170) : 115;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = {
     ...final,
@@ -502,7 +513,7 @@ async function answerPipeline(p: PipelineInput) {
   }
   // Over the limit: the checker tightens the wording first, so trimming below never drops a rule, a computed number or the data nudge.
   if (checked && wordCount(fullText(final)) > maximum) {
-    const target = shortReply ? 60 : buildHelp ? 160 : 110;
+    const target = shortReply ? 60 : buildHelp ? (focus ? 200 : 160) : 110;
     const tighter = await runCheck(final, `cut to under ~${target} words by tightening the wording of every line. Keep every point, number and rule of Dan's${must.length ? ` (especially the MUST SAY rules)` : ""}, and keep the note if it asks them to update their numbers or Context Room.`);
     if (tighter && wordCount(fullText(tighter.final)) < wordCount(fullText(final))) { final = tighter.final; issues.push(...tighter.issues); }
   }
@@ -575,7 +586,7 @@ async function answerPipeline(p: PipelineInput) {
     probs = problems(final);
   }
   // Hard cap so every answer stays inside the format: shorten the note to its first sentence, then drop it, then trim the last point's reason.
-  const cap = shortReply ? 60 : buildHelp ? 185 : 118;
+  const cap = shortReply ? 60 : buildHelp ? (focus ? 235 : 185) : 118;
   // An "Also:" note carries Dan's rules, so shortening it drops the lead-in sentence, never the rules.
   if (wordCount(fullText(final)) > cap && final.note) {
     const rules = final.note.search(/also:/i);
@@ -692,7 +703,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.22";
+const VERSION = "2026-10-24.23";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
