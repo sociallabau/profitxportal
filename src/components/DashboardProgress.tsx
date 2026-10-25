@@ -46,17 +46,6 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
           <h2 className="text-sm font-semibold flex items-center gap-2 flex-wrap">Prism Progress · Revenue Ladder™ <ExampleLabel show={example} /></h2>
           <span className="text-xs text-muted-foreground">{current ? `${current.month} · ${money(revenue)}/mth` : 'No monthly report yet'}</span>
         </div>
-        {current && revenue < INNER_CIRCLE && (
-          <div className="relative mx-3 h-4 mb-1">
-            <span
-              className="absolute -translate-x-1/2 whitespace-nowrap text-[10px] sm:text-[11px] font-semibold text-amber-700 dark:text-amber-300"
-              style={{ left: `${revenuePosition(INNER_CIRCLE)}%` }}
-              title={`${money(INNER_CIRCLE - revenue)}/mth to go, at $2,500 per retainer client`}
-            >
-              {clientsToInnerCircle(revenue)} clients until Inner Circle invite <span className="font-normal text-muted-foreground">(based on $2.5k retainer)</span>
-            </span>
-          </div>
-        )}
         <div className="relative mx-3" role="progressbar" aria-label="Revenue ladder progress" aria-valuemin={0} aria-valuemax={150000} aria-valuenow={Math.min(revenue, 150000)} aria-valuetext={`${money(revenue)} per month`}>
           {current && <div className="absolute bottom-3 -translate-x-1/2 flex flex-col items-center" style={{ left: `${Math.max(3, Math.min(97, position))}%` }}>
             <span className="text-[10px] font-bold whitespace-nowrap">{money(revenue)}</span>
@@ -79,6 +68,17 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
             <Ticket className="w-3 h-3" aria-hidden />Inner Circle invite · $45k
           </span>
         </div>
+        {current && revenue < INNER_CIRCLE && (
+          <div className="relative mx-3 h-4 mt-1">
+            <span
+              className="absolute -translate-x-1/2 whitespace-nowrap text-[10px] sm:text-[11px] font-semibold text-amber-700 dark:text-amber-300"
+              style={{ left: `${revenuePosition(INNER_CIRCLE)}%` }}
+              title={`${money(INNER_CIRCLE - revenue)}/mth to go, at $2,500 per retainer client`}
+            >
+              {clientsToInnerCircle(revenue)} clients until Inner Circle invite <span className="font-normal text-muted-foreground">(based on $2.5k retainer)</span>
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-5">
