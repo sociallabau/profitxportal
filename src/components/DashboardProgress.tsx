@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Flag, Crosshair, ArrowUpRight, Flame, TrendingUp, Ticket } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { REVENUE_STEPS, focusBullets, revenuePosition, submissionStreak } from '@/lib/dashboardProgress';
+import { REVENUE_STEPS, focusBullets, revenuePosition, submissionStreak, clientsToInnerCircle } from '@/lib/dashboardProgress';
 import { brisbaneDateKey } from '@/data/calls';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -66,7 +66,7 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
               style={{ left: `${revenuePosition(INNER_CIRCLE)}%` }}
               title={`${money(INNER_CIRCLE - revenue)}/mth to go, at $2,500 per retainer client`}
             >
-              {Math.ceil((INNER_CIRCLE - revenue) / 2500)} clients until Inner Circle invite
+              {clientsToInnerCircle(revenue)} clients until Inner Circle invite
             </span>
           </div>
         )}
