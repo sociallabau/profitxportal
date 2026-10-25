@@ -483,12 +483,12 @@ async function answerPipeline(p: PipelineInput) {
       if (wordCount(text) < 15 || wordCount(text) > 60) out.push("boundary/privacy reply must be 15–60 words");
       if (a.points.length || a.note) out.push("boundary/privacy reply must be 1–2 short lines, no points or note");
     } else {
-      if (buildHelp ? a.points.length < (focus ? 2 : 3) || a.points.length > 5 : oneShot ? a.points.length > 1 : a.points.length < 1 || a.points.length > 4) {
-        out.push(buildHelp ? (focus ? "needs 2–5 points, all on this one step" : "needs 3–5 build steps") : oneShot ? "one problem, one fix: keep only the single point that answers what they asked" : "needs 1–4 dot points");
+      if (buildHelp ? a.points.length < (focus ? 2 : 3) || a.points.length > 6 : oneShot ? a.points.length > 1 : a.points.length < 1 || a.points.length > 4) {
+        out.push(buildHelp ? (focus ? "needs 2–6 points, all on this one step" : "needs 3–6 build steps, all on this one task") : oneShot ? "one problem, one fix: keep only the single point that answers what they asked" : "needs 1–4 dot points");
       }
       if (a.points.some(pt => !pt.why.trim())) out.push("each point needs one short reason");
       if (wordCount(a.answer) > 18) out.push("stance must be max ~15 words");
-      if (wordCount(text) > (buildHelp ? (focus ? 230 : 185) : 130)) out.push(buildHelp ? `cut to under ~${focus ? 200 : 160} words total` : "cut to under ~110 words total");
+      if (wordCount(text) > (buildHelp ? (focus ? 340 : 320) : 130)) out.push(buildHelp ? `cut to under ~${focus ? 300 : 280} words total` : "cut to under ~110 words total");
     }
     // Ads/scaling/pricing questions must use the member's cost per client — only when it was actually computed.
     const cpc = block.derived?.cost_per_client;
@@ -504,7 +504,7 @@ async function answerPipeline(p: PipelineInput) {
     return { out, names };
   };
   const shortReply = shortAnswer;
-  const maximum = shortReply ? 60 : buildHelp ? (focus ? 215 : 170) : 115;
+  const maximum = shortReply ? 60 : buildHelp ? (focus ? 320 : 300) : 115;
   const clean = (text: string) => findBanned(text).length ? text.split(/(?<=[.!?])\s+|\n+/).filter(line => !findBanned(line).length).join("\n") : text;
   final = {
     ...final,
@@ -524,7 +524,7 @@ async function answerPipeline(p: PipelineInput) {
   }
   // Over the limit: the checker tightens the wording first, so trimming below never drops a rule, a computed number or the data nudge.
   if (checked && wordCount(fullText(final)) > maximum) {
-    const target = shortReply ? 60 : buildHelp ? (focus ? 200 : 160) : 110;
+    const target = shortReply ? 60 : buildHelp ? (focus ? 300 : 280) : 110;
     const tighter = await runCheck(final, `cut to under ~${target} words by tightening the wording of every line. Keep every point, number and rule of Dan's${must.length ? ` (especially the MUST SAY rules)` : ""}, and keep the note if it asks them to update their numbers or Context Room.`);
     if (tighter && wordCount(fullText(tighter.final)) < wordCount(fullText(final))) { final = tighter.final; issues.push(...tighter.issues); }
   }
@@ -597,7 +597,7 @@ async function answerPipeline(p: PipelineInput) {
     probs = problems(final);
   }
   // Hard cap so every answer stays inside the format: shorten the note to its first sentence, then drop it, then trim the last point's reason.
-  const cap = shortReply ? 60 : buildHelp ? (focus ? 235 : 185) : 118;
+  const cap = shortReply ? 60 : buildHelp ? (focus ? 345 : 325) : 118;
   // An "Also:" note carries Dan's rules, so shortening it drops the lead-in sentence, never the rules.
   if (wordCount(fullText(final)) > cap && final.note) {
     const rules = final.note.search(/also:/i);
