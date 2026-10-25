@@ -163,3 +163,24 @@ export function goalStatus(goal: GateGoal, monthsNewestFirst: GoalMonth[]): { va
     held: Array.from({ length: HOLD_MONTHS }, (_, i) => (recent[i]?.[goal.field] ?? 0) >= goal.target),
   };
 }
+
+const GOAL_TASK: Partial<Record<GateGoal['field'], RegExp>> = { content_posts: /\b(?:posts?|videos?|reels?)\b/i, leads_generated: /\b(?:conversations?|convos?|dms?)\b/i };
+
+/** The monthly build task that counts toward a goal: same kind of thing, same number in its title. */
+export function goalTask(goal: GateGoal, tasks: TaskWithStatus[]): TaskWithStatus | null {
+  const re = GOAL_TASK[goal.field];
+  return re ? tasks.find(t => t.kind === 'monthly' && taskTarget(t) === goal.target && re.test(t.title)) ?? null : null;
+}
+
+/**
+ * What a goal tile shows: this month's running count from the build list once they're tracking it
+ * (or this month's check-in if that's higher), otherwise the latest check-in. Holding still goes off check-ins.
+ */
+export function liveGoalValue(goal: GateGoal, monthsNewestFirst: GoalMonth[], tasks: TaskWithStatus[], month = monthKey()): { value: number | null; tracked: boolean } {
+  const { value } = goalStatus(goal, monthsNewestFirst);
+  const count = goalTask(goal, tasks)?.tracking?.count ?? 0;
+  if (!count) return { value, tracked: false };
+  const latest = monthsNewestFirst[0];
+  const checkedIn = latest?.month.startsWith(month) ? latest[goal.field] ?? 0 : 0;
+  return { value: Math.max(count, checkedIn), tracked: count >= checkedIn };
+}

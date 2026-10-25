@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildProgress, gateLabel, gateNumber, goalStatus, helpPrompt, isWorking, nextTask, taskTarget, trainingLink, withStatus,
+  buildProgress, gateLabel, gateNumber, goalStatus, helpPrompt, isWorking, liveGoalValue, nextTask, taskTarget, trainingLink, withStatus,
   GATE_GOALS, type GrowthHubTask, type TaskProgress, type TaskTracking,
 } from './growthHub';
 
@@ -134,5 +134,27 @@ describe('trainingLink matches the Roadmap tiles', () => {
     expect(trainingLink(t(['C1']), hasPage)?.href).toBe('/module/C1');
     expect(trainingLink(t(['O1']), hasPage)).toMatchObject({ label: 'Covered in onboarding with Dan', href: null, status: 'onboarding' });
     expect(trainingLink(t(['D4']), hasPage)).toMatchObject({ label: 'Book a call with Dan', external: true, status: 'book' });
+  });
+});
+
+describe('liveGoalValue', () => {
+  const posts = GATE_GOALS[2].find(g => g.field === 'content_posts')!;
+  const convos = GATE_GOALS[2].find(g => g.field === 'leads_generated')!;
+  const clients = GATE_GOALS[2].find(g => g.field === 'new_clients')!;
+  const tasks = withStatus([
+    task({ id: 'p', position: 1, kind: 'monthly', title: 'Post 8 times on your own Instagram (2 a week)' }),
+    task({ id: 'c', position: 2, kind: 'monthly', title: 'Have 6 retainer conversations using the DM scripts' }),
+  ], [], '2026-10', [{ task_id: 'p', period: '2026-10', working: true, count: 4 }, { task_id: 'c', period: '2026-10', working: true, count: 2 }]);
+  const sept = [{ month: '2026-09-01', content_posts: 0, leads_generated: 1, new_clients: 0 }];
+  it('shows the build-list tally for this month over last month\'s check-in', () => {
+    expect(liveGoalValue(posts, sept, tasks, '2026-10')).toEqual({ value: 4, tracked: true });
+    expect(liveGoalValue(convos, sept, tasks, '2026-10')).toEqual({ value: 2, tracked: true });
+  });
+  it('keeps the check-in when nothing is tracked or there is no matching task', () => {
+    expect(liveGoalValue(clients, sept, tasks, '2026-10')).toEqual({ value: 0, tracked: false });
+    expect(liveGoalValue(posts, sept, [], '2026-10')).toEqual({ value: 0, tracked: false });
+  });
+  it('uses this month\'s check-in when it is higher than the tally', () => {
+    expect(liveGoalValue(posts, [{ month: '2026-10-01', content_posts: 7, leads_generated: 0, new_clients: 0 }], tasks, '2026-10')).toEqual({ value: 7, tracked: false });
   });
 });

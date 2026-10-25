@@ -126,7 +126,7 @@ export default function GrowthHub() {
               <h2 className="mono-label text-[12px] font-bold text-primary">Gate goals</h2>
               <span className="text-xs text-muted-foreground">Hold 2 months to move up</span>
             </div>
-            <GateGoals gate={current} months={months ?? []} />
+            <GateGoals gate={current} months={months ?? []} tasks={tasks} />
             {member?.settings.fast_track_lead_gen && <p className="text-xs font-semibold text-primary mt-3">Lead gen fast-track approved by Dan</p>}
           </section>
         </div>

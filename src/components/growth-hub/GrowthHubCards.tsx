@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { moduleName } from '@/data/modules';
 import { useCanUseDanAi } from '@/lib/danAccess';
 import {
-  GATE_GOALS, goalStatus, helpPrompt, isWorking, taskTarget, trainingLink,
+  GATE_GOALS, goalStatus, helpPrompt, isWorking, liveGoalValue, taskTarget, trainingLink,
   type GateNumber, type TaskStatus, type TaskWithStatus,
 } from '@/lib/growthHub';
 import { useModulePages, useTickTask, useTrackTask, useUntickTask, type GateModule } from '@/hooks/useGrowthHub';
@@ -199,15 +199,17 @@ export function BuildList({ tasks, isAdmin, userId }: { tasks: TaskWithStatus[];
 }
 
 type Month = { month: string; content_posts: number | null; leads_generated: number | null; new_clients: number | null };
-export function GateGoals({ gate, months }: { gate: GateNumber; months: Month[] }) {
+export function GateGoals({ gate, months, tasks = [] }: { gate: GateNumber; months: Month[]; tasks?: TaskWithStatus[] }) {
   return (
     <div className="grid grid-cols-2 gap-2.5">
       {GATE_GOALS[gate].map(goal => {
-        const { value, held } = goalStatus(goal, months);
+        const { held } = goalStatus(goal, months);
+        const { value, tracked } = liveGoalValue(goal, months, tasks);
         return (
           <div key={goal.label} className="glass-tile rounded-[1.25rem] p-3.5">
             <p className="mono-label text-[10px] font-bold text-muted-foreground">{goal.label}</p>
             <p className="text-[34px] font-extrabold tracking-tight leading-none mt-2">{value ?? '–'}<span className="text-sm text-muted-foreground font-bold">/{goal.target}</span></p>
+            {tracked && <p className="text-[11px] font-semibold text-primary mt-1">This month so far</p>}
             <div className="flex gap-1.5 mt-2.5" title="Hit it 2 months in a row to hold it">
               {[...held].reverse().map((ok, i) => (
                 <span key={i} className={`h-1.5 w-6 rounded-full ${ok ? 'violet-grad shadow-[0_0_8px_rgb(155_92_255/0.7)]' : 'bg-primary/15'}`} />
