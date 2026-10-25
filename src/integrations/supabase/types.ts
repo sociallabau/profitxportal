@@ -1072,6 +1072,55 @@ export type Database = {
           },
         ]
       }
+      member_task_tracking: {
+        Row: {
+          count: number
+          period: string
+          task_id: string
+          updated_at: string
+          user_id: string
+          working: boolean
+        }
+        Insert: {
+          count?: number
+          period: string
+          task_id: string
+          updated_at?: string
+          user_id: string
+          working?: boolean
+        }
+        Update: {
+          count?: number
+          period?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+          working?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_task_tracking_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_task_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_task_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_pages: {
         Row: {
           created_at: string | null

@@ -176,6 +176,13 @@
       "when": 1792887942391,
       "tag": "0024_add_instagram_profile_to_member_memory",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792901601441,
+      "tag": "0025_create_member_task_tracking",
+      "breakpoints": true
     }
   ]
 }
