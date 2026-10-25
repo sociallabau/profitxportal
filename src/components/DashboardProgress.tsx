@@ -59,6 +59,17 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
         <div className="flex justify-between mt-3 gap-1 text-[9px] sm:text-[10px] text-muted-foreground">
           {REVENUE_STEPS.map(step => <span key={step}>{stepLabel(step)}</span>)}
         </div>
+        {current && revenue < INNER_CIRCLE && (
+          <div className="relative mx-3 h-4 mt-2">
+            <span
+              className="absolute -translate-x-1/2 whitespace-nowrap text-[9px] sm:text-[10px] font-semibold text-amber-700 dark:text-amber-300"
+              style={{ left: `${revenuePosition(INNER_CIRCLE)}%` }}
+              title={`${money(INNER_CIRCLE - revenue)}/mth to go, at $2,500 per retainer client`}
+            >
+              {Math.ceil((INNER_CIRCLE - revenue) / 2500)} clients until Inner Circle invite
+            </span>
+          </div>
+        )}
         <div className="relative mx-3 h-6 mt-1.5">
           <span
             className={`absolute -translate-x-1/2 inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold ${revenue >= INNER_CIRCLE ? 'border-amber-500 bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.45)]' : 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}
