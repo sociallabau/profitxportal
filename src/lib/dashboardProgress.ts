@@ -83,6 +83,13 @@ export function revenuePosition(revenue: number) {
   return ((index - 1 + (amount - lower) / (REVENUE_STEPS[index] - lower)) / (REVENUE_STEPS.length - 1)) * 100;
 }
 
+/** Retainer clients still needed to reach the $45k/mth Inner Circle invite, at $2,500 per client. */
+export const INNER_CIRCLE_TARGET = 45000;
+export const RETAINER_CLIENT_VALUE = 2500;
+export function clientsToInnerCircle(revenue: number) {
+  return Math.max(0, Math.ceil((INNER_CIRCLE_TARGET - Math.max(0, revenue)) / RETAINER_CLIENT_VALUE));
+}
+
 export function submissionStreak(months: string[], today: string) {
   const monthNumber = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1;
   const submitted = new Set(months.map(monthNumber));

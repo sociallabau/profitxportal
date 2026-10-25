@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { revenuePosition, submissionStreak, focusBullets } from './dashboardProgress';
+import { revenuePosition, submissionStreak, focusBullets, clientsToInnerCircle } from './dashboardProgress';
 import { workshopTypeFor } from '@/data/calls';
 
 const CASE_NOTE = '(either results from client or BTS posts with you talking)';
@@ -14,6 +14,15 @@ describe('revenue ladder', () => {
     expect(revenuePosition(25000)).toBe(31.25);
     expect(revenuePosition(150000)).toBe(100);
     expect(revenuePosition(-1)).toBe(0);
+  });
+});
+describe('clients until Inner Circle invite', () => {
+  it('counts $2,500 retainer clients needed to reach $45k/mth', () => {
+    expect(clientsToInnerCircle(0)).toBe(18);
+    expect(clientsToInnerCircle(10000)).toBe(14);
+    expect(clientsToInnerCircle(43750)).toBe(1);
+    expect(clientsToInnerCircle(45000)).toBe(0);
+    expect(clientsToInnerCircle(60000)).toBe(0);
   });
 });
 describe('monthly submission streak', () => {
