@@ -411,7 +411,7 @@ async function answerPipeline(p: PipelineInput) {
         [{ role: "user", content: `${buildHelp}\n\n=====\n\n${block.text}\n\n=====\n\nDAN'S KNOWLEDGE\n${passageText.slice(0, 6000)}` }], false, clock.data, "step")) as typeof nextStep;
     } catch (err) { console.error("next step pick failed", err); }
   }
-  const stepText = nextStep?.step ? `THE ONE STEP TO ANSWER (picked from their data): ${nextStep.step}${nextStep.why_first ? `\nWhy this first: ${nextStep.why_first}` : ""}${nextStep.done_when ? `\nDone when: ${nextStep.done_when}` : ""}\nAnswer ONLY this step.${Array.isArray(nextStep.not_now) && nextStep.not_now.length ? ` Do not mention or set any of these (later or separate tasks): ${nextStep.not_now.slice(0, 8).join("; ")}.` : " Don't mention the later parts of the task."}\n\n` : "";
+  const stepText = nextStep?.step ? `THE ONE STEP TO ANSWER (picked from their data): ${nextStep.step}${nextStep.why_first ? `\nWhy this first: ${nextStep.why_first}` : ""}${nextStep.done_when ? `\nDone when: ${nextStep.done_when}` : ""}\nAnswer ONLY this step.${Array.isArray(nextStep.not_now) && nextStep.not_now.length ? ` Do not mention or set any of these (later or separate tasks): ${nextStep.not_now.slice(0, 8).join("; ")}. Ignore WHAT LOOKS OFF in their data for this answer unless it is about this step.` : " Don't mention the later parts of the task."}\n\n` : "";
   const buildText = buildHelp ? `${buildHelp}\n\n${stepText}${focus ? FOCUS_FORMAT : BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
   // The shape comes from what they actually asked: one problem gets one fix, and a general business
   // question isn't forced through Dan's gates, roadmap or keyword rules.
@@ -615,7 +615,7 @@ async function answerPipeline(p: PipelineInput) {
   // Focus answers stop at "send it to Dan": cut any "then build the campaign…" tail off the last point.
   if (focus && final.points.length) {
     const last = final.points[final.points.length - 1];
-    const cut = (s: string) => s.replace(/[,;.]?\s*(and )?then (you |we )?(can )?(move|build|start|go|jump|get)\b.*$/i, ".").replace(/\.\.$/, ".");
+    const cut = (s: string) => s.replace(/[,;.]?\s*(and |so )?(then )?(you |we )(can |will |'ll )?(move|build|start|go|jump|get) (on )?(into|onto|to|straight|on)\b.*$|[,;.]?\s*(and )?then (you |we )?(can )?(move|build|start|go|jump|get)\b.*$/i, ".").replace(/\.\.$/, ".");
     final = { ...final, points: [...final.points.slice(0, -1), { do: cut(last.do), why: cut(last.why) }] };
   }
   // Stale numbers: say which month the advice is based on, if the answer didn't.
@@ -726,7 +726,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.28";
+const VERSION = "2026-10-24.29";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
