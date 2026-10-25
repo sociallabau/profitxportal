@@ -483,8 +483,8 @@ async function answerPipeline(p: PipelineInput) {
       if (wordCount(text) < 15 || wordCount(text) > 60) out.push("boundary/privacy reply must be 15–60 words");
       if (a.points.length || a.note) out.push("boundary/privacy reply must be 1–2 short lines, no points or note");
     } else {
-      if (buildHelp ? a.points.length < 3 || a.points.length > 5 : oneShot ? a.points.length > 1 : a.points.length < 1 || a.points.length > 4) {
-        out.push(buildHelp ? "needs 3–5 build steps" : oneShot ? "one problem, one fix: keep only the single point that answers what they asked" : "needs 1–4 dot points");
+      if (buildHelp ? a.points.length < (focus ? 2 : 3) || a.points.length > 5 : oneShot ? a.points.length > 1 : a.points.length < 1 || a.points.length > 4) {
+        out.push(buildHelp ? (focus ? "needs 2–5 points, all on this one step" : "needs 3–5 build steps") : oneShot ? "one problem, one fix: keep only the single point that answers what they asked" : "needs 1–4 dot points");
       }
       if (a.points.some(pt => !pt.why.trim())) out.push("each point needs one short reason");
       if (wordCount(a.answer) > 18) out.push("stance must be max ~15 words");
@@ -714,7 +714,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.24";
+const VERSION = "2026-10-24.25";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
