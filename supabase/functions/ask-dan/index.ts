@@ -20,7 +20,7 @@ import { signals } from "./signals.ts";
 import { guideFor, prescribe, workshopGuideText } from "./workshops.ts";
 import { loadRoster, ROSTER_PROMPT } from "./roster.ts";
 import { situationBlock } from "./playbook.ts";
-import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
+import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, STEP_PROMPT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, limitBro, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 
 const SONNET = "claude-sonnet-5-5";
@@ -401,7 +401,18 @@ async function answerPipeline(p: PipelineInput) {
   // "Help me do this" on a build task: the task, Dan's proof ask and its module content, walked through as steps.
   const buildHelp = shortAnswer ? null : await loadBuildHelp(p.admin, p.question, member?.extras?.gate_number ?? null, member?.extras?.build ?? []);
   const focus = !!buildHelp && !buildTaskTitle(p.question);
-  const buildText = buildHelp ? `${buildHelp}\n\n${focus ? FOCUS_FORMAT : BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
+  // "What should I focus on": Sonnet picks the one sub-step inside their next build task they haven't done,
+  // from the task's training and their data, so the answer goes deep on that step instead of the whole task.
+  let nextStep = null as { step?: string; why_first?: string; done_when?: string } | null;
+  if (focus && buildHelp) {
+    p.status?.("Working out your very next step…");
+    try {
+      nextStep = parseJson(await callAnthropic(SONNET, [{ type: "text", text: STEP_PROMPT }],
+        [{ role: "user", content: `${buildHelp}\n\n=====\n\n${block.text}\n\n=====\n\nDAN'S KNOWLEDGE\n${passageText.slice(0, 6000)}` }], false, clock.data, "step")) as typeof nextStep;
+    } catch (err) { console.error("next step pick failed", err); }
+  }
+  const stepText = nextStep?.step ? `THE ONE STEP TO ANSWER (picked from their data): ${nextStep.step}${nextStep.why_first ? `\nWhy this first: ${nextStep.why_first}` : ""}${nextStep.done_when ? `\nDone when: ${nextStep.done_when}` : ""}\nAnswer ONLY this step. Don't mention the later parts of the task.\n\n` : "";
+  const buildText = buildHelp ? `${buildHelp}\n\n${stepText}${focus ? FOCUS_FORMAT : BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
   // The shape comes from what they actually asked: one problem gets one fix, and a general business
   // question isn't forced through Dan's gates, roadmap or keyword rules.
   const general = !shortAnswer && !buildHelp && plan.program_related === false;
@@ -703,7 +714,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.23";
+const VERSION = "2026-10-24.24";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
