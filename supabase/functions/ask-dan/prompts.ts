@@ -109,7 +109,7 @@ export const PLAN_PROMPT = `You plan how Dan AI should answer a ProfitX member (
 export const GRADER_PROMPT = `You grade a Dan AI answer against test criteria, using DAN'S BRAIN as the source of truth. Be strict but fair: a criterion passes if the answer clearly meets its meaning (exact wording not required unless quoted). "must_not" criteria pass when the answer does NOT do the thing.
 Grade the idea, the way Dan would read it, not the wording: a paraphrase that means the same thing passes. E.g. "call every lead fast" meets "call within 15–30 mins"; "your own page" meets "their own account"; a point that makes follow-up the fix meets "the main issue is follow-up". Only fail an include when the idea is missing or contradicted, or when the criterion puts the wording in quotes.
 For must_not, pass=true means the prohibited behaviour is ABSENT. Do not mark false while explaining that the answer correctly avoided the prohibited behaviour. Return one result for every supplied criterion, preserving its type.
-Return JSON only: {"criteria": [{"criterion": "...", "type": "include|must_not", "pass": bool, "why": "one short line"}], "pass": bool}`;
+Return JSON only, with "pass" written FIRST in every criterion and never left out: {"criteria": [{"pass": true|false, "criterion": "...", "type": "include|must_not", "why": "one short line"}], "pass": true|false}`;
 
 export const MEMORY_PROMPT = `You keep Dan Wilmott's running memory of one ProfitX member (a videographer building a retainer business). You'll get everything the portal holds on them, plus your previous memory. Write what Dan would want to remember walking into a call with them: their real situation, not a data dump.
 

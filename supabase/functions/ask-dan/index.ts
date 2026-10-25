@@ -396,18 +396,20 @@ async function answerPipeline(p: PipelineInput) {
   const general = !shortAnswer && !buildHelp && plan.program_related === false;
   // Dan's own answer and reasoning for the stuck point this question is about (playbook.ts).
   const situation = shortAnswer ? { text: "", keys: [] as string[] } : situationBlock(p.question);
-  const must = shortAnswer || general ? [] : mustSay({
+  // A general business question keeps Dan's business rules (fees, discounts, scope) but not his gate/ad-ladder rules.
+  const programRule = (r: { say: string }) => /\bgate\b|boost|awareness|lead gen|\bcpa\b|creatives|campaign/i.test(r.say);
+  const must = shortAnswer ? [] : mustSay({
     question: p.question,
     gate: member?.extras?.gate_number ?? gateFromLabel(member?.gate),
     revenue: block.derived?.total_revenue_latest ?? block.derived?.mrr_latest ?? null,
     hasContext: block.hasContext, hasMember: !!member,
     costPerClient: block.derived?.cost_per_client ?? null, lowestPrice: block.derived?.lowest_retainer_price ?? null,
     fastTrack: !!member?.extras?.fast_track_lead_gen,
-  });
+  }).filter(r => !general || !programRule(r));
   const mustText = must.length ? `MUST SAY — Dan's rules this question needs. Include every one (tighten other wording to fit, never drop these):\n${must.map(m => `- ${m.say}`).join("\n")}${must.length >= 4 ? "\nThere are more rules than points: pair related rules in one point (e.g. a gate step plus the ad rule), keeping each rule's exact numbers." : ""}\n\n=====\n\n` : "";
   // One point only when a single fix answers it and it doesn't carry several of Dan's rules.
   const oneShot = !shortAnswer && !buildHelp && plan.shape === "one" && must.length <= 1;
-  const shapeText = shortAnswer || !plan.core_problem ? "" : `WHAT THEY'RE REALLY ASKING (read past the brain dump): ${plan.core_problem}\n${oneShot ? "ANSWER SHAPE: ONE. This is one problem with one fix. Stance line + exactly ONE point that is the fix, said plainly with the how. No extra points, no padding, no note unless their numbers are stale.\n" : ""}${general ? "This is a general business question, not about the gates, roadmap or build list. Answer the problem itself with Dan's own opinion. Don't bolt on gate steps, ad rules or trainings that don't fix it.\n" : ""}\n=====\n\n`;
+  const shapeText = shortAnswer || !plan.core_problem ? "" : `WHAT THEY'RE REALLY ASKING (read past the brain dump): ${plan.core_problem}\n${oneShot ? "ANSWER SHAPE: ONE. This is one problem with one fix. Stance line + exactly ONE point that is the fix, said plainly with the how. No extra points, no padding, no note unless their numbers are stale.\n" : ""}${general ? "This is a general business question, not about the gates, roadmap or build list. Answer the problem itself with Dan's own opinion. Don't bolt on gate steps, the ad ladder or trainings that don't fix it, but Dan's rules on business decisions (holding the fee, discounts, scope, ad spend on top of the fee) still apply.\n" : ""}\n=====\n\n`;
   const draftSystem: Block[] = [...brainBlock, { type: "text", text: draftPrompt([], "") + voiceText + (p.extraRules ? `\n\nEXTRA RULES:\n${p.extraRules}` : ""), cache_control: { type: "ephemeral" } }];
   const convo = p.history.map(t => `${t.role === "user" ? "MEMBER" : "DAN"}: ${t.content}`).join("\n\n") || "(none)";
   const userTurn = `RESOURCES YOU CAN POINT TO (exact line or null)\n${catalogue}\n\n${workshopText ? `${workshopText}\nResource = the recording that fixes the problem you diagnosed. Use one of the lines above unless another catalogue line clearly fits better.\n\n` : ""}${shapeText}${situation.text}${buildText}${mustText}${block.text}\n\n=====\n\nDAN'S KNOWLEDGE — real advice Dan has given (use for detail and phrasing; the Brain wins on conflict)\n\n${passageText || "(nothing matched)"}\n\n=====\n\nCONVERSATION SO FAR\n${convo}\n\n=====\n\nTHE MEMBER ASKED: ${p.question}`;
@@ -690,7 +692,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.21";
+const VERSION = "2026-10-24.22";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));

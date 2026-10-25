@@ -25,8 +25,13 @@ describe('mustSay', () => {
     expect(says(r)).not.toContain('$15–20k');
     expect(says(r)).not.toContain('$50');
     expect(r.map(x => x.short)).toContain('your priority is landing the next paying retainer');
-    expect(missingRules(r, "Not yet. The free client doesn't count. Land your next paying retainer. Post case studies on your own account.")).toEqual([]);
-    expect(missingRules(r, "Not yet. The free client doesn't count. Post case studies on your own account.").map(x => x.short)).toEqual(['your priority is landing the next paying retainer']);
+    expect(missingRules(r, "Not yet. Gate 1 is 3 paying retainers held for 2 months. The free client doesn't count. Land your next paying retainer. Post case studies on your own account.")).toEqual([]);
+    expect(missingRules(r, "Not yet. Gate 1 is 3 paying retainers held for 2 months. The free client doesn't count. Post case studies on your own account.").map(x => x.short)).toEqual(['your priority is landing the next paying retainer']);
+  });
+  it('DISCOUNT: hold the fee, compromise on ad budget on top', () => {
+    const r = mustSay({ ...base, question: 'A real estate agent wants $500 off my $2,500 package. Should I do it?' });
+    expect(r.map(x => x.short)).toContain('hold the fee; meet in the middle on ad budget on top, not the fee');
+    expect(missingRules(r, "Hold the $2,500. If you need to meet in the middle, do it on the ad budget on top of the fee.")).toEqual([]);
   });
   it('VOICE_GENERAL and TOO_BUSY: free extras are not a free client; too busy gets the easy documenting format', () => {
     expect(says(mustSay({ ...base, question: 'client keeps asking for extra videos for free, what do i do' }))).not.toContain('PAYING');

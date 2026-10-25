@@ -48,6 +48,11 @@ export function mustSay(i: MustSayInput): Rule[] {
   if (freeWork && (path || /\bcount|retainers?\b/.test(q))) {
     out.push({ say: "A free (or case-study) client doesn't count toward the gate: only PAYING monthly retainers count.", short: "free clients don't count, only paying retainers", test: /(doesn'?t|don'?t|does not|do not|won'?t|isn'?t|not) count/i });
     out.push({ say: "Make point 1 their priority: landing the next PAYING retainer (case studies support that, they don't replace it).", short: "your priority is landing the next paying retainer", test: /(next|another|one more|3rd|third) paying (retainer|client)|land(ing)? (your |the |a |one more |another )?(next |3rd |third )?paying/i });
+    if (path) out.push({ say: "State Gate 1 in full: 3+ paying monthly retainers, held for 2 months.", short: "Gate 1 is 3+ paying retainers held for 2 months", test: /held (for )?2 months|2 months/i });
+  }
+  // A prospect wants money off: hold the fee, and any compromise is on the ad budget on top, never the fee.
+  if (/discount|knock (\$?\d+k?|it|some) off|\$\d[\d,]*k? off|(cheaper|lower) (price|rate|fee)|drop (my|the) price|negotiat/.test(q)) {
+    out.push({ say: "Hold the fee. If a compromise is needed, meet in the middle on the ad budget ON TOP (through the client's own ad account), never by cutting the fee.", short: "hold the fee; meet in the middle on ad budget on top, not the fee", test: /ad (budget|spend)[^.]{0,60}(on top|middle)|(on top|middle)[^.]{0,60}ad (budget|spend)/i });
   }
   if (workload) out.push({ say: `Editor/outsourcing cue is ~$15–20k/mo revenue${revenueNote}.`, short: "bring on an editor at ~$15–20k/mo", test: /15\s*[–-]\s*20k/i });
   if (/too busy|no time|don'?t have (the )?time|can'?t find (the )?time|flat out|swamped/.test(q) && /post|content|own (stuff|marketing|socials|page)|film (myself|me)/.test(q)) {
