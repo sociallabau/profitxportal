@@ -60,6 +60,10 @@ export function mustSay(i: MustSayInput): Rule[] {
     out.push({ say: "Be blunt (it's an excuse, so don't open with \"That's fine\"): their own content is the lifeblood of the business, so \"too busy\" isn't good enough; find solutions, not excuses.", short: "your own content is the lifeblood, too busy isn't good enough", test: /lifeblood|not optional|isn'?t optional|isn'?t good enough|no excuses|find solutions/i });
   }
   if (caseStudy) out.push({ say: "Case studies go on THEIR OWN account, not the client's.", short: "case studies go on your own account", test: /own (account|page|profile|feed|socials|instagram|ig)/i });
+  // Leads coming in but nobody booking: follow-up is the leak, whatever else they asked about.
+  if (/\d+ leads?[^.?]{0,40}(none|no one|nobody|0|zero)[^.?]{0,20}(booked|book)|no (booked )?calls|not booking|aren'?t booking|leads? but no (calls|bookings)/.test(q)) {
+    out.push({ say: "Leads but no booked calls means follow-up is the leak: call every lead fast (within 15–30 mins).", short: "follow-up is the leak: call every lead within 15–30 mins", test: /15\s*[–-]\s*30|follow.?up|call (every|each|all|them|the)/i });
+  }
   if (/ad spend|ads? budget/.test(q) && /bundle|include|inside|\binto\b|\bin (my|the) (retainer|price|package|fee)/.test(q)) {
     out.push({ say: "Ad spend sits on top of the fee, through the client's own ad account.", short: "ad spend sits on top of the fee, through the client's own ad account", test: /on top of (the |your )?(fee|retainer|price)/i });
   }

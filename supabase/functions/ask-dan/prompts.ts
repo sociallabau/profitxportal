@@ -102,7 +102,7 @@ export const PLAN_PROMPT = `You plan how Dan AI should answer a ProfitX member (
  "search_terms": ["8-15 keywords and synonyms Dan would use, e.g. awareness, profile visit, PV boost, lead gen, CTR, speed to lead, retainer, case study"],
  "member_facts_needed": ["which member facts matter"],
  "gate_relevant": bool,
- "core_problem": "one sentence: what they ACTUALLY need help with. Members often brain-dump a long story; read past it to the real problem (e.g. a long story about ads, calls and proposals = 'proposals go out with no next meeting booked, so deals go cold')",
+ "core_problem": "one sentence: what they ACTUALLY need help with. Members often brain-dump a long story; read past it to the real problem behind what they ASKED to fix (their actual question), even if the story mentions other issues along the way (e.g. a long story about ads, calls and proposals ending 'how do I get a yes faster?' = 'proposals go out with no next meeting booked, so deals go cold')",
  "shape": "one|steps",  // "one" when a single fix answers it (most specific problems). "steps" ONLY when it genuinely needs an ordered sequence: how to build something, several plans to address, or 'what should I do next' at their stage.
  "program_related": bool}  // true if it's about Dan's gates, roadmap, build tasks, content engine or ad ladder. false for a general business question (a sales process, a client situation, a tool) that should be answered on its own terms.`;
 
@@ -140,7 +140,7 @@ export const STEP_PROMPT = `A ProfitX member asked what to focus on. You get the
 - Never return the whole build task when it has parts. Break it into its parts in the order the training does them (set-up before launch: e.g. an awareness campaign = optimise the Instagram profile (bio, pinned posts) → pick the videos → build the campaign → launch), then return the FIRST part not clearly done.
 - If their data can't show a part is done, assume it isn't done. (E.g. no Instagram profile data = assume the profile isn't optimised yet, so that's the step.)
 - Only when the task is genuinely one small action is the step the task itself.
-Return JSON only: {"step": "the one step, in a few words (e.g. 'Optimise your Instagram profile')", "why_first": "one line from their data", "done_when": "what finished looks like"}`;
+Return JSON only: {"step": "the one step, in a few words (e.g. 'Optimise your Instagram profile')", "why_first": "one line from their data", "done_when": "what finished looks like", "not_now": ["short names of the later parts of this task and their other build tasks, e.g. building the campaign, posting 8 a month"]}`;
 
 export const FOCUS_FORMAT = `FOCUS: they asked what to focus on. Give them THE VERY NEXT STEP and go one layer deeper on it. Not their build list, not the whole task in big chunks.
 1. Find the very next step. Their next build task is above. Inside it, work out the FIRST piece they haven't done yet, judged from their data (e.g. awareness campaign task: if their bio and pinned posts aren't set up for their niche yet, that's the step; if they are, the next piece is building the campaign). If Dan sent the task back, his note is the step.

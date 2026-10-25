@@ -403,7 +403,7 @@ async function answerPipeline(p: PipelineInput) {
   const focus = !!buildHelp && !buildTaskTitle(p.question);
   // "What should I focus on": Sonnet picks the one sub-step inside their next build task they haven't done,
   // from the task's training and their data, so the answer goes deep on that step instead of the whole task.
-  let nextStep = null as { step?: string; why_first?: string; done_when?: string } | null;
+  let nextStep = null as { step?: string; why_first?: string; done_when?: string; not_now?: string[] } | null;
   if (focus && buildHelp) {
     p.status?.("Working out your very next step…");
     try {
@@ -411,7 +411,7 @@ async function answerPipeline(p: PipelineInput) {
         [{ role: "user", content: `${buildHelp}\n\n=====\n\n${block.text}\n\n=====\n\nDAN'S KNOWLEDGE\n${passageText.slice(0, 6000)}` }], false, clock.data, "step")) as typeof nextStep;
     } catch (err) { console.error("next step pick failed", err); }
   }
-  const stepText = nextStep?.step ? `THE ONE STEP TO ANSWER (picked from their data): ${nextStep.step}${nextStep.why_first ? `\nWhy this first: ${nextStep.why_first}` : ""}${nextStep.done_when ? `\nDone when: ${nextStep.done_when}` : ""}\nAnswer ONLY this step. Don't mention the later parts of the task.\n\n` : "";
+  const stepText = nextStep?.step ? `THE ONE STEP TO ANSWER (picked from their data): ${nextStep.step}${nextStep.why_first ? `\nWhy this first: ${nextStep.why_first}` : ""}${nextStep.done_when ? `\nDone when: ${nextStep.done_when}` : ""}\nAnswer ONLY this step.${Array.isArray(nextStep.not_now) && nextStep.not_now.length ? ` Do not mention or set any of these (later or separate tasks): ${nextStep.not_now.slice(0, 8).join("; ")}.` : " Don't mention the later parts of the task."}\n\n` : "";
   const buildText = buildHelp ? `${buildHelp}\n\n${stepText}${focus ? FOCUS_FORMAT : BUILD_HELP_FORMAT}\n\n=====\n\n` : "";
   // The shape comes from what they actually asked: one problem gets one fix, and a general business
   // question isn't forced through Dan's gates, roadmap or keyword rules.
@@ -612,6 +612,18 @@ async function answerPipeline(p: PipelineInput) {
   }
   // One problem, one fix: the first point is the fix, so anything after it is padding.
   if (oneShot && final.points.length > 1) final = { ...final, points: final.points.slice(0, 1) };
+  // Focus answers stop at "send it to Dan": cut any "then build the campaign…" tail off the last point.
+  if (focus && final.points.length) {
+    const last = final.points[final.points.length - 1];
+    const cut = (s: string) => s.replace(/[,;.]?\s*(and )?then (you |we )?(can )?(move|build|start|go|jump|get)\b.*$/i, ".").replace(/\.\.$/, ".");
+    final = { ...final, points: [...final.points.slice(0, -1), { do: cut(last.do), why: cut(last.why) }] };
+  }
+  // Stale numbers: say which month the advice is based on, if the answer didn't.
+  const staleMonth = block.derived?.data_freshness === "stale" && block.derived.latest_month
+    ? new Date(`${block.derived.latest_month.slice(0, 7)}-15T00:00:00Z`).toLocaleDateString("en-AU", { month: "long", timeZone: "UTC" }) : null;
+  if (staleMonth && !shortAnswer && !/based on your \w+ numbers/i.test(fullText(final))) {
+    final = { ...final, note: `Based on your ${staleMonth} numbers.${final.note ? ` ${final.note}` : " Submit your latest Monthly Check-In."}` };
+  }
   // "bro" stays occasional: at most one, and none if either of Dan's last two answers in this thread used it.
   final = limitBro(final, !p.history.filter(t => t.role === "assistant").slice(-2).some(t => /\bbro\b/i.test(t.content)));
   // Length is fixed by trimming above, so only real problems (privacy, voice, a cut-off, a missing number) withhold the answer.
@@ -714,7 +726,7 @@ function codeChecks(a: Answer, catalogueLines: string[], tokens: string[], short
 }
 
 // ---------- self-test ----------
-const VERSION = "2026-10-24.27";
+const VERSION = "2026-10-24.28";
 
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
