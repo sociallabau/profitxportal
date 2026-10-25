@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HeartPulse, ArrowUpCircle, Search, LayoutGrid, Table2, ClipboardCheck, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { HeartPulse, ArrowUpCircle, Trophy, Search, LayoutGrid, Table2, ClipboardCheck, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import ClientDetailPanel from '@/components/client-health/ClientDetailPanel';
@@ -26,7 +26,7 @@ import {
 } from '@/lib/clientHealth';
 import { computeDrift, DRIFT_BAND, gateNumber, type DriftBand } from '@/lib/driftRisk';
 import { gateHealth, type GateMonth } from '@/lib/gateHealth';
-import { ROMAN, gateNumber as gateNum, type TaskProgress } from '@/lib/growthHub';
+import { ROMAN, gateNumber as gateNum, monthKey, type TaskProgress, type TaskTracking } from '@/lib/growthHub';
 import { useGrowthHubContent } from '@/hooks/useGrowthHub';
 
 export default function ClientHealth() {
@@ -115,14 +115,18 @@ export default function ClientHealth() {
 
   // The gate system: every build task, each member's ticks, their gate-bar numbers and Dan AI's read on them.
   const { data: content } = useGrowthHubContent();
-  const { data: gateData = { progress: {}, months: {}, focus: {} } } = useQuery({
+  const { data: gateData = { progress: {}, months: {}, focus: {}, tracking: {}, newClients: {} } } = useQuery({
     queryKey: ['client-gate-health'],
     enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
-      const [progress, months, memory] = await Promise.all([
+      const thisMonth = monthKey();
+      const [progress, months, memory, tracking, signed] = await Promise.all([
         supabase.from('member_task_progress').select('*'),
         supabase.from('monthly_totals').select('user_id, month, content_posts, leads_generated, new_clients').order('month', { ascending: false }).limit(1000),
         supabase.from('member_memory').select('user_id, memory, brief'),
+        // Live this month, before the check-in: build-list tallies and clients logged as signed.
+        supabase.from('member_task_tracking').select('user_id, task_id, period, working, count').eq('period', thisMonth),
+        supabase.from('new_clients').select('user_id').gte('signed_date', `${thisMonth}-01`),
       ]);
       const byUser = <T extends { user_id: string }>(rows: T[]) =>
         rows.reduce<Record<string, T[]>>((acc, r) => ((acc[r.user_id] ??= []).push(r), acc), {});
@@ -135,6 +139,8 @@ export default function ClientHealth() {
         progress: byUser((progress.data ?? []) as (TaskProgress & { user_id: string })[]),
         months: byUser((months.data ?? []) as (GateMonth & { user_id: string })[]),
         focus,
+        tracking: byUser((tracking.data ?? []) as (TaskTracking & { user_id: string })[]),
+        newClients: (signed.data ?? []).reduce<Record<string, number>>((acc, r) => ((acc[r.user_id] = (acc[r.user_id] ?? 0) + 1), acc), {}),
       };
     },
   });
@@ -165,7 +171,9 @@ export default function ClientHealth() {
       .filter((c: ClientOverview) => !archivedIds.includes(c.id))
       .map((c: ClientOverview) => {
       const monthlyRevenue = Number(c.last_total_revenue || 0);
-      const gh = gateHealth(gateNum(clientGates[c.id]), content?.tasks ?? [], gateData.progress[c.id] ?? [], gateData.months[c.id] ?? []);
+      const gh = gateHealth(gateNum(clientGates[c.id]), content?.tasks ?? [], gateData.progress[c.id] ?? [], gateData.months[c.id] ?? [], monthKey(), {
+        tracking: gateData.tracking[c.id] ?? [], newClientsThisMonth: gateData.newClients[c.id] ?? 0,
+      });
 
       const drift = computeDrift({
         revenueSeries: revenueTrends.revenue?.[c.id] ?? [],
@@ -191,6 +199,7 @@ export default function ClientHealth() {
   const amberCount = clientsWithHealth.filter(c => c.health.band === 'amber').length;
   const redCount   = clientsWithHealth.filter(c => c.health.band === 'red').length;
   const readyToMoveUp = clientsWithHealth.filter(c => c.gh.readyToMoveUp);
+  const hitThisMonth = clientsWithHealth.filter(c => c.gh.hitThisMonth && !c.gh.readyToMoveUp);
   const waitingOnDan = clientsWithHealth.filter(c => c.gh.toApprove > 0);
 
 
@@ -233,7 +242,7 @@ export default function ClientHealth() {
       </div>
 
 
-      {/* Ready to move up a gate: whole build list approved and the gate's monthly bars held 2 months */}
+      {/* Ready to move up a gate: every gate goal hit 2 months running (check-ins, or last month's check-in + this month live) */}
       {readyToMoveUp.length > 0 && (
         <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
@@ -241,7 +250,7 @@ export default function ClientHealth() {
             <h2 className="text-sm font-bold text-primary">Ready to move up a gate</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            Build list fully approved and their gate's monthly bars held 2 months running. Move them up in their profile.
+            Hit every gate goal 2 months running. Check their build list, then move them up in their profile.
           </p>
           <div className="space-y-2">
             {readyToMoveUp.map(client => (
@@ -252,7 +261,37 @@ export default function ClientHealth() {
               >
                 <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
                 <span className="text-xs text-muted-foreground">
-                  Gate {ROMAN[client.gh.gate!]} → {ROMAN[client.gh.gate! + 1]} · {client.gh.goals.map(g => `${g.label} ${g.value ?? 0}/${g.target}`).join(' · ')}
+                  Gate {ROMAN[client.gh.gate!]} → {ROMAN[client.gh.gate! + 1]} · {client.gh.goals.map(g => `${g.label} ${g.live}/${g.target}`).join(' · ')} ·{' '}
+                  <span className={client.gh.buildApproved ? 'text-primary font-semibold' : 'text-orange-600 font-semibold'}>
+                    {client.gh.buildApproved ? 'build list approved' : `build list ${client.gh.build.approved}/${client.gh.build.total} approved`}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Hit every gate goal this month, live from check-ins, build-list tallies and logged clients */}
+      {hitThisMonth.length > 0 && (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-sm font-bold text-emerald-700">Hit their gate goals this month ({hitThisMonth.length})</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Every goal for their gate is at target this month. Hold it next month and they show up above, ready to move up.
+          </p>
+          <div className="space-y-2">
+            {hitThisMonth.map(client => (
+              <button
+                key={client.id}
+                onClick={() => setSelectedClient(client)}
+                className="w-full flex items-center justify-between bg-card/50 rounded-lg p-3 border border-border hover:bg-card transition text-left"
+              >
+                <span className="text-sm font-semibold text-foreground">{client.full_name}</span>
+                <span className="text-xs text-muted-foreground">
+                  Gate {ROMAN[client.gh.gate!]} · {client.gh.goals.map(g => `${g.label} ${g.live}/${g.target}`).join(' · ')}
                 </span>
               </button>
             ))}

@@ -5,10 +5,6 @@ import {
   type GateNumber, type GrowthHubGate, type GrowthHubTask, type TaskProgress, type TaskTracking, type TaskWithStatus,
 } from '@/lib/growthHub';
 
-// member_task_tracking is newer than the generated Supabase types; Lovable regenerates them after the migration.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const trackingTable = () => (supabase as any).from('member_task_tracking');
-
 export type GateModule = { gate: GateNumber; module_code: string; note: string | null; position: number };
 export type MemberGrowthHub = { fast_track_lead_gen: boolean; fast_track_since: string | null; extra_modules: string[] };
 
@@ -52,7 +48,7 @@ export function useMemberGrowthHub(userId?: string | null) {
         supabase.from('member_task_progress').select('*').eq('user_id', userId!),
         supabase.from('member_playbook').select('fast_track_lead_gen, fast_track_since, extra_modules').eq('user_id', userId!).maybeSingle(),
         // Before the tracking migration runs this table doesn't exist; the build list just shows no tallies.
-        trackingTable().select('task_id, period, working, count').eq('user_id', userId!),
+        supabase.from('member_task_tracking').select('task_id, period, working, count').eq('user_id', userId!),
       ]);
       return {
         progress: (progress.data ?? []) as TaskProgress[],
@@ -93,7 +89,7 @@ export function useTrackTask(userId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (t: { task_id: string; period: string; working: boolean; count: number }) => {
-      const { error } = await trackingTable()
+      const { error } = await supabase.from('member_task_tracking')
         .upsert({ ...t, user_id: userId!, updated_at: new Date().toISOString() }, { onConflict: 'user_id,task_id,period' });
       if (error) throw error;
     },
