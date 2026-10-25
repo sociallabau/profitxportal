@@ -171,6 +171,24 @@ const CALLS: Call[] = [
       'How to keep your retainer clients over the Christmas period.',
     thumbnail: christmasThumb,
   },
+  {
+    title: 'ProfitX - November Intensive',
+    category: 'Coaching',
+    start: '2026-11-04T08:00:00',
+    durationMins: 300,
+    meetUrl: 'https://meet.google.com/mna-qjor-qpv',
+    description:
+      'November Intensive with Colby (Content & Lead Generation), Darcy Campbell (Sales Process & Sales) and Dan (Finance + AI).',
+  },
+  {
+    title: 'ProfitX Workshop - AI Systems™',
+    category: 'Workshop',
+    workshopType: 'do',
+    start: '2026-11-18T07:00:00',
+    durationMins: 90,
+    meetUrl: '',
+    description: 'Simple AI setups and building your dashboard.',
+  },
 
 ];
 
@@ -200,6 +218,18 @@ const MOMENTUM_DATES = [
   '2026-11-10',
   '2026-11-17',
   '2026-11-24',
+  '2026-12-01',
+  '2026-12-08',
+  '2026-12-15',
+  '2026-12-22',
+  '2026-12-29',
+  '2027-01-05',
+  '2027-01-12',
+  '2027-01-19',
+  '2027-01-26',
+  '2027-02-02',
+  '2027-02-09',
+  '2027-02-16',
 ];
 
 
