@@ -169,6 +169,13 @@
       "when": 1792886159034,
       "tag": "0023_add_sales_stall_one_fix_test",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792887942391,
+      "tag": "0024_add_instagram_profile_to_member_memory",
+      "breakpoints": true
     }
   ]
 }

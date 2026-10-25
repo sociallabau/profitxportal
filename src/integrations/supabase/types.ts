@@ -913,6 +913,7 @@ export type Database = {
           instagram: Json | null
           instagram_fetched_at: string | null
           instagram_handle: string | null
+          instagram_profile: Json | null
           memory: Json
           refresh_started_at: string | null
           refreshed_at: string | null
@@ -926,6 +927,7 @@ export type Database = {
           instagram?: Json | null
           instagram_fetched_at?: string | null
           instagram_handle?: string | null
+          instagram_profile?: Json | null
           memory?: Json
           refresh_started_at?: string | null
           refreshed_at?: string | null
@@ -939,6 +941,7 @@ export type Database = {
           instagram?: Json | null
           instagram_fetched_at?: string | null
           instagram_handle?: string | null
+          instagram_profile?: Json | null
           memory?: Json
           refresh_started_at?: string | null
           refreshed_at?: string | null
