@@ -47,9 +47,15 @@ export default function DashboardProgress({ series, gate, keyTask, moveUp, nextM
           <span className="text-xs text-muted-foreground">{current ? `${current.month} · ${money(revenue)}/mth` : 'No monthly report yet'}</span>
         </div>
         {current && revenue < INNER_CIRCLE && (
-          <p className="mx-3 mb-2 text-[10px] sm:text-[11px] font-semibold text-amber-700 dark:text-amber-300" title={`${money(INNER_CIRCLE - revenue)}/mth to go, at $2,500 per retainer client`}>
-            {clientsToInnerCircle(revenue)} clients until Inner Circle invite <span className="font-normal text-muted-foreground">(based on $2.5k retainer)</span>
-          </p>
+          <div className="relative mx-3 h-4 mb-1">
+            <span
+              className="absolute -translate-x-1/2 whitespace-nowrap text-[10px] sm:text-[11px] font-semibold text-amber-700 dark:text-amber-300"
+              style={{ left: `${revenuePosition(INNER_CIRCLE)}%` }}
+              title={`${money(INNER_CIRCLE - revenue)}/mth to go, at $2,500 per retainer client`}
+            >
+              {clientsToInnerCircle(revenue)} clients until Inner Circle invite <span className="font-normal text-muted-foreground">(based on $2.5k retainer)</span>
+            </span>
+          </div>
         )}
         <div className="relative mx-3" role="progressbar" aria-label="Revenue ladder progress" aria-valuemin={0} aria-valuemax={150000} aria-valuenow={Math.min(revenue, 150000)} aria-valuetext={`${money(revenue)} per month`}>
           {current && <div className="absolute bottom-3 -translate-x-1/2 flex flex-col items-center" style={{ left: `${Math.max(3, Math.min(97, position))}%` }}>
