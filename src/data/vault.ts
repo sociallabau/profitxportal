@@ -25,6 +25,16 @@ export type VaultItem = {
 
 export const VAULT_ITEMS: VaultItem[] = [
   {
+    title: 'Momentum Call - Outsourced Video Editing Help + Breaking Down Limiting Beliefs',
+    sortDate: '2026-10-27',
+    category: 'Momentum Call',
+    date: 'Oct 27',
+    url: 'https://drive.google.com/file/d/1y4IQtcsbA4DHJ1MaRD47ZnheLhydLvPM/view?usp=sharing',
+    thumb: 'vaultMomentumJun23',
+    transcriptUrl: 'https://docs.google.com/document/d/1Drp_CGhetHMXJhU2xNv9DMa5G6UNn97jiR5s-Uz12sc/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+  },
+  {
     title: 'Workshop — Ad Metrics & Tracking 101™',
     sortDate: '2026-10-14',
     category: 'Workshop',
