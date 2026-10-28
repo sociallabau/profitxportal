@@ -22,6 +22,7 @@ import hotSeatElijahThumb from '@/assets/hot-seat-elijah-thumb.png';
 import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 import vaultTheSystem from '@/assets/the-system-thumb.png';
 import vaultAdMetrics101 from '@/assets/ad-metrics-thumb.png';
+import vaultChristmasComesEarly from '@/assets/christmas-comes-early-thumb.png';
 
 import { VAULT_ITEMS, type VaultItem } from '@/data/vault';
 
@@ -46,6 +47,7 @@ const THUMBS: Record<string, string> = {
   payToPlayThumb,
   vaultTheSystem,
   vaultAdMetrics101,
+  vaultChristmasComesEarly,
 };
 
 const categoryStyles: Record<VaultItem['category'], string> = {
