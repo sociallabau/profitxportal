@@ -25,6 +25,18 @@ export type VaultItem = {
 
 export const VAULT_ITEMS: VaultItem[] = [
   {
+    title: 'Workshop — Christmas Comes Early™',
+    sortDate: '2026-10-28',
+    category: 'Workshop',
+    date: 'Oct 28',
+    url: 'https://drive.google.com/file/d/19USTp9uMsTB_oOIu7wDPgY1Pd8m26Tq0/view?usp=sharing',
+    thumb: 'vaultChristmasComesEarly',
+    transcriptUrl: 'https://docs.google.com/document/d/1Ucwj-JwoEqjxPW3PCj063YonRO6dR04I8fSAf4rdmU8/edit?usp=sharing',
+    transcriptLabel: 'Notes',
+    workbookUrl: 'https://messy-arrow-f59.notion.site/Christmas-Comes-Early-401bdcf32ce480129712da0df862c291?source=copy_link',
+    workbookLabel: 'Workbook',
+  },
+  {
     title: 'Momentum Call - Outsourced Video Editing Help + Breaking Down Limiting Beliefs',
     sortDate: '2026-10-27',
     category: 'Momentum Call',
