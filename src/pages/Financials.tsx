@@ -3,6 +3,7 @@ import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import MonthlyReview from '@/components/MonthlyReview';
+import ClientProfitCalculator from '@/components/ClientProfitCalculator';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { usePageTracking } from '@/hooks/usePageTracking';
@@ -155,6 +156,7 @@ export default function Financials() {
           <p className="text-base font-semibold text-foreground mb-2">No financial data yet</p>
           <p className="text-sm text-muted-foreground">Submit your monthly check-in to see your real numbers and margins here.</p>
         </div>
+        <div className="mt-5"><ClientProfitCalculator userId={user?.id} /></div>
         <MonthlyReview />
       </PageLayout>
     );
@@ -277,6 +279,7 @@ export default function Financials() {
           </div>
         </div>
       )}
+      <div className="mt-5"><ClientProfitCalculator userId={user?.id} /></div>
       <MonthlyReview />
     </PageLayout>
   );
