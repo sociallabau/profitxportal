@@ -211,7 +211,7 @@ export default function Onboarding() {
               </p>
               <ul className="space-y-3 mb-8">
                 {[
-                  ['About you', 'Name & a short business overview so your coach has context.'],
+                  ['About you', 'Name & a short business overview so Dan has context.'],
                   ['90-day MRR goal', "Where you're starting and where you want to be in 90 days."],
                   [`Baseline report (${lastMonthLabel})`, 'Quick MRR / revenue / expenses so we can track from day one.'],
                 ].map(([t, d]) => (
@@ -236,7 +236,7 @@ export default function Onboarding() {
           {step === 1 && (
             <div>
               <h2 className="text-xl font-bold text-foreground mb-1">About you</h2>
-              <p className="text-sm text-muted-foreground mb-6">Your coach will see this in the client portal.</p>
+              <p className="text-sm text-muted-foreground mb-6">Dan will see this in the client portal.</p>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">Full Name *</label>
