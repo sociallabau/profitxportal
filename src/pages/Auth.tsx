@@ -179,7 +179,7 @@ export default function Auth() {
                   className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Don't have a code? Reach out to your coach.
+                  Don't have a code? Message Dan.
                 </p>
               </div>
             )}
