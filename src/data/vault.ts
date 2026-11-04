@@ -25,6 +25,25 @@ export type VaultItem = {
 
 export const VAULT_ITEMS: VaultItem[] = [
   {
+    title: 'November Intensive',
+    sortDate: '2026-11-04',
+    category: 'Workshop',
+    date: 'Nov 4',
+    url: 'https://drive.google.com/file/d/1ZbMepkZ6OKj_s-E4rkRAl5v7w8NohBhg/view?usp=sharing',
+    thumb: 'vaultNovemberIntensive',
+    transcriptUrl: 'https://docs.google.com/document/d/1tCOOm5QTgBmcT2_dwwLazidRZPT7NvqdyPyrH5h2THU/edit?usp=sharing',
+    transcriptLabel: 'Full Notes',
+    workbookUrl: 'https://drive.google.com/file/d/15lVcI05nwaB5tXVNW7TvTB5HOUjeMKwL/view?usp=sharing',
+    workbookLabel: 'Chat Notes',
+    gptUrl: 'https://claude.ai/artifact/ENwKKBV15i21t2PyC1erNN',
+    gptLabel: 'Cognition Content Coach AI',
+    templates: [
+      { label: "Darcy's Presentation", url: 'https://www.dropbox.com/scl/fi/lyvp2viagfdg82zafpcgs/Sales-Seminar.pdf?rlkey=jbgu0zbpakgd5zu8itg97iz5y&st=bluggfbp&e=1&dl=0' },
+      { label: "Colby's Presentation", url: 'https://claude.ai/artifact/Vc4XkLwvS9FRemS763YfUm#slide-3dd33bdac6c2' },
+      { label: 'Grok Bot', url: 'https://cursor.com/download/bot' },
+    ],
+  },
+  {
     title: 'Workshop — Christmas Comes Early™',
     sortDate: '2026-10-28',
     category: 'Workshop',
