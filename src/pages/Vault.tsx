@@ -23,6 +23,7 @@ import payToPlayThumb from '@/assets/pay-to-play-thumb.png';
 import vaultTheSystem from '@/assets/the-system-thumb.png';
 import vaultAdMetrics101 from '@/assets/ad-metrics-thumb.png';
 import vaultChristmasComesEarly from '@/assets/christmas-comes-early-thumb.png';
+import vaultNovemberIntensive from '@/assets/november-intensive-thumb.png';
 
 import { VAULT_ITEMS, type VaultItem } from '@/data/vault';
 
@@ -48,6 +49,7 @@ const THUMBS: Record<string, string> = {
   vaultTheSystem,
   vaultAdMetrics101,
   vaultChristmasComesEarly,
+  vaultNovemberIntensive,
 };
 
 const categoryStyles: Record<VaultItem['category'], string> = {
