@@ -39,7 +39,7 @@ export default function Auth() {
       });
       const data = await res.json();
       if (!data.valid) {
-        setError('Invalid signup code. Contact your coach for access.');
+        setError('Invalid signup code. Message Dan for access.');
         setLoading(false);
         return;
       }
@@ -173,7 +173,7 @@ export default function Auth() {
                   type="text"
                   value={signupCode}
                   onChange={e => setSignupCode(e.target.value)}
-                  placeholder="Provided by your coach"
+                  placeholder="Provided by Dan"
                   required
                   maxLength={100}
                   className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
