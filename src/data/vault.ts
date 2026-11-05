@@ -38,6 +38,7 @@ export const VAULT_ITEMS: VaultItem[] = [
     gptUrl: 'https://claude.ai/artifact/ENwKKBV15i21t2PyC1erNN',
     gptLabel: 'Cognition Content Coach AI',
     templates: [
+      { label: "Dan's Presentation", url: 'https://messy-arrow-f59.notion.site/Profit-By-Design-409bdcf32ce48270b47781a478c83059?source=copy_link' },
       { label: "Darcy's Presentation", url: 'https://www.dropbox.com/scl/fi/lyvp2viagfdg82zafpcgs/Sales-Seminar.pdf?rlkey=jbgu0zbpakgd5zu8itg97iz5y&st=bluggfbp&e=1&dl=0' },
       { label: "Colby's Presentation", url: 'https://claude.ai/artifact/Vc4XkLwvS9FRemS763YfUm#slide-3dd33bdac6c2' },
       { label: 'Grok Bot', url: 'https://cursor.com/download/bot' },
