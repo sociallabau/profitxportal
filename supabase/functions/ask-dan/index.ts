@@ -169,7 +169,7 @@ async function loadMemberInput(admin: DB, memberId: string): Promise<MemberInput
   const extrasPromise = profileQuery.then(({ data }: { data: { gate: string | null } | null }) => loadExtras(admin, memberId, data?.gate ?? null));
   const [{ data: profile }, { data: room }, { data: totals }, { data: goal }, extras] = await Promise.all([
     profileQuery,
-    admin.from("context_rooms").select("answers").eq("user_id", memberId).maybeSingle(),
+    admin.from("context_rooms").select("answers, section_updated_at").eq("user_id", memberId).maybeSingle(),
     admin.from("monthly_totals")
       .select("month, mrr, mrr_manual, total_revenue, oneoff_revenue, expenses, new_clients, leads_generated, booked_calls, calls_showed, offers_made, ad_spend, content_posts, active_retainers, retainers_lost, retainer_convos, ad_leads, case_studies_posted, ad_spend_awareness, ad_spend_leadgen, meetings, expense_contractors")
       .eq("user_id", memberId).order("month", { ascending: false }).limit(6),
@@ -181,7 +181,8 @@ async function loadMemberInput(admin: DB, memberId: string): Promise<MemberInput
   return {
     name: profile?.full_name ?? null, business_overview: profile?.business_overview ?? null,
     gate: profile?.gate ?? null, gate_key_task: profile?.gate_key_task ?? null, gate_move_up: profile?.gate_move_up ?? null,
-    answers, totals: totals ?? [], goal: goal ?? null, extras,
+    answers, contextTimestamps: (room?.section_updated_at ?? {}) as Record<string, string>,
+    totals: totals ?? [], goal: goal ?? null, extras,
   };
 }
 

@@ -1,6 +1,6 @@
 // Member context + DERIVED numbers, computed in code so the model never does the maths.
 // Pure: no I/O. Used for real members (MEMBER/ADMIN mode) and synthetic personas (TEST mode).
-import { contextSections, isFilled, type ContextAnswers } from "../_shared/contextRoom.ts";
+import { contextSections, isFilled, sectionAge, type ContextAnswers } from "../_shared/contextRoom.ts";
 import { nextBuildTask, type MemberExtras } from "./dossier.ts";
 import { instagramLines } from "./instagram.ts";
 import { signalLines, signals } from "./signals.ts";
@@ -23,6 +23,7 @@ export type MemberInput = {
   business_overview?: string | null;
   gate?: string | null; gate_key_task?: string | null; gate_move_up?: string | null;
   answers: ContextAnswers;
+  contextTimestamps?: Record<string, string>; // context_rooms.section_updated_at, keyed by section key
   totals: Totals[]; // newest first, max 6
   goal: Goal | null;
   extras?: MemberExtras; // everything else in the portal (real members only; personas don't have it)
@@ -38,7 +39,7 @@ export type Derived = {
   cac_vs_first_month: number | null; cac_verdict: string;
   revenue_reliable: boolean; calls_tracked: boolean;
   goal_status: "current" | "expired" | "none";
-  context_room_filled: number; context_room_missing: string[];
+  context_room_filled: number; context_room_missing: string[]; stale_context_sections: string[];
 };
 
 const KEY_FIELDS: [string, string][] = [
@@ -93,6 +94,11 @@ export function derive(m: MemberInput, today = new Date()): Derived {
   const filled = fields.filter(f => isFilled(m.answers[f.key])).length;
   const ov = m.business_overview?.trim() || "";
   const missing = KEY_FIELDS.filter(([k]) => !isFilled(m.answers[k]) && !(ov && OVERVIEW_COVERS[k]?.test(ov))).map(([, l]) => l);
+  const timestamps = m.contextTimestamps ?? {};
+  const staleSections = contextSections
+    .filter(s => s.fields.filter(f => f.key !== "anything_else").some(f => isFilled(m.answers[f.key])))
+    .filter(s => sectionAge(timestamps[s.key], today.getTime()).needsRefresh)
+    .map(s => s.title);
   const oneoff = latest?.oneoff_revenue ?? null, totalRev = latest?.total_revenue ?? null;
   const allOneoff = (mrrLatest ?? 0) === 0 && ((totalRev ?? 0) > 0 || (oneoff ?? 0) > 0);
   return {
@@ -103,7 +109,7 @@ export function derive(m: MemberInput, today = new Date()): Derived {
     cost_per_client: cpc, lowest_retainer_price: low,
     cac_vs_first_month: ratio != null ? Math.round(ratio * 100) : null, cac_verdict: verdict,
     revenue_reliable: revenueReliable, calls_tracked: callsTracked, goal_status: goalStatus,
-    context_room_filled: filled, context_room_missing: missing,
+    context_room_filled: filled, context_room_missing: missing, stale_context_sections: staleSections,
   };
 }
 
@@ -169,6 +175,7 @@ export function buildMemberBlock(m: MemberInput, today = new Date()): { text: st
   else if (d.goal_status === "current") L.push(`- Goal: ${money(m.goal!.target_mrr ?? 0)} MRR by ${m.goal!.target_date} — current`);
   else L.push("- Goal: none set");
   if (d.context_room_missing.length) L.push(`Missing from Context Room: ${d.context_room_missing.join(", ")}`);
+  if (d.stale_context_sections.length) L.push(`Context Room sections untouched for 90+ days (answers may be outdated — don't state them as certain fact): ${d.stale_context_sections.join(", ")}`);
   if (m.extras) L.push(...extrasLines(m.extras));
   L.push(...signalLines(signals(m, d)));
 
@@ -202,7 +209,7 @@ export function extrasLines(x: MemberExtras): string[] {
   }
   if (x.fast_track_lead_gen) L.push("LEAD GEN FAST-TRACK: APPROVED BY DAN — lead gen ads ($20/day+) are allowed now even though they're below Gate 3.");
   if (x.extra_modules.length) L.push(`Extra modules Dan unlocked for them: ${x.extra_modules.join(", ")}`);
-  const ci = x.check_ins.filter(c => c.biggest_win || c.needs_this_month || c.business_confidence != null);
+  const ci = x.check_ins.filter(c => c.biggest_win || c.needs_this_month || c.business_confidence != null || c.meetings != null || c.nps != null);
   if (ci.length) {
     L.push("Monthly check-in answers (newest first):");
     for (const c of ci.slice(0, 4)) {
