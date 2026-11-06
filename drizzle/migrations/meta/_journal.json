@@ -197,6 +197,13 @@
       "when": 1793938324333,
       "tag": "0027_20261107100000_a1d8f3c6_2e47_4b90_9c15_7f3b8e0d6a29",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793938341268,
+      "tag": "0028_reload_api_schema_client_health",
+      "breakpoints": true
     }
   ]
 }
