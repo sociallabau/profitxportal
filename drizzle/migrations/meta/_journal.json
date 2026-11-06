@@ -183,6 +183,13 @@
       "when": 1792901601441,
       "tag": "0025_create_member_task_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793938304122,
+      "tag": "0026_20261107090000_c9a4e1d7_6b32_4f58_9d0a_3e7b5c2f8a14",
+      "breakpoints": true
     }
   ]
 }

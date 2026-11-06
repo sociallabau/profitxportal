@@ -211,6 +211,63 @@ export type Database = {
           },
         ]
       }
+      client_care: {
+        Row: {
+          checkin_bullets: Json | null
+          client_id: string
+          dan_read: string | null
+          dan_read_at: string | null
+          dan_read_by: string | null
+          dan_read_note: string | null
+          snapshot: string | null
+          snapshot_at: string | null
+          snapshot_month: string | null
+          touch_every_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          checkin_bullets?: Json | null
+          client_id: string
+          dan_read?: string | null
+          dan_read_at?: string | null
+          dan_read_by?: string | null
+          dan_read_note?: string | null
+          snapshot?: string | null
+          snapshot_at?: string | null
+          snapshot_month?: string | null
+          touch_every_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          checkin_bullets?: Json | null
+          client_id?: string
+          dan_read?: string | null
+          dan_read_at?: string | null
+          dan_read_by?: string | null
+          dan_read_note?: string | null
+          snapshot?: string | null
+          snapshot_at?: string | null
+          snapshot_month?: string | null
+          touch_every_days?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_care_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_care_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_health: {
         Row: {
           client_user_id: string
@@ -345,6 +402,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      client_touchpoints: {
+        Row: {
+          author_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          kind: string
+          note: string | null
+          occurred_at: string
+          source: string
+        }
+        Insert: {
+          author_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          note?: string | null
+          occurred_at?: string
+          source?: string
+        }
+        Update: {
+          author_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          occurred_at?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_touchpoints_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_touchpoints_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_posts: {
         Row: {
