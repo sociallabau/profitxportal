@@ -204,6 +204,13 @@
       "when": 1793938341268,
       "tag": "0028_reload_api_schema_client_health",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793942682932,
+      "tag": "0029_20261107110000_e5b2a9c4_8d13_4f67_a0e1_4c9d7b3f2a58",
+      "breakpoints": true
     }
   ]
 }

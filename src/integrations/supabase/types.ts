@@ -481,6 +481,13 @@ export type Database = {
             foreignKeyName: "client_status_log_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
