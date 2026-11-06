@@ -1,16 +1,17 @@
 // The Monday "who do I talk to this week" list for Dan and Emily.
 //
-// Called three ways:
-//   - by the Monday cron job (x-cron-secret). If DIGEST_WEBHOOK_URL is set the
-//     digest is also POSTed there as { text, items }, so Zapier/Make can turn it
-//     into a WhatsApp, Slack or email message. The portal has no email provider.
-//   - by an admin in the portal ("Weekly digest" button), which just gets it back.
+// Called two ways:
+//   - by the Monday cron job (x-cron-secret). It saves this week's snapshot, so next Monday can
+//     say who got worse, and, if DIGEST_WEBHOOK_URL is set, POSTs { text, items } there so
+//     Zapier/Make can turn it into a WhatsApp, Slack or email message. The portal has no
+//     email provider.
+//   - by an admin in the portal ("Weekly digest" button), which just gets it back and saves nothing.
 // The portal never sends a client anything from here: it is for the team only.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { isCronCall } from "../_shared/cron.ts";
 import {
-  attention, computeMomentum, daysBetween, describeQuarterly, effectiveStatus, formatShortDate,
-  lastContact, quarterly, touchEveryDays, STATUS_STYLE, type DanRead, type Touchpoint,
+  assessClient, BUCKET_SEVERITY, BUCKET_STYLE, describeQuarterly, formatShortDate,
+  type Bucket, type DanRead, type MonthInput, type Touchpoint,
 } from "../_shared/clientCare.ts";
 
 const corsHeaders = {
@@ -18,6 +19,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 const TOP = 10;
+
+type Row = Record<string, number | string | null>;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -38,61 +41,98 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date();
-    const [people, totals, touches, care, rooms] = await Promise.all([
+    const today = now.toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
+    // The planned-date column arrives with the latest migration: until then, read the care table without it.
+    const readCare = async () => {
+      const full = await admin.from("client_care").select("client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on");
+      return full.error ? await admin.from("client_care").select("client_id, touch_every_days, dan_read, dan_read_note") : full;
+    };
+    const [people, totals, touches, care, rooms, overview, previous] = await Promise.all([
       admin.from("profiles").select("id, full_name, created_at").is("archived_at", null).or("is_admin.is.null,is_admin.eq.false"),
-      admin.from("monthly_totals").select("user_id, month, created_at, total_revenue, mrr, mrr_manual, oneoff_revenue, business_confidence, retainers_lost, active_retainers, expenses").order("month", { ascending: false }).limit(1500),
+      admin.from("monthly_totals").select("user_id, month, total_revenue, mrr, mrr_manual, oneoff_revenue, business_confidence, nps, retainers_lost, active_retainers, expenses").order("month", { ascending: false }).limit(1500),
       admin.from("client_touchpoints").select("client_id, kind, occurred_at").order("occurred_at", { ascending: false }).limit(10000),
-      admin.from("client_care").select("client_id, touch_every_days, dan_read"),
+      readCare(),
       admin.from("context_rooms").select("user_id, cadence:answers->>check_in_cadence"),
+      admin.from("admin_client_overview").select("id, days_since_submission, days_since_last_login"),
+      admin.from("client_status_log").select("client_id, snapshot_on, bucket").lt("snapshot_on", today).order("snapshot_on", { ascending: false }).limit(5000),
     ]);
-    for (const r of [people, totals, touches, care, rooms]) if (r.error) throw r.error;
+    for (const r of [people, totals, touches, care, rooms, overview]) if (r.error) throw r.error;
+    // The snapshot table may not exist yet if the latest migration has not run: skip "what changed" rather than fail.
+    const previousRows = previous.error ? [] : previous.data ?? [];
 
     const group = <T extends Record<string, unknown>>(rows: T[] | null, key: string) =>
       (rows ?? []).reduce<Record<string, T[]>>((acc, r) => ((acc[String(r[key])] ??= []).push(r), acc), {});
-    const totalsBy = group(totals.data as Record<string, unknown>[], "user_id");
-    const touchesBy = group(touches.data as Record<string, unknown>[], "client_id");
+    const totalsBy = group(totals.data as Row[], "user_id");
+    const touchesBy = group(touches.data as Row[], "client_id");
     const careBy = Object.fromEntries((care.data ?? []).map(c => [c.client_id, c]));
     const cadenceBy = Object.fromEntries(((rooms.data ?? []) as unknown as { user_id: string; cadence: string | null }[]).map(r => [r.user_id, r.cadence]));
+    const overviewBy = Object.fromEntries((overview.data ?? []).map(o => [o.id, o]));
+    // The most recent earlier snapshot per client.
+    const previousBucket: Record<string, Bucket> = {};
+    for (const r of previousRows) if (!(r.client_id in previousBucket)) previousBucket[r.client_id] = r.bucket as Bucket;
 
     const items = (people.data ?? []).map(p => {
-      const months = (totalsBy[p.id] ?? []) as Record<string, number | string | null>[];
-      const num = (r: Record<string, number | string | null>) =>
-        Number(r.total_revenue) || (Number(r.mrr_manual || r.mrr || 0) + Number(r.oneoff_revenue || 0));
-      const lastCheckin = months[0]?.created_at ? daysBetween(new Date(String(months[0].created_at)), now) : null;
-      const momentum = computeMomentum({
-        revenueSeries: months.map(num),
-        confidenceSeries: months.map(r => (r.business_confidence as number | null) ?? null),
-        retainersLostSeries: months.map(r => (r.retainers_lost as number | null) ?? null),
-        activeRetainersSeries: months.map(r => (r.active_retainers as number | null) ?? null),
-        expensesSeries: months.map(r => (r.expenses as number | null) ?? null),
-        daysSinceCheckin: lastCheckin,
-        daysSinceJoined: p.created_at ? daysBetween(new Date(p.created_at), now) : null,
-      });
+      const months: MonthInput[] = ((totalsBy[p.id] ?? []) as Row[]).map(m => ({
+        revenue: Number(m.total_revenue) || (Number(m.mrr_manual || m.mrr || 0) + Number(m.oneoff_revenue || 0)),
+        confidence: (m.business_confidence as number | null) ?? null,
+        nps: (m.nps as number | null) ?? null,
+        retainersLost: (m.retainers_lost as number | null) ?? null,
+        activeRetainers: (m.active_retainers as number | null) ?? null,
+        expenses: (m.expenses as number | null) ?? null,
+      }));
       const c = careBy[p.id];
-      const { status } = effectiveStatus(momentum, (c?.dan_read ?? null) as DanRead | null);
-      const tps = (touchesBy[p.id] ?? []) as unknown as Touchpoint[];
-      const contact = lastContact(tps, now);
-      const q = quarterly(tps, p.created_at, now);
-      const attn = attention({ status, contact, quarterly: q, touchEveryDays: touchEveryDays(c?.touch_every_days, cadenceBy[p.id]), isNew: momentum.status === "new" });
-      return { id: p.id, name: p.full_name ?? "Unnamed", status: STATUS_STYLE[status].label, quarterly: q, attention: attn };
+      const o = overviewBy[p.id];
+      const a = assessClient({
+        joinedAt: p.created_at, months,
+        daysSinceCheckin: o?.days_since_submission ?? null,
+        daysSinceLogin: o?.days_since_last_login ?? null,
+        touchpoints: (touchesBy[p.id] ?? []) as unknown as Touchpoint[],
+        danRead: (c?.dan_read ?? null) as DanRead | null, danReadNote: c?.dan_read_note ?? null,
+        touchEveryExplicit: c?.touch_every_days, contextCadence: cadenceBy[p.id], quarterlyPlannedOn: (c as { quarterly_due_on?: string | null } | undefined)?.quarterly_due_on,
+      }, now);
+      return { id: p.id, name: p.full_name ?? "Unnamed", ...a };
     });
 
-    const todo = items.filter(i => i.attention.priority > 0).sort((a, b) => b.attention.priority - a.attention.priority);
-    const soon = items.filter(i => i.quarterly.state === "soon" || i.quarterly.state === "overdue")
-      .sort((a, b) => (a.quarterly.daysUntil ?? 0) - (b.quarterly.daysUntil ?? 0));
+    const inBucket = (b: Bucket) => items.filter(i => i.attention.bucket === b).sort((x, y) => y.attention.priority - x.attention.priority);
+    const act = inBucket("act");
+    const reach = inBucket("reach");
+    const quarterlyList = inBucket("quarterly");
+    const doingWell = items.filter(i => i.attention.bucket === "good" || i.attention.bucket === "new").length;
+    const worse = items
+      .filter(i => previousBucket[i.id] && BUCKET_SEVERITY[i.attention.bucket] > BUCKET_SEVERITY[previousBucket[i.id]])
+      .sort((x, y) => y.attention.priority - x.attention.priority);
 
-    const heading = `ProfitX weekly — ${now.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short", timeZone: "Australia/Sydney" })}`;
-    const lines = [heading, `${items.length} clients · ${todo.length} need a message or call`, ""];
-    if (todo.length) {
-      lines.push(`TALK TO NEXT${todo.length > TOP ? ` (top ${TOP} of ${todo.length})` : ""}`);
-      for (const i of todo.slice(0, TOP)) lines.push(`• ${i.name} (${i.status}) — ${i.attention.reasons.join(" · ")}`);
-    } else lines.push("Nobody needs a message or call this week.");
-    if (soon.length) {
-      lines.push("", "QUARTERLY CALLS");
-      for (const i of soon.slice(0, TOP)) lines.push(`• ${i.name} — ${describeQuarterly(i.quarterly)} (due ${formatShortDate(i.quarterly.dueAt)})`);
+    const line = (i: (typeof items)[number], extra = "") => `• ${i.name} — ${i.attention.reasons.slice(0, 3).join(" · ")}${extra}`;
+    const lines = [
+      `ProfitX weekly — ${now.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short", timeZone: "Australia/Sydney" })}`,
+      `${act.length + reach.length} need you this week · ${doingWell} doing well`,
+    ];
+    if (worse.length) {
+      lines.push("", "GOT WORSE SINCE LAST WEEK");
+      for (const i of worse.slice(0, TOP)) lines.push(line(i, ` (was ${BUCKET_STYLE[previousBucket[i.id]].label.toLowerCase()}, now ${BUCKET_STYLE[i.attention.bucket].label.toLowerCase()})`));
     }
+    if (act.length) { lines.push("", "ACT NOW"); for (const i of act.slice(0, TOP)) lines.push(line(i)); }
+    if (reach.length) { lines.push("", "REACH OUT"); for (const i of reach.slice(0, TOP)) lines.push(line(i)); }
+    if (quarterlyList.length) {
+      lines.push("", "QUARTERLY CALLS");
+      for (const i of quarterlyList.slice(0, TOP)) lines.push(`• ${i.name} — ${describeQuarterly(i.quarterly)} (due ${formatShortDate(i.quarterly.dueAt)})`);
+    }
+    if (!act.length && !reach.length && !quarterlyList.length) lines.push("", "Nobody needs you this week.");
     const text = lines.join("\n");
-    const payload = { text, items: todo.slice(0, TOP).map(i => ({ client: i.name, status: i.status, reasons: i.attention.reasons })) };
+    const payload = {
+      text,
+      items: [...act, ...reach].slice(0, TOP).map(i => ({ client: i.name, bucket: i.attention.bucket, reasons: i.attention.reasons })),
+      got_worse: worse.slice(0, TOP).map(i => i.name),
+    };
+
+    // Save this week's snapshot, but only from the Monday job: opening the digest in the portal must not rewrite history.
+    if (cron) {
+      const { error } = await admin.from("client_status_log").upsert(
+        items.map(i => ({ client_id: i.id, snapshot_on: today, bucket: i.attention.bucket, status: i.status, reasons: i.attention.reasons })),
+        { onConflict: "client_id,snapshot_on" },
+      );
+      if (error) console.error("could not save the status snapshot", error.message);
+    }
 
     let webhook: "sent" | "failed" | "not set" = "not set";
     const url = Deno.env.get("DIGEST_WEBHOOK_URL");

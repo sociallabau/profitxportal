@@ -261,6 +261,9 @@ export default function ClientDetailPanel({
                 {s.label}{c.overridden ? " · your read" : c.momentum.reasons.length ? ` · ${c.momentum.reasons.join(' · ')}` : ''}
                 <span className="text-muted-foreground font-normal"> · {formatTierLabel(c.tier)}</span>
               </p>
+              {c.attention.reasons.length > 0 && (
+                <p className="mt-0.5 text-xs text-foreground/80">{c.attention.reasons.join(' · ')}</p>
+              )}
             </div>
           </div>
           <button onClick={() => onClose()} className="p-2 rounded-lg hover:bg-muted/50 transition" aria-label="Close">
@@ -324,6 +327,11 @@ export default function ClientDetailPanel({
                 {c.contact.days === null ? 'None logged' : c.contact.days === 0 ? 'Today' : `${c.contact.days}d ago`}
               </p>
               {c.contact.kind && <p className="text-[11px] text-muted-foreground">{touchLabel(c.contact.kind)}</p>}
+              {c.reply.days !== null && (
+                <p className={`text-[11px] ${c.attention.reasons.some(r => r.startsWith("Hasn't replied")) ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>
+                  They replied {c.reply.days === 0 ? 'today' : `${c.reply.days}d ago`}
+                </p>
+              )}
             </div>
             <div className={`p-3 rounded-xl border ${c.quarterly.state === 'overdue' ? 'border-red-500/40 bg-red-500/10' : c.quarterly.state === 'soon' ? 'border-yellow-500/40 bg-yellow-500/10' : 'border-border'}`}>
               <p className="text-xs text-muted-foreground mb-1">Quarterly call</p>

@@ -5,12 +5,14 @@
 // POST with header  x-ingest-key: <TOUCHPOINT_INGEST_KEY>  and a JSON body:
 //   { "source": "whatsapp_scan" | "recording_scan",
 //     "touchpoints": [ { "client": "Jake Nelson", "kind": "whatsapp", "occurred_at": "2026-11-03", "note": "optional" } ] }
+// kind "client_message" records that the CLIENT messaged us (their last reply), which is how
+// we tell "they have gone quiet" from "we have not been in touch". Everything else is the team reaching out.
 // `client` is a full name (case-insensitive) or a profile id. Names that match no one or
 // more than one person are skipped and reported back, never guessed. Re-sending the same
 // contact is safe: the same client + kind + day is recorded once.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const KINDS = ["whatsapp", "call", "quarterly_call", "group_call", "other"];
+const KINDS = ["whatsapp", "call", "quarterly_call", "group_call", "other", "client_message"];
 const SOURCES = ["whatsapp_scan", "recording_scan"];
 const MAX_BATCH = 500;
 

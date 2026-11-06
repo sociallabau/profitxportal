@@ -67,6 +67,19 @@ export default function QuarterlyCall({ client, history }: { client: ClientWithH
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [planDate, setPlanDate] = useState('');
+  const plan = useMutation({
+    mutationFn: async (date: string | null) => {
+      const { error } = await supabase.from('client_care').upsert({ client_id: c.id, quarterly_due_on: date, updated_at: new Date().toISOString() }, { onConflict: 'client_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['client-care'] });
+      toast.success('Quarterly call date saved');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const complete = useMutation({
     mutationFn: async () => {
       const { data: auth } = await supabase.auth.getUser();
@@ -76,6 +89,9 @@ export default function QuarterlyCall({ client, history }: { client: ClientWithH
         occurred_at: callDate === todayInput() ? new Date().toISOString() : new Date(`${callDate}T12:00:00`).toISOString(),
       });
       if (error) throw error;
+      // The call happened, so the planned date has done its job: the 90 days now run from this call.
+      const { error: clearError } = await supabase.from('client_care').upsert({ client_id: c.id, quarterly_due_on: null, updated_at: new Date().toISOString() }, { onConflict: 'client_id' });
+      if (clearError) throw clearError;
       const rows = newGoals.map(g => g.trim()).filter(Boolean).map(goal => ({ client_id: c.id, goal, set_on: callDate, author_id: author }));
       if (rows.length) {
         const { error: goalError } = await supabase.from('client_goals').insert(rows);
@@ -89,6 +105,7 @@ export default function QuarterlyCall({ client, history }: { client: ClientWithH
       qc.invalidateQueries({ queryKey: ['client-touchpoints'] });
       qc.invalidateQueries({ queryKey: ['client-touchpoints', c.id] });
       qc.invalidateQueries({ queryKey: ['client-goals', c.id] });
+      qc.invalidateQueries({ queryKey: ['client-care'] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -107,6 +124,15 @@ export default function QuarterlyCall({ client, history }: { client: ClientWithH
       </summary>
 
       <div className="mt-4 space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="plan-date" className="text-[11px] uppercase tracking-wider text-muted-foreground">Booked for</label>
+          <input id="plan-date" type="date" value={planDate || (q.planned && q.dueAt ? q.dueAt.toISOString().slice(0, 10) : '')}
+            onChange={e => setPlanDate(e.target.value)}
+            className="px-2 py-1.5 bg-input border border-border rounded-lg text-xs text-foreground" />
+          <Button type="button" size="sm" variant="outline" disabled={!planDate || plan.isPending} onClick={() => plan.mutate(planDate)}>Save date</Button>
+          {q.planned && <button className="text-[11px] text-muted-foreground hover:text-destructive" disabled={plan.isPending} onClick={() => { setPlanDate(''); plan.mutate(null); }}>Clear</button>}
+        </div>
+
         {since && (
           <div>
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Since {q.lastAt ? `the last call (${formatShortDate(q.lastAt)})` : 'they joined'}</p>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const ago = (d: number) => new Date(Date.now() - d * 86400000).toISOString();
@@ -12,16 +12,19 @@ const people = [
   { id: 'jake', full_name: 'Jake Nelson', created_at: ago(300), gate: 'Gate 1 (Fix)' },
   { id: 'lachlan', full_name: 'Lachlan Beale', created_at: ago(300), gate: 'Gate 1 (Fix)' },
   { id: 'marc', full_name: 'Marc', created_at: ago(300), gate: 'Gate 1 (Fix)' },
+  { id: 'ethan', full_name: 'Ethan Fagan', created_at: ago(300), gate: null },
+  { id: 'emily', full_name: 'Emily Phillips', created_at: ago(500), gate: null },
 ];
-const overview = (id: string, name: string, rev: number, daysSub: number | null) => ({
+const overview = (id: string, name: string, rev: number, daysSub: number | null, extra: Record<string, unknown> = {}) => ({
   id, full_name: name, tier: 'in_flow_starter', is_admin: false, last_total_revenue: rev, last_expenses: rev * 0.5, last_mrr: rev,
-  days_since_submission: daysSub, days_since_last_login: 60, last_submission_at: daysSub === null ? null : ago(daysSub), last_submission_month: month(0),
+  days_since_submission: daysSub, days_since_last_login: 60, last_submission_at: daysSub === null ? null : ago(daysSub), last_submission_month: month(0), ...extra,
 });
 const fixtures: Record<string, unknown[]> = {
   profiles: people,
   admin_client_overview: [
     overview('tobias', 'Tobias', 19600, 5), overview('harry', 'Harry Hopkins', 0, null), overview('jake', 'Jake Nelson', 6000, 70),
-    overview('lachlan', 'Lachlan Beale', 5000, 12), overview('marc', 'Marc', 2500, 80),
+    overview('lachlan', 'Lachlan Beale', 5000, 12), overview('marc', 'Marc', 2500, 80), overview('ethan', 'Ethan Fagan', 0, 134),
+    overview('emily', 'Emily Phillips', 2, 3, { is_admin: true }),
   ],
   monthly_totals: [
     { user_id: 'tobias', month: month(0), total_revenue: 19600, business_confidence: 8 },
@@ -30,6 +33,7 @@ const fixtures: Record<string, unknown[]> = {
     { user_id: 'lachlan', month: month(1), total_revenue: 4900, business_confidence: 7 },
     { user_id: 'jake', month: month(3), total_revenue: 6000, business_confidence: 7 },
     { user_id: 'marc', month: month(3), total_revenue: 2500, business_confidence: 6 },
+    { user_id: 'ethan', month: month(5), total_revenue: 3000, business_confidence: 6 },
   ],
   client_touchpoints: [
     { client_id: 'tobias', kind: 'whatsapp', occurred_at: ago(6) },
@@ -38,9 +42,13 @@ const fixtures: Record<string, unknown[]> = {
     { client_id: 'jake', kind: 'whatsapp', occurred_at: ago(50) },
     { client_id: 'jake', kind: 'quarterly_call', occurred_at: ago(40) },
     { client_id: 'lachlan', kind: 'whatsapp', occurred_at: ago(5) },
+    { client_id: 'lachlan', kind: 'client_message', occurred_at: ago(2) },
     { client_id: 'lachlan', kind: 'quarterly_call', occurred_at: ago(20) },
     { client_id: 'marc', kind: 'whatsapp', occurred_at: ago(80) },
     { client_id: 'marc', kind: 'quarterly_call', occurred_at: ago(100) },
+    { client_id: 'ethan', kind: 'whatsapp', occurred_at: ago(1) },
+    { client_id: 'ethan', kind: 'client_message', occurred_at: ago(21) },
+    { client_id: 'ethan', kind: 'quarterly_call', occurred_at: ago(30) },
   ],
   client_care: [{ client_id: 'jake', touch_every_days: null, dan_read: 'good', dan_read_note: 'Quiet but sweet', snapshot: 'Jake runs a small video studio. MRR $6,000, steady.', checkin_bullets: ['Signed one new client'], snapshot_at: ago(1) }],
 };
@@ -77,58 +85,75 @@ const renderPage = () => render(
   <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ClientHealth /></QueryClientProvider>,
 );
 
+const card = async (name: string) =>
+  (await screen.findAllByText(name)).map(e => e.closest('[role="button"]')).find(Boolean) as HTMLElement | undefined;
+
 describe('Client Health page', () => {
-  it('reads your example clients the way you would', async () => {
+  it('shows only the people who need you, and hides the ones doing well', async () => {
     renderPage();
-    const row = async (name: string) => (await screen.findAllByText(name)).map(e => e.closest('tr')).find(Boolean) as HTMLElement;
+    await screen.findByText('Reach out', { selector: 'h2' });
 
-    // Tobias: rolling, spoke to 6d ago, quarterly not due.
-    const tobias = await row('Tobias');
-    expect(within(tobias).getByText('Rolling')).toBeTruthy();
-    expect(tobias.textContent).toContain('6d ago');
+    // Needs you: Marc (silent + quarterly overdue), Jake (not spoken to), Ethan (stopped replying).
+    expect((await card('Marc'))?.textContent).toContain('Last spoke 80d ago');
+    expect((await card('Marc'))?.textContent).toContain('Quarterly call overdue 10d');
+    expect((await card('Jake Nelson'))?.textContent).toContain('Last spoke 40d ago');
 
-    // Harry just joined: New, not Needs help.
-    const harry = await row('Harry Hopkins');
-    expect(within(harry).getByText('New')).toBeTruthy();
-    expect(harry.textContent).not.toMatch(/Needs help|Watch/);
+    // Hidden: Tobias and Lachlan are fine (Lachlan never logs in but chats and replies), Harry is settling in.
+    expect(await card('Tobias')).toBeUndefined();
+    expect(await card('Lachlan Beale')).toBeUndefined();
+    expect(await card('Harry Hopkins')).toBeUndefined();
 
-    // Jake: your read (good) wins and he is flagged only because nobody has spoken to him in 40 days.
-    const jake = await row('Jake Nelson');
-    expect(jake.textContent).toContain('Rolling ★');
-    expect(jake.textContent).toContain('Last spoke 40d ago');
-
-    // Lachlan: WhatsApp weekly, never logs in, no flag at all.
-    const lachlan = await row('Lachlan Beale');
-    expect(lachlan.textContent).not.toContain('Last spoke');
-    expect(lachlan.textContent).not.toMatch(/Needs help|Watch/);
-
-    // Marc: quarterly overdue and not spoken to in 80 days.
-    const marc = await row('Marc');
-    expect(marc.textContent).toContain('Quarterly call overdue 10d');
-    expect(marc.textContent).toContain('Last spoke 80d ago');
+    // Emily and Dan are staff, not clients.
+    expect(screen.queryByText('Emily Phillips')).toBeNull();
+    expect(screen.queryByText('Dan')).toBeNull();
   });
 
-  it('lists Marc and Jake under "Talk to next", but not Lachlan or Tobias', async () => {
+  it('puts someone who has stopped replying under Act now, marked Drifting', async () => {
     renderPage();
-    expect(await screen.findByText('Weekly digest')).toBeTruthy();
-    const heading = await screen.findByText('Talk to next');
-    const card = heading.closest('div.bg-card') as HTMLElement;
-    expect(card.textContent).toContain('Marc');
-    expect(card.textContent).toContain('Jake Nelson');
-    expect(card.textContent).not.toContain('Lachlan');
-    expect(card.textContent).not.toContain('Tobias');
-    expect(card.textContent).not.toContain('Harry');
+    const ethan = await waitFor(async () => {
+      const c = await card('Ethan Fagan');
+      expect(c).toBeTruthy();
+      return c!;
+    });
+    expect(ethan.textContent).toContain('Drifting');
+    expect(ethan.textContent).toContain("Hasn't replied in 21d");
+    const section = ethan.closest('section')!;
+    expect(section.textContent).toContain('Act now');
+  });
+
+  it('tucks the quiet people away but keeps their names reachable', async () => {
+    renderPage();
+    const summary = await screen.findByText(/Doing well/, { selector: 'summary span' });
+    const details = summary.closest('details')!;
+    expect(details.hasAttribute('open')).toBe(false);
+    expect(details.textContent).toContain('Tobias');
+    expect(details.textContent).toContain('Lachlan Beale');
+    const settling = (await screen.findByText(/Settling in/, { selector: 'summary span' })).closest('details')!;
+    expect(settling.textContent).toContain('Harry Hopkins');
+  });
+
+  it('summarises how many need you', async () => {
+    renderPage();
+    expect(await screen.findByText(/people need you/)).toBeTruthy();
   });
 
   it('opens a client with the short summary and no hot list or roadmap progress', async () => {
     renderPage();
-    fireEvent.click((await screen.findAllByText('Jake Nelson'))[0]);
+    fireEvent.click((await card('Jake Nelson'))!);
     await waitFor(() => expect(screen.getByText('Quick summary')).toBeTruthy());
     expect(await screen.findByText(/Jake runs a small video studio/)).toBeTruthy();
     expect(screen.getByText('Signed one new client', { exact: false })).toBeTruthy();
     expect(screen.getByText('Notes & contact log')).toBeTruthy();
-    expect(screen.getAllByText('Quarterly call').length).toBeGreaterThan(1);
+    expect(screen.getAllByText('Quarterly call').length).toBeGreaterThan(0);
     expect(screen.getByText('Prep me')).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/Hot List|Roadmap Progress|What Dan AI knows/);
+  });
+
+  it('offers to spread the first quarterly calls on the quarterly tab', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByText('Quarterly calls', { selector: 'button' }));
+    // Marc's last quarterly call was logged, Harry is new, so nobody here is waiting on a first date.
+    expect(screen.queryByText(/first calls over 90 days/)).toBeNull();
+    expect(await screen.findByText('Last quarterly call')).toBeTruthy();
   });
 });

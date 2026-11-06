@@ -1,6 +1,6 @@
 import type { ViewRow } from '@/lib/db';
 import type { GateHealth } from '@/lib/gateHealth';
-import type { Attention, ContactInfo, MomentumResult, Momentum, QuarterlyInfo, DanRead } from '@/lib/clientCare';
+import type { Attention, ContactInfo, MomentumResult, Momentum, QuarterlyInfo, ReplyInfo, DanRead } from '@/lib/clientCare';
 
 /**
  * Tier labels, margin thresholds and the shape of a client on the Client Health
@@ -21,6 +21,8 @@ export type ClientWithHealth = ClientOverview & {
   danRead: DanRead | null;
   danReadNote: string | null;
   contact: ContactInfo;
+  /** When they last messaged us. Null days = we don't have that data. */
+  reply: ReplyInfo;
   quarterly: QuarterlyInfo;
   touchEveryDays: number;
   attention: Attention;
