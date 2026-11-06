@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import ContentCalendar from '@/components/content-studio/ContentCalendar';
 import InstagramSearch from '@/components/content-studio/InstagramSearch';
 import SavedIdeas from '@/components/content-studio/SavedIdeas';
@@ -11,6 +12,7 @@ const TABS = ['Content Calendar', 'Instagram', 'Saved Ideas', 'Content Generator
 
 export default function ContentStudio() {
   const { loading } = useRequireAuth();
+  usePageTracking('content-studio');
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('Content Calendar');
 

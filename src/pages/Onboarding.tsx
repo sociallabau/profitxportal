@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useGoal } from '@/hooks/useGoal';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { Loader2, Check, ArrowRight, Sparkles, Target, FileText, Compass } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export default function Onboarding() {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { setGoal } = useGoal();
+  usePageTracking('onboarding');
 
   const [step, setStep] = useState<Step>(0);
   const [saving, setSaving] = useState(false);

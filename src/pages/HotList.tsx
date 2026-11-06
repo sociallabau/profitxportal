@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, X, Mail, Phone, Flame, GripVertical } from 'lucide-react';
@@ -51,6 +52,7 @@ const formatMoney = (n: number) => {
 
 export default function HotList() {
   const { user, loading: authLoading } = useRequireAuth();
+  usePageTracking('hot-list');
   const [cards, setCards] = useState<HotListCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);

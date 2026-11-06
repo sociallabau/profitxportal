@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Video, Calendar, ExternalLink, CalendarPlus } from 'lucide-react';
 import { brisbaneDateKey, type Call } from '@/data/calls';
 import { useUpcomingCalls } from '@/hooks/useUpcomingCalls';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 const categoryStyles: Record<Call['category'], string> = {
   Workshop: 'bg-warning/15 text-warning border-warning/30',
@@ -54,6 +55,7 @@ function googleCalendarUrl(call: Call) {
 export default function Calls() {
   const todayBrisbane = brisbaneDateKey();
   const { calls: upcoming } = useUpcomingCalls();
+  usePageTracking('calls');
 
   return (
     <PageLayout>

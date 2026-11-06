@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/hooks/useProfile";
+import { usePageTracking } from "@/hooks/usePageTracking";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -113,6 +114,7 @@ function OutputBlock({ title, helper, content, loading, onRegenerate, subjectLin
 }
 
 export default function ContentGenerator() {
+  usePageTracking('content-generator');
   return (
     <PageLayout>
       <ContentGeneratorView />

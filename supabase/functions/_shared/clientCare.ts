@@ -452,6 +452,15 @@ export const BUCKET_STYLE: Record<Bucket, { label: string; hint: string; bg: str
   good:      { label: 'Doing well',     hint: 'Nothing needed',                        bg: 'bg-green-500/10',  border: 'border-green-500/30',  text: 'text-success',          dot: 'bg-green-400',  bar: 'bg-green-400' },
 };
 
+/** 'numbers' is a display refinement, not a real bucket: it's "reach out" where the only thing wrong is overdue numbers — a nudge, not a conversation. One source of truth for every status color, shared by the page, the client card and the Monday digest. */
+export type Group = Bucket | 'numbers';
+export const GROUP_STYLE: Record<Group, { label: string; hint: string; bg: string; border: string; text: string; dot: string; bar: string }> = {
+  ...BUCKET_STYLE,
+  reach: { ...BUCKET_STYLE.reach, label: 'Reach out', hint: 'Worth a message or a call' },
+  numbers: { label: 'Numbers overdue', hint: 'Needs a nudge, not a call', bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-600', dot: 'bg-orange-300', bar: 'bg-orange-300' },
+};
+export const groupOf = (a: Attention): Group => (a.numbersOnly ? 'numbers' : a.bucket);
+
 export function describeQuarterly(q: QuarterlyInfo): string {
   if (!q.dueAt || q.daysUntil === null) return '—';
   if (q.state === 'unscheduled') return 'Not planned';

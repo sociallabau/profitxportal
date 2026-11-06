@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Plus, Trash2, ChevronRight, Mail, Phone, Compass, X, BookOpen } from 'lucide-react';
@@ -31,6 +32,7 @@ const emptyForm = { name: '', phone: '', email: '' };
 
 export default function ClientJourney() {
   const { user, loading: authLoading } = useRequireAuth();
+  usePageTracking('client-journey');
   const [clients, setClients] = useState<ClientJourneyCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);

@@ -1,4 +1,5 @@
 import PageLayout from '@/components/PageLayout';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { Card } from '@/components/ui/card';
 import { PlayCircle, ExternalLink, BookOpen, FileSpreadsheet, FileText, Sparkles } from 'lucide-react';
 
@@ -61,6 +62,7 @@ const categoryStyles: Record<VaultItem['category'], string> = {
 };
 
 export default function Vault() {
+  usePageTracking('vault');
   return (
     <PageLayout>
       <div className="mb-6">

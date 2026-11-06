@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import type { LucideIcon } from 'lucide-react';
@@ -49,6 +50,7 @@ const STAGES: { key: string; label: string; color: string }[] = [
 
 export default function LaunchHQ() {
   const { user, loading } = useRequireAuth();
+  usePageTracking('launch-hq');
   const qc = useQueryClient();
   const [showLaunch, setShowLaunch] = useState(false);
   const [bulkHandles, setBulkHandles] = useState('');

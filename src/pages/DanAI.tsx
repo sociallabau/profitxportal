@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { resourceCatalogue, vaultSources } from '@/data/resourceCatalogue';
@@ -66,6 +67,7 @@ type Tab = 'chat' | 'knowledge' | 'checks' | 'tests';
 
 export default function DanAI() {
   const { user, loading: authLoading } = useRequireAuth();
+  usePageTracking('dan-ai');
   const { data: profile } = useProfile();
   const isAdmin = Boolean(profile?.is_admin);
 

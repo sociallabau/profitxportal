@@ -1,12 +1,14 @@
 import PageLayout from '@/components/PageLayout';
 import ContextRoom from '@/components/ContextRoom';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LockKeyhole } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, loading } = useRequireAuth();
+  usePageTracking('settings');
   if (loading || !user) return null;
   return <PageLayout>
     <div className="max-w-4xl">

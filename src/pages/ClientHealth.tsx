@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HeartPulse, ArrowUpCircle, Trophy, Search, LayoutGrid, Table2, CalendarClock, CheckCircle2, Users, CalendarRange, ChevronDown, Copy } from 'lucide-react';
+import { HeartPulse, ArrowUpCircle, Trophy, Search, LayoutGrid, Table2, CalendarClock, CheckCircle2, Users, CalendarRange, ChevronDown, Copy, Activity } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import ClientDetailPanel from '@/components/client-health/ClientDetailPanel';
@@ -8,6 +8,7 @@ import ClientCard from '@/components/client-health/ClientCard';
 import { initials, revenueLine } from '@/lib/clientDisplay';
 import QuickLog from '@/components/client-health/QuickLog';
 import WeeklyDigest from '@/components/client-health/WeeklyDigest';
+import EngagementPanel from '@/components/client-health/EngagementPanel';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
@@ -17,27 +18,30 @@ import {
   formatTierLabel,
 } from '@/lib/clientHealth';
 import {
-  BUCKET_STYLE, assessClient, describeQuarterly, formatShortDate, spreadQuarterly, touchLabel,
-  type Bucket, type DanRead, type MonthInput, type Touchpoint,
+  GROUP_STYLE, assessClient, describeQuarterly, formatShortDate, groupOf, spreadQuarterly, touchLabel,
+  type Group, type DanRead, type MonthInput, type Touchpoint,
 } from '@/lib/clientCare';
 import { gateHealth, type GateMonth } from '@/lib/gateHealth';
 import { ROMAN, gateNumber as gateNum, monthKey, type TaskProgress, type TaskTracking } from '@/lib/growthHub';
 import { useGrowthHubContent } from '@/hooks/useGrowthHub';
 
-type View = 'needs' | 'everyone' | 'quarterly' | 'gate';
+type View = 'needs' | 'everyone' | 'quarterly' | 'gate' | 'activity';
 type SortKey = 'priority' | 'name' | 'revenue';
+
+/** Momentum only ever looks at the last few months, so a date floor (not a row count) is what should bound
+ * these queries: a flat `.limit()` across every client drops the oldest rows first as the business grows,
+ * and unevenly — whichever clients' months happen to sit near the cutoff lose history, not everyone equally. */
+const monthFloor = (monthsBack: number) => {
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - monthsBack);
+  return d.toISOString().slice(0, 10);
+};
+const isoMonthsAgo = (monthsBack: number) => {
+  const d = new Date(); d.setMonth(d.getMonth() - monthsBack);
+  return d.toISOString();
+};
 /** The buckets that get a card each. The rest are tucked away: nobody needs to look at them. */
 const ACTION_BUCKETS: Group[] = ['act', 'reach', 'numbers', 'quarterly'];
 const GROUP_ORDER: Group[] = ['act', 'reach', 'numbers', 'quarterly', 'new', 'good'];
-
-/** 'numbers' is a display group, not a database bucket: it's "reach out" where the only thing wrong is overdue numbers. */
-type Group = Bucket | 'numbers';
-const GROUP_STYLE: Record<Group, { label: string; hint: string; bg: string; text: string; dot: string; bar: string }> = {
-  ...BUCKET_STYLE,
-  reach: { ...BUCKET_STYLE.reach, label: 'Reach out', hint: 'Worth a message or a call' },
-  numbers: { label: 'Numbers overdue', hint: 'Needs a nudge, not a call', bg: 'bg-orange-500/10', text: 'text-orange-600', dot: 'bg-orange-300', bar: 'bg-orange-300' },
-};
-const groupOf = (c: ClientWithHealth): Group => (c.attention.numbersOnly ? 'numbers' : c.attention.bucket);
 
 const nudgeText = (c: ClientWithHealth) =>
   `Hey ${(c.full_name ?? '').split(' ')[0] || 'mate'}, I haven't seen your monthly numbers in a while. Can you pop them into the portal when you get a minute? It lets me see exactly where to help you most.`;
@@ -137,8 +141,9 @@ export default function ClientHealth() {
       const { data } = await supabase
         .from('monthly_totals')
         .select('user_id, month, total_revenue, mrr, mrr_manual, oneoff_revenue, business_confidence, nps, retainers_lost, active_retainers, expenses')
+        .gte('month', monthFloor(12))
         .order('month', { ascending: false })
-        .limit(1500);
+        .limit(5000);
       const byUser: Record<string, MonthInput[]> = {};
       for (const row of data ?? []) {
         (byUser[row.user_id] ??= []).push({
@@ -172,7 +177,9 @@ export default function ClientHealth() {
     enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_touchpoints').select('client_id, kind, occurred_at').order('occurred_at', { ascending: false }).limit(5000);
+        .from('client_touchpoints').select('client_id, kind, occurred_at')
+        .gte('occurred_at', isoMonthsAgo(24))
+        .order('occurred_at', { ascending: false }).limit(10000);
       if (error) throw error;
       const byId: Record<string, Touchpoint[]> = {};
       for (const row of data ?? []) (byId[row.client_id] ??= []).push(row);
@@ -186,10 +193,9 @@ export default function ClientHealth() {
     enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
       type CareRow = { client_id: string; touch_every_days: number | null; dan_read: string | null; dan_read_note: string | null; quarterly_due_on?: string | null };
-      let res = await supabase.from('client_care').select('client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on');
-      // Until the latest database change has run there is no planned-date column: carry on without it rather than lose everything else.
-      if (res.error) res = (await supabase.from('client_care').select('client_id, touch_every_days, dan_read, dan_read_note')) as unknown as typeof res;
-      return Object.fromEntries(((res.data ?? []) as CareRow[]).map(r => [r.client_id, r]));
+      const { data, error } = await supabase.from('client_care').select('client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on');
+      if (error) throw error;
+      return Object.fromEntries(((data ?? []) as CareRow[]).map(r => [r.client_id, r]));
     },
   });
   const { data: cadenceAnswers = {} } = useQuery({
@@ -210,7 +216,7 @@ export default function ClientHealth() {
       const thisMonth = monthKey();
       const [progress, months, tracking, signed] = await Promise.all([
         supabase.from('member_task_progress').select('*'),
-        supabase.from('monthly_totals').select('user_id, month, content_posts, leads_generated, new_clients').order('month', { ascending: false }).limit(1000),
+        supabase.from('monthly_totals').select('user_id, month, content_posts, leads_generated, new_clients').gte('month', monthFloor(12)).order('month', { ascending: false }).limit(5000),
         // Live this month, before the check-in: build-list tallies and clients logged as signed.
         supabase.from('member_task_tracking').select('user_id, task_id, period, working, count').eq('period', thisMonth),
         supabase.from('new_clients').select('user_id').gte('signed_date', `${thisMonth}-01`),
@@ -228,6 +234,7 @@ export default function ClientHealth() {
 
   const { data: archivedIds = [] } = useQuery({
     queryKey: ['archived-clients'],
+    enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
@@ -278,7 +285,7 @@ export default function ClientHealth() {
 
   const byGroup = useMemo(() => {
     const groups: Record<Group, ClientWithHealth[]> = { act: [], reach: [], numbers: [], quarterly: [], new: [], good: [] };
-    for (const c of clientsWithHealth) groups[groupOf(c)].push(c);
+    for (const c of clientsWithHealth) groups[groupOf(c.attention)].push(c);
     for (const g of GROUP_ORDER) groups[g].sort((x, y) => y.attention.priority - x.attention.priority || (x.full_name ?? '').localeCompare(y.full_name ?? ''));
     return groups;
   }, [clientsWithHealth]);
@@ -394,9 +401,12 @@ export default function ClientHealth() {
         {tab('everyone', 'Everyone', Table2)}
         {tab('quarterly', 'Quarterly calls', CalendarClock)}
         {tab('gate', 'By gate', LayoutGrid)}
+        {tab('activity', 'Activity', Activity)}
       </div>
 
-      {isLoading ? (
+      {view === 'activity' ? (
+        <EngagementPanel />
+      ) : isLoading ? (
         <p className="text-sm text-muted-foreground">Loading clients...</p>
       ) : total === 0 ? (
         <p className="text-sm text-muted-foreground">No clients have submitted data yet.</p>
@@ -579,7 +589,7 @@ export default function ClientHealth() {
                         <button key={c.id} onClick={() => open(c)} className="w-full rounded-lg border border-border bg-card p-3 text-left transition hover:border-primary/40">
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate text-sm font-semibold text-foreground">{c.full_name || 'Unnamed'}</span>
-                            <BucketPill bucket={groupOf(c)} />
+                            <BucketPill bucket={groupOf(c.attention)} />
                           </div>
                         </button>
                       ))}
@@ -636,7 +646,7 @@ export default function ClientHealth() {
                 </thead>
                 <tbody>
                   {everyone.map(c => {
-                    const b = GROUP_STYLE[groupOf(c)];
+                    const b = GROUP_STYLE[groupOf(c.attention)];
                     const r = revenueLine(c);
                     const checkin = c.days_since_submission != null ? Number(c.days_since_submission) : null;
                     return (
@@ -648,7 +658,7 @@ export default function ClientHealth() {
                           </div>
                         </td>
                         <td className="px-3 py-3">
-                          <BucketPill bucket={groupOf(c)} />
+                          <BucketPill bucket={groupOf(c.attention)} />
                           {c.attention.reasons.length > 0 && <p className="mt-0.5 max-w-[200px] truncate text-[10px] text-muted-foreground">{c.attention.reasons.join(' · ')}</p>}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{contactText(c)}</td>

@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePageTracking } from '@/hooks/usePageTracking';
 
 export default function NewClients() {
   const { user } = useRequireAuth();
+  usePageTracking('new-clients');
   const qc = useQueryClient();
   const [form, setForm] = useState({ client_name: '', monthly_value: '', notes: '' });
   const [saved, setSaved] = useState(false);
