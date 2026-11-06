@@ -13,6 +13,7 @@ import { ROMAN, type GateNumber, type GrowthHubTask, type TaskKind } from '@/lib
 type Draft = Omit<GrowthHubTask, 'id'> & { id?: string };
 const blank = (gate: GateNumber, position: number): Draft => ({
   gate, position, title: '', why: '', kind: 'monthly', module_codes: [], training_label: null, training_url: null, proof_hint: '', active: true,
+  week_start: null, week_end: null,
 });
 
 function TaskEditor({ task, onSaved }: { task: Draft; onSaved: () => void }) {
@@ -45,6 +46,8 @@ function TaskEditor({ task, onSaved }: { task: Draft; onSaved: () => void }) {
         <Input value={d.module_codes.join(', ')} onChange={e => set('module_codes', e.target.value.toUpperCase().split(/[,\s]+/).filter(Boolean))} placeholder="Modules, e.g. C1, C2" />
         <Input value={d.training_label ?? ''} onChange={e => set('training_label', e.target.value)} placeholder="Training name (if no module)" />
         <Input value={d.training_url ?? ''} onChange={e => set('training_url', e.target.value)} placeholder="Training link (Loom etc.)" />
+        <Input value={d.week_start ?? ''} type="number" min={1} onChange={e => set('week_start', e.target.value ? Number(e.target.value) : null)} placeholder="Week start (Gate 1 only, optional)" />
+        <Input value={d.week_end ?? ''} type="number" min={1} onChange={e => set('week_end', e.target.value ? Number(e.target.value) : null)} placeholder="Week end (optional)" />
       </div>
       <Input value={d.proof_hint} onChange={e => set('proof_hint', e.target.value)} placeholder="Proof to send, e.g. Post links + Ads Manager screenshot" />
       <div className="flex gap-2 justify-end">

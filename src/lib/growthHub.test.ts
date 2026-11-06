@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildProgress, gateLabel, gateNumber, goalStatus, helpPrompt, isWorking, liveGoalValue, nextTask, taskTarget, trainingLink, withStatus,
+  buildProgress, gateLabel, gateNumber, goalStatus, helpPrompt, isWorking, liveGoalValue, nextTask, taskTarget, trainingLink, weekLabel, withStatus,
   GATE_GOALS, type GrowthHubTask, type TaskProgress, type TaskTracking,
 } from './growthHub';
 
@@ -134,6 +134,23 @@ describe('trainingLink matches the Roadmap tiles', () => {
     expect(trainingLink(t(['C1']), hasPage)?.href).toBe('/module/C1');
     expect(trainingLink(t(['O1']), hasPage)).toMatchObject({ label: 'Covered in onboarding with Dan', href: null, status: 'onboarding' });
     expect(trainingLink(t(['D4']), hasPage)).toMatchObject({ label: 'Book a call with Dan', external: true, status: 'book' });
+  });
+});
+
+describe('weekLabel', () => {
+  it('is null with no week range (every gate but 1)', () => {
+    expect(weekLabel(task({}))).toBeNull();
+    expect(weekLabel({ week_start: null, week_end: null })).toBeNull();
+  });
+  it('shows a single week when start and end match', () => {
+    expect(weekLabel({ week_start: 1, week_end: 1 })).toBe('Week 1');
+  });
+  it('falls back to a single week when there is no end', () => {
+    expect(weekLabel({ week_start: 1, week_end: null })).toBe('Week 1');
+  });
+  it('shows a range when start and end differ', () => {
+    expect(weekLabel({ week_start: 1, week_end: 4 })).toBe('Weeks 1–4');
+    expect(weekLabel({ week_start: 4, week_end: 8 })).toBe('Weeks 4–8');
   });
 });
 

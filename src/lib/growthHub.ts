@@ -18,7 +18,16 @@ export type GrowthHubGate = { gate: GateNumber; name: string; headline: string; 
 export type GrowthHubTask = {
   id: string; gate: GateNumber; position: number; title: string; why: string; kind: TaskKind;
   module_codes: string[]; training_label: string | null; training_url: string | null; proof_hint: string; active: boolean;
+  /** Gate 1 only: the 8-week window this task sits in. Null everywhere else — later gates are achievement-gated, not time-boxed. */
+  week_start?: number | null; week_end?: number | null;
 };
+
+/** "Week 1" or "Weeks 1–4". Null when the task has no week range (every gate but 1). */
+export function weekLabel(task: Pick<GrowthHubTask, 'week_start' | 'week_end'>): string | null {
+  if (!task.week_start) return null;
+  const end = task.week_end ?? task.week_start;
+  return task.week_start === end ? `Week ${task.week_start}` : `Weeks ${task.week_start}–${end}`;
+}
 export type TaskProgress = {
   id?: string; user_id: string; task_id: string; period: string; status: Exclude<TaskStatus, 'open'>;
   proof_url: string | null; member_note: string | null; review_note: string | null;

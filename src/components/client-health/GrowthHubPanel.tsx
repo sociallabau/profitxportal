@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
 import { useGateBuild, useReviewTask } from '@/hooks/useGrowthHub';
 import { PROFITX_MODULES } from '@/data/modules';
-import { GATES, ROMAN, buildProgress, gateLabel, gateNumber, type GateNumber } from '@/lib/growthHub';
+import { GATES, ROMAN, buildProgress, gateLabel, gateNumber, weekLabel, type GateNumber } from '@/lib/growthHub';
 
 /**
  * Dan's controls for one member: set their gate, approve or send back build
@@ -69,7 +69,7 @@ export default function GrowthHubPanel({ memberId, gate: gateRaw }: { memberId: 
             {tasks.map(t => (
               <div key={t.id} className="rounded-xl border border-border p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold">{t.title}</p>
+                  <p className="text-sm font-semibold">{t.title}{weekLabel(t) && <span className="ml-1.5 text-[10px] font-bold text-primary">· {weekLabel(t)}</span>}</p>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                     {t.status === 'open' ? (t.kind === 'kickoff' ? 'kickoff' : 'not submitted') : t.status.replace('_', ' ')}
                   </span>

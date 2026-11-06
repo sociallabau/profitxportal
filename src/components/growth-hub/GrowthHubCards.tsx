@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { moduleName } from '@/data/modules';
 import { useCanUseDanAi } from '@/lib/danAccess';
 import {
-  GATE_GOALS, goalStatus, helpPrompt, isWorking, liveGoalValue, taskTarget, trainingLink,
+  GATE_GOALS, goalStatus, helpPrompt, isWorking, liveGoalValue, taskTarget, trainingLink, weekLabel,
   type GateNumber, type TaskStatus, type TaskWithStatus,
 } from '@/lib/growthHub';
 import { useModulePages, useTickTask, useTrackTask, useUntickTask, type GateModule } from '@/hooks/useGrowthHub';
@@ -169,6 +169,7 @@ function TaskRow({ task, isAdmin, ticking, tracking, canTick }: {
           <p className="text-[12.5px] text-primary font-semibold mt-1 inline-flex items-start gap-1"><MessageCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{proofPrompt(task)}</p>
         )}
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
+          {weekLabel(task) && <span className="text-[11.5px] font-bold rounded-full px-2.5 py-1 bg-primary/10 text-primary">{weekLabel(task)}</span>}
           <TrainingChip task={task} />
           <span className="text-[11.5px] font-bold rounded-full px-2.5 py-1 bg-foreground/[0.06] text-muted-foreground">{KIND[task.kind]}</span>
           {canAsk && task.status !== 'approved' && (

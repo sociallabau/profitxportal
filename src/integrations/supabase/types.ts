@@ -1713,6 +1713,8 @@ export type Database = {
           training_label: string | null
           training_url: string | null
           updated_at: string
+          week_end: number | null
+          week_start: number | null
           why: string
         }
         Insert: {
@@ -1728,6 +1730,8 @@ export type Database = {
           training_label?: string | null
           training_url?: string | null
           updated_at?: string
+          week_end?: number | null
+          week_start?: number | null
           why?: string
         }
         Update: {
@@ -1743,6 +1747,8 @@ export type Database = {
           training_label?: string | null
           training_url?: string | null
           updated_at?: string
+          week_end?: number | null
+          week_start?: number | null
           why?: string
         }
         Relationships: [
