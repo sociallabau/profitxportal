@@ -219,6 +219,10 @@ export type Database = {
           dan_read_at: string | null
           dan_read_by: string | null
           dan_read_note: string | null
+          next_contact_at: string | null
+          next_contact_by: string | null
+          next_contact_kind: string | null
+          next_contact_note: string | null
           quarterly_due_on: string | null
           snapshot: string | null
           snapshot_at: string | null
@@ -233,6 +237,10 @@ export type Database = {
           dan_read_at?: string | null
           dan_read_by?: string | null
           dan_read_note?: string | null
+          next_contact_at?: string | null
+          next_contact_by?: string | null
+          next_contact_kind?: string | null
+          next_contact_note?: string | null
           quarterly_due_on?: string | null
           snapshot?: string | null
           snapshot_at?: string | null
@@ -247,6 +255,10 @@ export type Database = {
           dan_read_at?: string | null
           dan_read_by?: string | null
           dan_read_note?: string | null
+          next_contact_at?: string | null
+          next_contact_by?: string | null
+          next_contact_kind?: string | null
+          next_contact_note?: string | null
           quarterly_due_on?: string | null
           snapshot?: string | null
           snapshot_at?: string | null

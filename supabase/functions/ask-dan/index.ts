@@ -23,6 +23,7 @@ import { situationBlock } from "./playbook.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, STEP_PROMPT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, limitBro, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 import { resolveTaskProgress, validIdea, type TaskProgressIntent, type SaveIdeaIntent } from "./actions.ts";
+import { resolveContactLog, contactLogPrompt, type ContactLogDraft, type Roster } from "./contactLog.ts";
 
 const SONNET = "claude-sonnet-5-5";
 const HAIKU = "claude-haiku-5-5";
@@ -1061,6 +1062,58 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
         };
         await admin.from("dan_ai_test_runs").update({ summary, results: list }).eq("id", body.run_id);
         return json({ summary });
+      }
+
+      // Client Health chat: "booked a call with Harry Tuesday 8:15am" → a touchpoint (already happened)
+      // or a next_contact_at on client_care (still ahead), resolved against the real client list and clock.
+      if (body.action === "client_health_log") {
+        const text = typeof body.text === "string" ? body.text.trim().slice(0, 500) : "";
+        if (!text) return json({ error: "Type what happened first" }, 400);
+        const preselectedId = typeof body.client_id === "string" && uuidRe.test(body.client_id) ? body.client_id : null;
+        const { data: profiles } = await admin.from("profiles").select("id, full_name")
+          .eq("is_admin", false).eq("access_revoked", false).is("archived_at", null);
+        const roster: Roster = ((profiles ?? []) as { id: string; full_name: string | null }[])
+          .filter(p => p.full_name).map(p => ({ id: p.id, name: p.full_name as string }));
+        const preselected = preselectedId ? roster.find(r => r.id === preselectedId) ?? null : null;
+        const today = new Date().toLocaleString("en-AU", {
+          weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Australia/Brisbane",
+        });
+        const sys = [{ type: "text" as const, text: contactLogPrompt(today, preselected ? null : roster.map(r => r.name)) }];
+        const parsed = parseJson(await callMain(sys, [{ role: "user", content: text }], clock.data, "other"));
+        const draft: ContactLogDraft = {
+          client_name: typeof parsed?.client_name === "string" ? parsed.client_name : null,
+          scheduled_at: typeof parsed?.scheduled_at === "string" ? parsed.scheduled_at : null,
+          kind: typeof parsed?.kind === "string" ? parsed.kind : null,
+          note: typeof parsed?.note === "string" ? parsed.note : null,
+          understood: parsed?.understood === true,
+        };
+        const resolved = resolveContactLog(draft, roster, new Date(), preselected);
+        if (!resolved.ok) {
+          const messages = {
+            not_understood: "Didn't catch a contact update in that — try naming the client and when.",
+            client_not_found: "Couldn't tell which client that was — try their full name.",
+            bad_date: "Couldn't work out the date — try being more specific about when.",
+          } as const;
+          return json({ ok: false, reason: resolved.reason, message: messages[resolved.reason] });
+        }
+        let touchpointId: string | null = null;
+        if (resolved.when === "future") {
+          const { error } = await admin.from("client_care").upsert({
+            client_id: resolved.client.id, next_contact_at: resolved.at.toISOString(), next_contact_kind: resolved.kind,
+            next_contact_note: resolved.note, next_contact_by: userId, updated_at: new Date().toISOString(),
+          }, { onConflict: "client_id" });
+          if (error) return json({ error: error.message }, 500);
+        } else {
+          const { data, error } = await admin.from("client_touchpoints").insert({
+            client_id: resolved.client.id, kind: resolved.kind, occurred_at: resolved.at.toISOString(), note: resolved.note, author_id: userId, source: "chat",
+          }).select("id").single();
+          if (error) return json({ error: error.message }, 500);
+          touchpointId = data?.id ?? null;
+        }
+        return json({
+          ok: true, when: resolved.when, client_id: resolved.client.id, client_name: resolved.client.name,
+          scheduled_at: resolved.at.toISOString(), kind: resolved.kind, note: resolved.note, touchpoint_id: touchpointId,
+        });
       }
       return json({ error: "Unknown action" }, 400);
     }

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { touchLabel, type TouchKind } from '@/lib/clientCare';
+import { formatShortDateTime, touchLabel, type TouchKind } from '@/lib/clientCare';
 
 export type LogTouchInput = { clientId: string; kind: TouchKind; occurredAt?: string; note?: string; clientName?: string | null };
 
@@ -41,6 +41,57 @@ export function useLogTouchpoint() {
             if (error) toast.error(error.message); else { refresh(); toast('Removed'); }
           },
         } : undefined,
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export type ContactLogged = {
+  ok: true; when: 'past' | 'future'; client_id: string; client_name: string;
+  scheduled_at: string; kind: TouchKind; note: string | null; touchpoint_id: string | null;
+};
+type ContactLogFailed = { ok: false; reason: string; message: string };
+
+/**
+ * Client Health chat: "booked a call with Harry Tuesday 8:15am" — the ask-dan edge function
+ * resolves who, when and what kind of contact, then writes a touchpoint (already happened) or
+ * a booked next_contact_at on client_care (still ahead). Either write can be undone.
+ */
+export function useLogContactChat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ text, clientId }: { text: string; clientId?: string | null }) => {
+      const { data, error } = await supabase.functions.invoke('ask-dan', { body: { action: 'client_health_log', text, client_id: clientId } });
+      if (error) throw error;
+      const result = data as ContactLogged | ContactLogFailed;
+      // Couldn't tell who or when: say so rather than write a guess.
+      if (!result.ok) throw new Error((result as ContactLogFailed).message || "Couldn't log that — try again");
+      return result as ContactLogged;
+    },
+    onSuccess: (result) => {
+      const refresh = () => {
+        qc.invalidateQueries({ queryKey: ['client-touchpoints'] });
+        qc.invalidateQueries({ queryKey: ['client-care'] });
+        qc.invalidateQueries({ queryKey: ['client-care-row'] });
+      };
+      refresh();
+      const headline = result.when === 'future'
+        ? `Booked for ${formatShortDateTime(new Date(result.scheduled_at))}`
+        : `${touchLabel(result.kind)} logged`;
+      toast.success(`${headline} — ${result.client_name}`, {
+        duration: 8000,
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            const undo = result.when === 'future'
+              ? supabase.from('client_care').update({ next_contact_at: null, next_contact_kind: null, next_contact_note: null, next_contact_by: null }).eq('client_id', result.client_id)
+              : result.touchpoint_id ? supabase.from('client_touchpoints').delete().eq('id', result.touchpoint_id) : null;
+            if (!undo) return;
+            const { error } = await undo;
+            if (error) toast.error(error.message); else { refresh(); toast('Removed'); }
+          },
+        },
       });
     },
     onError: (e: Error) => toast.error(e.message),

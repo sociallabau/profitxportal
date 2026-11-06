@@ -42,10 +42,12 @@ Deno.serve(async (req) => {
 
     const now = new Date();
     const today = now.toLocaleDateString("en-CA", { timeZone: "Australia/Sydney" });
-    // The planned-date column arrives with the latest migration: until then, read the care table without it.
+    // The planned-date and booked-contact columns arrive with later migrations: until then, read the care table without them.
     const readCare = async () => {
-      const full = await admin.from("client_care").select("client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on");
-      return full.error ? await admin.from("client_care").select("client_id, touch_every_days, dan_read, dan_read_note") : full;
+      const full = await admin.from("client_care").select("client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on, next_contact_at, next_contact_kind, next_contact_note");
+      if (!full.error) return full;
+      const planned = await admin.from("client_care").select("client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on");
+      return planned.error ? await admin.from("client_care").select("client_id, touch_every_days, dan_read, dan_read_note") : planned;
     };
     const [people, totals, touches, care, rooms, overview, previous] = await Promise.all([
       admin.from("profiles").select("id, full_name, created_at").is("archived_at", null).or("is_admin.is.null,is_admin.eq.false"),
@@ -81,6 +83,8 @@ Deno.serve(async (req) => {
         expenses: (m.expenses as number | null) ?? null,
       }));
       const c = careBy[p.id];
+      // Columns from later migrations: absent when the fallback select above was used.
+      const later = c as { quarterly_due_on?: string | null; next_contact_at?: string | null; next_contact_kind?: string | null; next_contact_note?: string | null } | undefined;
       const o = overviewBy[p.id];
       const a = assessClient({
         joinedAt: p.created_at, months,
@@ -88,7 +92,8 @@ Deno.serve(async (req) => {
         daysSinceLogin: o?.days_since_last_login ?? null,
         touchpoints: (touchesBy[p.id] ?? []) as unknown as Touchpoint[],
         danRead: (c?.dan_read ?? null) as DanRead | null, danReadNote: c?.dan_read_note ?? null,
-        touchEveryExplicit: c?.touch_every_days, contextCadence: cadenceBy[p.id], quarterlyPlannedOn: (c as { quarterly_due_on?: string | null } | undefined)?.quarterly_due_on,
+        touchEveryExplicit: c?.touch_every_days, contextCadence: cadenceBy[p.id], quarterlyPlannedOn: later?.quarterly_due_on,
+        nextContactAt: later?.next_contact_at, nextContactKind: later?.next_contact_kind, nextContactNote: later?.next_contact_note,
       }, now);
       return { id: p.id, name: p.full_name ?? "Unnamed", ...a };
     });

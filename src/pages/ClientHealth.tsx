@@ -7,6 +7,7 @@ import ClientDetailPanel from '@/components/client-health/ClientDetailPanel';
 import ClientCard from '@/components/client-health/ClientCard';
 import { initials, revenueLine } from '@/lib/clientDisplay';
 import QuickLog from '@/components/client-health/QuickLog';
+import HealthChatBox from '@/components/client-health/HealthChatBox';
 import WeeklyDigest from '@/components/client-health/WeeklyDigest';
 import EngagementPanel from '@/components/client-health/EngagementPanel';
 import { useRequireAuth } from '@/hooks/useAuth';
@@ -18,7 +19,7 @@ import {
   formatTierLabel,
 } from '@/lib/clientHealth';
 import {
-  GROUP_STYLE, assessClient, describeQuarterly, formatShortDate, groupOf, spreadQuarterly, touchLabel,
+  GROUP_STYLE, assessClient, describeQuarterly, formatShortDate, formatShortDateTime, groupOf, spreadQuarterly, touchLabel,
   type Group, type DanRead, type MonthInput, type Touchpoint,
 } from '@/lib/clientCare';
 import { gateHealth, type GateMonth } from '@/lib/gateHealth';
@@ -192,8 +193,12 @@ export default function ClientHealth() {
     queryKey: ['client-care'],
     enabled: !!selfProfile?.is_admin,
     queryFn: async () => {
-      type CareRow = { client_id: string; touch_every_days: number | null; dan_read: string | null; dan_read_note: string | null; quarterly_due_on?: string | null };
-      const { data, error } = await supabase.from('client_care').select('client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on');
+      type CareRow = {
+        client_id: string; touch_every_days: number | null; dan_read: string | null; dan_read_note: string | null; quarterly_due_on?: string | null;
+        next_contact_at?: string | null; next_contact_kind?: string | null; next_contact_note?: string | null;
+      };
+      const { data, error } = await supabase.from('client_care')
+        .select('client_id, touch_every_days, dan_read, dan_read_note, quarterly_due_on, next_contact_at, next_contact_kind, next_contact_note');
       if (error) throw error;
       return Object.fromEntries(((data ?? []) as CareRow[]).map(r => [r.client_id, r]));
     },
@@ -266,6 +271,7 @@ export default function ClientHealth() {
           touchpoints: touchpoints[c.id] ?? [],
           danRead: (care?.dan_read ?? null) as DanRead | null, danReadNote: care?.dan_read_note ?? null,
           touchEveryExplicit: care?.touch_every_days, contextCadence: cadenceAnswers[c.id], quarterlyPlannedOn: care?.quarterly_due_on,
+          nextContactAt: care?.next_contact_at, nextContactKind: care?.next_contact_kind, nextContactNote: care?.next_contact_note,
         }, now);
 
         return {
@@ -364,6 +370,9 @@ export default function ClientHealth() {
         </div>
         <WeeklyDigest />
       </div>
+
+      {/* Tell the board what you just did, in your own words. */}
+      {total > 0 && <div className="mb-6"><HealthChatBox /></div>}
 
       {/* Where everyone is, at a glance. Tap a segment to look at just that group. */}
       {total > 0 && (
@@ -660,6 +669,9 @@ export default function ClientHealth() {
                         <td className="px-3 py-3">
                           <BucketPill bucket={groupOf(c.attention)} />
                           {c.attention.reasons.length > 0 && <p className="mt-0.5 max-w-[200px] truncate text-[10px] text-muted-foreground">{c.attention.reasons.join(' · ')}</p>}
+                          {c.attention.nextContact && (
+                            <p className="mt-0.5 text-[10px] font-semibold text-primary">Booked {formatShortDateTime(c.attention.nextContact.at)}</p>
+                          )}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{contactText(c)}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{c.reply.days === null ? '—' : c.reply.days === 0 ? 'Today' : `${c.reply.days}d ago`}</td>

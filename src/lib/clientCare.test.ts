@@ -191,7 +191,7 @@ describe('attention: who to talk to next', () => {
   };
 
   it('says nothing about a client who is doing well and recently spoken to', () => {
-    expect(attention(rolling)).toEqual({ priority: 0, reasons: [], bucket: 'good', drifting: false, numbersOnly: false });
+    expect(attention(rolling)).toEqual({ priority: 0, reasons: [], bucket: 'good', drifting: false, numbersOnly: false, nextContact: null });
   });
 
   it('Lachlan: chatting weekly and replying, but never logs in, so he is fine', () => {
@@ -255,7 +255,7 @@ describe('attention: who to talk to next', () => {
   it('Harry: a new client is not flagged, but is checked on sooner than the usual cadence', () => {
     const q = quarterly([], ago(10), now);
     const fresh = attention({ status: 'new', touchEveryDays: 30, isNew: true, contact: lastContact([touch('call', 5)], now), quarterly: q });
-    expect(fresh).toEqual({ priority: 0, reasons: [], bucket: 'new', drifting: false, numbersOnly: false });
+    expect(fresh).toEqual({ priority: 0, reasons: [], bucket: 'new', drifting: false, numbersOnly: false, nextContact: null });
     const lapsed = attention({ status: 'new', touchEveryDays: 30, isNew: true, contact: lastContact([touch('call', 20)], now), quarterly: q });
     expect(lapsed.reasons).toEqual(['Last spoke 20d ago']);
     expect(lapsed.bucket).toBe('reach');
@@ -282,7 +282,7 @@ describe('attention: who to talk to next', () => {
 
   it('does not nag about a quarterly call that was never planned', () => {
     const a = attention({ ...rolling, quarterly: quarterly([], ago(300), now) });
-    expect(a).toEqual({ priority: 0, reasons: [], bucket: 'good', drifting: false, numbersOnly: false });
+    expect(a).toEqual({ priority: 0, reasons: [], bucket: 'good', drifting: false, numbersOnly: false, nextContact: null });
   });
 
   it('numbers-only: spoke today, replying, but no numbers for months is a nudge, not a call', () => {
@@ -303,6 +303,27 @@ describe('attention: who to talk to next', () => {
 
   it('respects a per-client cadence', () => {
     expect(attention({ ...rolling, touchEveryDays: 60, contact: lastContact([touch('whatsapp', 45)], now) }).bucket).toBe('good');
+  });
+
+  it('a booked call softens the overdue-contact nag, with nothing else wrong', () => {
+    const booked = { at: new Date('2026-11-10T08:15:00Z'), kind: 'call', note: null };
+    const a = attention({ ...rolling, contact: lastContact([touch('whatsapp', 45)], now), nextContact: booked });
+    expect(a.reasons).toEqual([]);
+    expect(a.bucket).toBe('good');
+    expect(a.nextContact).toEqual(booked);
+  });
+
+  it('a booked call does not cover for bad numbers or going silent on messages', () => {
+    const booked = { at: new Date('2026-11-10T08:15:00Z'), kind: 'call', note: null };
+    const needsHelp = attention({ ...rolling, status: 'needs_help', statusReasons: ['Revenue down 25%'], nextContact: booked });
+    expect(needsHelp.bucket).toBe('act');
+    expect(needsHelp.reasons).toEqual(['Revenue down 25%']);
+    const drifting = attention({
+      ...rolling, status: 'quiet', daysSinceCheckin: 134,
+      contact: lastContact([touch('whatsapp', 1)], now), reply: lastReply([touch('client_message', 21)], now), nextContact: booked,
+    });
+    expect(drifting.drifting).toBe(true);
+    expect(drifting.bucket).toBe('act');
   });
 });
 
@@ -335,6 +356,27 @@ describe('assessClient', () => {
     }, now);
     expect(a.touchEveryDays).toBe(10);
     expect(a.attention.reasons).toEqual(['Last spoke 12d ago']);
+  });
+
+  it('a call booked for the future softens the overdue-contact nag', () => {
+    const a = assessClient({
+      joinedAt: ago(300), months: [month(9000), month(9000)], daysSinceCheckin: 8, daysSinceLogin: 2,
+      touchpoints: [touch('whatsapp', 45)],
+      nextContactAt: '2026-11-11T08:15:00Z', nextContactKind: 'call', nextContactNote: 'Tuesday catch-up',
+    }, now);
+    expect(a.attention.reasons).toEqual([]);
+    expect(a.attention.bucket).toBe('good');
+    expect(a.attention.nextContact).toEqual({ at: new Date('2026-11-11T08:15:00Z'), kind: 'call', note: 'Tuesday catch-up' });
+  });
+
+  it('ignores a booked call once its time has passed', () => {
+    const a = assessClient({
+      joinedAt: ago(300), months: [month(9000), month(9000)], daysSinceCheckin: 8, daysSinceLogin: 2,
+      touchpoints: [touch('whatsapp', 45)],
+      nextContactAt: ago(1),
+    }, now);
+    expect(a.attention.nextContact).toBeNull();
+    expect(a.attention.reasons).toEqual(['Last spoke 45d ago']);
   });
 });
 

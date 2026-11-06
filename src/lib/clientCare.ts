@@ -269,7 +269,12 @@ export type Attention = {
   drifting: boolean;
   /** The only thing wrong is that their monthly numbers are overdue. A nudge, not a conversation. */
   numbersOnly: boolean;
+  /** A call already booked ahead, still upcoming. Shown as its own chip, not mixed into reasons. */
+  nextContact: NextContact | null;
 };
+
+/** A call or message already booked ahead (client_care.next_contact_at/_kind/_note), still upcoming. */
+export type NextContact = { at: Date; kind: string; note: string | null };
 
 export type AttentionInput = {
   status: Momentum;
@@ -282,12 +287,15 @@ export type AttentionInput = {
   statusReasons?: string[];
   daysSinceCheckin?: number | null;
   daysSinceLogin?: number | null;
+  /** Softens the overdue-contact nag only — not momentum or unanswered messages, which a booked call doesn't fix by itself. */
+  nextContact?: NextContact | null;
 };
 
 export function attention(input: AttentionInput): Attention {
   const { status, contact, quarterly: q, touchEveryDays: every, isNew } = input;
   const reply = input.reply ?? { at: null, days: null };
   const checkinDays = input.daysSinceCheckin ?? null;
+  const booked = input.nextContact ?? null;
   let priority = 0;
   const reasons: string[] = [];
 
@@ -311,13 +319,15 @@ export function attention(input: AttentionInput): Attention {
   }
 
   const limit = isNew ? Math.min(every, 14) : every;
-  const contactOverdue = contact.days === null || contact.days > limit;
-  if (contact.days === null) {
-    priority += isNew ? 40 : 45;
-    reasons.push('No contact logged');
-  } else if (contact.days > limit) {
-    priority += 40 + Math.min(30, (contact.days - limit) / 2);
-    reasons.push(`Last spoke ${contact.days}d ago`);
+  const contactOverdue = !booked && (contact.days === null || contact.days > limit);
+  if (!booked) {
+    if (contact.days === null) {
+      priority += isNew ? 40 : 45;
+      reasons.push('No contact logged');
+    } else if (contact.days > limit) {
+      priority += 40 + Math.min(30, (contact.days - limit) / 2);
+      reasons.push(`Last spoke ${contact.days}d ago`);
+    }
   }
 
   if (checkinOverdue) {
@@ -341,7 +351,7 @@ export function attention(input: AttentionInput): Attention {
     : 'good';
 
   const numbersOnly = bucket === 'reach' && checkinOverdue && !negative && !contactOverdue && !unanswered;
-  return { priority: Math.round(priority), reasons, bucket, drifting, numbersOnly };
+  return { priority: Math.round(priority), reasons, bucket, drifting, numbersOnly, nextContact: booked };
 }
 
 // ---------- one call that does it all, so the page and the Monday digest can't disagree ----------
@@ -367,6 +377,10 @@ export type AssessInput = {
   touchEveryExplicit?: number | null;
   contextCadence?: string | string[] | null;
   quarterlyPlannedOn?: string | null;
+  /** client_care.next_contact_at/_kind/_note: a call or message already booked ahead. */
+  nextContactAt?: string | null;
+  nextContactKind?: string | null;
+  nextContactNote?: string | null;
 };
 
 export type Assessment = {
@@ -400,11 +414,16 @@ export function assessClient(input: AssessInput, now = new Date()): Assessment {
   const statusReasons = overridden
     ? [`Your read: ${status === 'needs_help' ? 'needs help' : status}${input.danReadNote ? ` (${input.danReadNote})` : ''}`]
     : momentum.reasons;
+  const nextAt = input.nextContactAt ? new Date(input.nextContactAt) : null;
+  const nextContact: NextContact | null = nextAt && !isNaN(nextAt.getTime()) && nextAt.getTime() > now.getTime()
+    ? { at: nextAt, kind: input.nextContactKind ?? 'call', note: input.nextContactNote ?? null }
+    : null;
   return {
     momentum, status, overridden, contact, reply, quarterly: q, touchEveryDays: every,
     attention: attention({
       status, contact, reply, quarterly: q, touchEveryDays: every, isNew: momentum.status === 'new',
       statusReasons, daysSinceCheckin: input.daysSinceCheckin, daysSinceLogin: input.daysSinceLogin,
+      nextContact,
     }),
   };
 }
@@ -470,3 +489,6 @@ export function describeQuarterly(q: QuarterlyInfo): string {
 
 export const formatShortDate = (d: Date | null) =>
   d ? d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—';
+
+export const formatShortDateTime = (d: Date | null) =>
+  d ? d.toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '—';

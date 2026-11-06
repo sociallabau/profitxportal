@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from 'react';
 import QuickLog from '@/components/client-health/QuickLog';
-import { BUCKET_STYLE, STATUS_STYLE } from '@/lib/clientCare';
+import { BUCKET_STYLE, STATUS_STYLE, formatShortDateTime } from '@/lib/clientCare';
 import { factsLine, initials } from '@/lib/clientDisplay';
 import type { ClientWithHealth } from '@/lib/clientHealth';
 
@@ -31,6 +31,11 @@ export default function ClientCard({ client, onOpen }: { client: ClientWithHealt
           <p className="font-semibold text-foreground truncate">{client.full_name || 'Unnamed'}</p>
           {client.attention.drifting && <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-destructive">Drifting</span>}
           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.bg} ${s.text}`}>{s.label}{client.overridden ? ' ★' : ''}</span>
+          {client.attention.nextContact && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              Booked {formatShortDateTime(client.attention.nextContact.at)}
+            </span>
+          )}
         </div>
         <p className="mt-0.5 text-sm text-foreground/85 leading-snug">{reasons.slice(0, 3).join(' · ') || b.hint}</p>
         <p className="mt-1 text-xs text-muted-foreground">{factsLine(client)}</p>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import ContextRoom from '@/components/ContextRoom';
 import GrowthHubPanel from '@/components/client-health/GrowthHubPanel';
 import QuarterlyCall from '@/components/client-health/QuarterlyCall';
+import HealthChatBox from '@/components/client-health/HealthChatBox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -20,7 +21,7 @@ import {
   TARGET_MARGIN,
   MIN_MARGIN,
 } from '@/lib/clientHealth';
-import { STATUS_STYLE, TOUCH_KINDS, describeQuarterly, formatShortDate, touchLabel, type DanRead, type TouchKind } from '@/lib/clientCare';
+import { STATUS_STYLE, TOUCH_KINDS, describeQuarterly, formatShortDate, formatShortDateTime, touchLabel, type DanRead, type TouchKind } from '@/lib/clientCare';
 
 const READS: { value: DanRead | 'auto'; label: string }[] = [
   { value: 'auto', label: 'Let the numbers decide' },
@@ -334,6 +335,11 @@ export default function ClientDetailPanel({
                   They replied {c.reply.days === 0 ? 'today' : `${c.reply.days}d ago`}
                 </p>
               )}
+              {c.attention.nextContact && (
+                <p className="text-[11px] font-semibold text-primary">
+                  {touchLabel(c.attention.nextContact.kind)} booked {formatShortDateTime(c.attention.nextContact.at)}
+                </p>
+              )}
             </div>
             <div className={`p-3 rounded-xl border ${c.quarterly.state === 'overdue' ? 'border-red-500/40 bg-red-500/10' : c.quarterly.state === 'soon' ? 'border-yellow-500/40 bg-yellow-500/10' : 'border-border'}`}>
               <p className="text-xs text-muted-foreground mb-1">Quarterly call</p>
@@ -394,6 +400,8 @@ export default function ClientDetailPanel({
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <StickyNote className="w-3.5 h-3.5" /> Notes &amp; contact log
             </p>
+
+            <div className="mb-3"><HealthChatBox clientId={c.id} clientName={(c.full_name ?? '').split(' ')[0] || null} /></div>
 
             <div className="rounded-lg bg-muted/30 border border-border p-3 mb-3 space-y-2">
               <p className="text-xs font-semibold text-foreground flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> Log a contact</p>
