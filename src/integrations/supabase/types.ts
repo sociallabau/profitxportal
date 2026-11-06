@@ -219,6 +219,7 @@ export type Database = {
           dan_read_at: string | null
           dan_read_by: string | null
           dan_read_note: string | null
+          quarterly_due_on: string | null
           snapshot: string | null
           snapshot_at: string | null
           snapshot_month: string | null
@@ -232,6 +233,7 @@ export type Database = {
           dan_read_at?: string | null
           dan_read_by?: string | null
           dan_read_note?: string | null
+          quarterly_due_on?: string | null
           snapshot?: string | null
           snapshot_at?: string | null
           snapshot_month?: string | null
@@ -245,6 +247,7 @@ export type Database = {
           dan_read_at?: string | null
           dan_read_by?: string | null
           dan_read_note?: string | null
+          quarterly_due_on?: string | null
           snapshot?: string | null
           snapshot_at?: string | null
           snapshot_month?: string | null
@@ -450,6 +453,45 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      client_status_log: {
+        Row: {
+          bucket: string
+          client_id: string
+          reasons: string[]
+          snapshot_on: string
+          status: string
+        }
+        Insert: {
+          bucket: string
+          client_id: string
+          reasons?: string[]
+          snapshot_on: string
+          status: string
+        }
+        Update: {
+          bucket?: string
+          client_id?: string
+          reasons?: string[]
+          snapshot_on?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_status_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_touchpoints: {
         Row: {
