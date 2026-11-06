@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { X, Sparkles, RefreshCw, Copy, StickyNote, Trash2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -247,7 +248,8 @@ export default function ClientDetailPanel({
     `flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition ${active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`;
   const submittedMonth = c.last_submission_month ? new Date(c.last_submission_month).toLocaleString('default', { month: 'long', year: 'numeric' }) : null;
 
-  return (
+  // Rendered at the top of the page, not inside it: a glass or animated parent would otherwise size this to itself and cut it off.
+  return createPortal(
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => onClose()} />
 
@@ -618,6 +620,7 @@ export default function ClientDetailPanel({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

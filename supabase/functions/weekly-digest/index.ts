@@ -95,7 +95,10 @@ Deno.serve(async (req) => {
 
     const inBucket = (b: Bucket) => items.filter(i => i.attention.bucket === b).sort((x, y) => y.attention.priority - x.attention.priority);
     const act = inBucket("act");
-    const reach = inBucket("reach");
+    const reachAll = inBucket("reach");
+    // Where the only thing wrong is overdue numbers, it's a nudge, not a conversation: list them apart.
+    const reach = reachAll.filter(i => !i.attention.numbersOnly);
+    const numbers = reachAll.filter(i => i.attention.numbersOnly);
     const quarterlyList = inBucket("quarterly");
     const doingWell = items.filter(i => i.attention.bucket === "good" || i.attention.bucket === "new").length;
     const worse = items
@@ -105,7 +108,7 @@ Deno.serve(async (req) => {
     const line = (i: (typeof items)[number], extra = "") => `• ${i.name} — ${i.attention.reasons.slice(0, 3).join(" · ")}${extra}`;
     const lines = [
       `ProfitX weekly — ${now.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short", timeZone: "Australia/Sydney" })}`,
-      `${act.length + reach.length} need you this week · ${doingWell} doing well`,
+      `${act.length + reach.length} need you this week${numbers.length ? ` · ${numbers.length} owe you their numbers` : ""} · ${doingWell} doing well`,
     ];
     if (worse.length) {
       lines.push("", "GOT WORSE SINCE LAST WEEK");
@@ -113,11 +116,15 @@ Deno.serve(async (req) => {
     }
     if (act.length) { lines.push("", "ACT NOW"); for (const i of act.slice(0, TOP)) lines.push(line(i)); }
     if (reach.length) { lines.push("", "REACH OUT"); for (const i of reach.slice(0, TOP)) lines.push(line(i)); }
+    if (numbers.length) {
+      lines.push("", "NUMBERS OVERDUE (a nudge will do)");
+      for (const i of numbers.slice(0, TOP * 2)) lines.push(`• ${i.name}`);
+    }
     if (quarterlyList.length) {
       lines.push("", "QUARTERLY CALLS");
       for (const i of quarterlyList.slice(0, TOP)) lines.push(`• ${i.name} — ${describeQuarterly(i.quarterly)} (due ${formatShortDate(i.quarterly.dueAt)})`);
     }
-    if (!act.length && !reach.length && !quarterlyList.length) lines.push("", "Nobody needs you this week.");
+    if (!act.length && !reach.length && !numbers.length && !quarterlyList.length) lines.push("", "Nobody needs you this week.");
     const text = lines.join("\n");
     const payload = {
       text,

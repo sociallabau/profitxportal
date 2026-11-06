@@ -31,7 +31,8 @@ export const REPLY_SILENT_DAYS = 14;
 /** No portal login for this long counts, but only alongside silence on WhatsApp. */
 export const LOGIN_STALE_DAYS = 30;
 export const LOW_CONFIDENCE = 4;
-export const LOW_NPS = 6;
+/** 5 is where the satisfaction slider starts, so a 5 tells us nothing. Only a clearly bad score counts. */
+export const LOW_NPS = 4;
 export const CONFIDENCE_DROP = 2;
 /** Revenue within ±5% of last month is flat; down more than 15% is a drop. */
 export const FLAT_TOLERANCE = 0.05;
@@ -117,7 +118,8 @@ export function lastReply(touchpoints: Touchpoint[], now = new Date()): ReplyInf
 
 // ---------- quarterly call ----------
 
-export type QuarterlyState = 'new' | 'ok' | 'soon' | 'overdue';
+/** 'unscheduled': a long-standing client with no quarterly call logged and none planned. That's a setup gap, not an overdue call. */
+export type QuarterlyState = 'new' | 'ok' | 'soon' | 'overdue' | 'unscheduled';
 
 export type QuarterlyInfo = {
   state: QuarterlyState;
@@ -145,8 +147,9 @@ export function quarterly(touchpoints: Touchpoint[], joinedAt: string | null | u
   if (!usePlan && !anchor) return { state: 'ok', dueAt: null, daysUntil: null, lastAt, neverLogged: !lastAt, planned: false };
   const dueAt = usePlan ? plan! : addDays(anchor!, QUARTER_DAYS);
   const daysUntil = daysBetween(now, dueAt);
-  const state: QuarterlyState = daysUntil < 0 ? 'overdue' : daysUntil <= QUARTER_SOON_DAYS ? 'soon' : lastAt || usePlan ? 'ok' : 'new';
-  return { state, dueAt, daysUntil, lastAt, neverLogged: !lastAt && !usePlan, planned: usePlan };
+  const neverLogged = !lastAt && !usePlan;
+  const state: QuarterlyState = daysUntil < 0 ? (neverLogged ? 'unscheduled' : 'overdue') : daysUntil <= QUARTER_SOON_DAYS ? 'soon' : neverLogged ? 'new' : 'ok';
+  return { state, dueAt, daysUntil, lastAt, neverLogged, planned: usePlan };
 }
 
 // ---------- momentum ----------
@@ -264,6 +267,8 @@ export type Attention = {
   bucket: Bucket;
   /** Their numbers are stale or sliding AND they've stopped answering messages we sent. */
   drifting: boolean;
+  /** The only thing wrong is that their monthly numbers are overdue. A nudge, not a conversation. */
+  numbersOnly: boolean;
 };
 
 export type AttentionInput = {
@@ -322,7 +327,7 @@ export function attention(input: AttentionInput): Attention {
 
   if (q.state === 'overdue') {
     priority += 70 + Math.min(30, Math.abs(q.daysUntil ?? 0) / 3);
-    reasons.push(q.neverLogged ? 'Quarterly call: none logged' : `Quarterly call overdue ${Math.abs(q.daysUntil ?? 0)}d`);
+    reasons.push(`Quarterly call overdue ${Math.abs(q.daysUntil ?? 0)}d`);
   } else if (q.state === 'soon') {
     priority += 35;
     reasons.push(`Quarterly call in ${q.daysUntil}d`);
@@ -335,7 +340,8 @@ export function attention(input: AttentionInput): Attention {
     : status === 'new' ? 'new'
     : 'good';
 
-  return { priority: Math.round(priority), reasons, bucket, drifting };
+  const numbersOnly = bucket === 'reach' && checkinOverdue && !negative && !contactOverdue && !unanswered;
+  return { priority: Math.round(priority), reasons, bucket, drifting, numbersOnly };
 }
 
 // ---------- one call that does it all, so the page and the Monday digest can't disagree ----------
@@ -448,7 +454,8 @@ export const BUCKET_STYLE: Record<Bucket, { label: string; hint: string; bg: str
 
 export function describeQuarterly(q: QuarterlyInfo): string {
   if (!q.dueAt || q.daysUntil === null) return '—';
-  if (q.state === 'overdue') return q.neverLogged ? 'None logged' : `Overdue ${Math.abs(q.daysUntil)}d`;
+  if (q.state === 'unscheduled') return 'Not planned';
+  if (q.state === 'overdue') return `Overdue ${Math.abs(q.daysUntil)}d`;
   return q.daysUntil === 0 ? 'Due today' : `In ${q.daysUntil}d`;
 }
 

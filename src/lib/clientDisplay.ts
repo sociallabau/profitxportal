@@ -26,7 +26,7 @@ export function factsLine(c: ClientWithHealth): string {
   }
   if (c.reply.days !== null && !said(r => r.startsWith("Hasn't replied"))) parts.push(`they replied ${c.reply.days === 0 ? 'today' : `${c.reply.days}d ago`}`);
   const q = describeQuarterly(c.quarterly);
-  if (q !== '—' && !said(r => r.startsWith('Quarterly'))) parts.push(`quarterly ${q === 'None logged' ? 'not booked' : q.toLowerCase()}`);
+  if (q !== '—' && !said(r => r.startsWith('Quarterly'))) parts.push(`quarterly ${q === 'Not planned' ? 'not booked' : q.toLowerCase()}`);
   const r = revenueLine(c);
   parts.push(`${r.text}${r.change !== null && Math.abs(r.change) >= 5 ? ` ${r.change > 0 ? '▲' : '▼'}${Math.abs(r.change)}%` : ''}`);
   return parts.join(' · ');

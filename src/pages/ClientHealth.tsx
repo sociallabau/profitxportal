@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HeartPulse, ArrowUpCircle, Trophy, Search, LayoutGrid, Table2, CalendarClock, CheckCircle2, Users, CalendarRange, ChevronDown } from 'lucide-react';
+import { HeartPulse, ArrowUpCircle, Trophy, Search, LayoutGrid, Table2, CalendarClock, CheckCircle2, Users, CalendarRange, ChevronDown, Copy } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
 import ClientDetailPanel from '@/components/client-health/ClientDetailPanel';
@@ -27,11 +27,23 @@ import { useGrowthHubContent } from '@/hooks/useGrowthHub';
 type View = 'needs' | 'everyone' | 'quarterly' | 'gate';
 type SortKey = 'priority' | 'name' | 'revenue';
 /** The buckets that get a card each. The rest are tucked away: nobody needs to look at them. */
-const ACTION_BUCKETS: Bucket[] = ['act', 'reach', 'quarterly'];
-const BUCKET_ORDER: Bucket[] = ['act', 'reach', 'quarterly', 'new', 'good'];
+const ACTION_BUCKETS: Group[] = ['act', 'reach', 'numbers', 'quarterly'];
+const GROUP_ORDER: Group[] = ['act', 'reach', 'numbers', 'quarterly', 'new', 'good'];
 
-function BucketPill({ bucket }: { bucket: Bucket }) {
-  const b = BUCKET_STYLE[bucket];
+/** 'numbers' is a display group, not a database bucket: it's "reach out" where the only thing wrong is overdue numbers. */
+type Group = Bucket | 'numbers';
+const GROUP_STYLE: Record<Group, { label: string; hint: string; bg: string; text: string; dot: string; bar: string }> = {
+  ...BUCKET_STYLE,
+  reach: { ...BUCKET_STYLE.reach, label: 'Reach out', hint: 'Worth a message or a call' },
+  numbers: { label: 'Numbers overdue', hint: 'Needs a nudge, not a call', bg: 'bg-orange-500/10', text: 'text-orange-600', dot: 'bg-orange-300', bar: 'bg-orange-300' },
+};
+const groupOf = (c: ClientWithHealth): Group => (c.attention.numbersOnly ? 'numbers' : c.attention.bucket);
+
+const nudgeText = (c: ClientWithHealth) =>
+  `Hey ${(c.full_name ?? '').split(' ')[0] || 'mate'}, I haven't seen your monthly numbers in a while. Can you pop them into the portal when you get a minute? It lets me see exactly where to help you most.`;
+
+function BucketPill({ bucket }: { bucket: Group }) {
+  const b = GROUP_STYLE[bucket];
   return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${b.bg} ${b.text}`}>{b.label}</span>;
 }
 
@@ -226,7 +238,7 @@ export default function ClientHealth() {
   });
 
   const [view, setView] = useState<View>('needs');
-  const [focus, setFocus] = useState<Bucket | null>(null);
+  const [focus, setFocus] = useState<Group | null>(null);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('priority');
 
@@ -264,14 +276,14 @@ export default function ClientHealth() {
       });
   }, [clients, archivedIds, monthsByUser, profileMeta, touchpoints, careRows, cadenceAnswers, content, gateData]);
 
-  const byBucket = useMemo(() => {
-    const groups: Record<Bucket, ClientWithHealth[]> = { act: [], reach: [], quarterly: [], new: [], good: [] };
-    for (const c of clientsWithHealth) groups[c.attention.bucket].push(c);
-    for (const b of BUCKET_ORDER) groups[b].sort((x, y) => y.attention.priority - x.attention.priority || (x.full_name ?? '').localeCompare(y.full_name ?? ''));
+  const byGroup = useMemo(() => {
+    const groups: Record<Group, ClientWithHealth[]> = { act: [], reach: [], numbers: [], quarterly: [], new: [], good: [] };
+    for (const c of clientsWithHealth) groups[groupOf(c)].push(c);
+    for (const g of GROUP_ORDER) groups[g].sort((x, y) => y.attention.priority - x.attention.priority || (x.full_name ?? '').localeCompare(y.full_name ?? ''));
     return groups;
   }, [clientsWithHealth]);
 
-  const needYou = byBucket.act.length + byBucket.reach.length;
+  const needYou = byGroup.act.length + byGroup.reach.length;
   const total = clientsWithHealth.length;
 
   const readyToMoveUp = clientsWithHealth.filter(c => c.gh.readyToMoveUp);
@@ -280,7 +292,7 @@ export default function ClientHealth() {
   const gateUpdates = readyToMoveUp.length + hitThisMonth.length + waitingOnDan.length;
 
   // Everyone's first quarterly call is "none logged", so everyone is overdue at once. Spread them out.
-  const needsFirstDate = clientsWithHealth.filter(c => c.quarterly.neverLogged && c.quarterly.state === 'overdue' && c.attention.bucket !== 'new');
+  const needsFirstDate = clientsWithHealth.filter(c => c.quarterly.state === 'unscheduled');
   const spread = useMutation({
     mutationFn: async () => {
       const plan = spreadQuarterly(needsFirstDate.map(c => ({ id: c.id, priority: c.attention.priority, contactDays: c.contact.days })));
@@ -334,9 +346,13 @@ export default function ClientHealth() {
             <HeartPulse className="w-6 h-6 text-primary" /> Client Health
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {total === 0 ? 'No clients yet.' : needYou === 0
+            {total === 0 ? 'No clients yet.' : needYou === 0 && byGroup.numbers.length === 0
               ? `Everyone's in good shape. Nobody needs you right now.`
-              : <><span className="font-semibold text-foreground">{needYou} {needYou === 1 ? 'person needs' : 'people need'} you</span> · {total - needYou} {total - needYou === 1 ? 'is' : 'are'} fine</>}
+              : <>
+                  <span className="font-semibold text-foreground">{needYou} {needYou === 1 ? 'person needs' : 'people need'} you</span>
+                  {byGroup.numbers.length > 0 && <> · {byGroup.numbers.length} owe you their numbers</>}
+                  {' '}· {total - needYou - byGroup.numbers.length} {total - needYou - byGroup.numbers.length === 1 ? 'is' : 'are'} fine
+                </>}
           </p>
         </div>
         <WeeklyDigest />
@@ -346,13 +362,13 @@ export default function ClientHealth() {
       {total > 0 && (
         <div className="mb-6 rounded-2xl border border-border bg-card/70 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex h-2.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-            {BUCKET_ORDER.map(b => byBucket[b].length > 0 && (
-              <div key={b} className={BUCKET_STYLE[b].bar} style={{ width: `${(byBucket[b].length / total) * 100}%` }} />
+            {GROUP_ORDER.map(b => byGroup[b].length > 0 && (
+              <div key={b} className={GROUP_STYLE[b].bar} style={{ width: `${(byGroup[b].length / total) * 100}%` }} />
             ))}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {BUCKET_ORDER.map(b => {
-              const s = BUCKET_STYLE[b];
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-6">
+            {GROUP_ORDER.map(b => {
+              const s = GROUP_STYLE[b];
               const active = focus === b;
               return (
                 <button
@@ -363,7 +379,7 @@ export default function ClientHealth() {
                 >
                   <div className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${s.dot}`} />
-                    <span className="text-xl font-bold text-foreground leading-none">{byBucket[b].length}</span>
+                    <span className="text-xl font-bold text-foreground leading-none">{byGroup[b].length}</span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{s.label}</p>
                 </button>
@@ -386,35 +402,73 @@ export default function ClientHealth() {
         <p className="text-sm text-muted-foreground">No clients have submitted data yet.</p>
       ) : view === 'needs' ? (
         <div className="space-y-6">
-          {needYou === 0 && byBucket.quarterly.length === 0 && (
+          {/* Everyone starts with no quarterly call logged. One tap plans the first round instead of 20 "overdue" flags. */}
+          {needsFirstDate.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{needsFirstDate.length} {needsFirstDate.length === 1 ? "client doesn't" : "clients don't"} have a quarterly call planned</p>
+                <p className="text-xs text-muted-foreground">Spread their first calls across the next 90 days, the people who most need you first. You can change any date later.</p>
+              </div>
+              <button
+                onClick={() => { if (confirm(`Plan a first quarterly call for ${needsFirstDate.length} clients, spread across the next 90 days with the people who most need you first?`)) spread.mutate(); }}
+                disabled={spread.isPending}
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+              >
+                <CalendarRange className="h-3.5 w-3.5" /> {spread.isPending ? 'Planning…' : 'Plan them'}
+              </button>
+            </div>
+          )}
+
+          {needYou === 0 && byGroup.numbers.length === 0 && byGroup.quarterly.length === 0 && (
             <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-6 text-center">
               <p className="font-semibold text-success">All clear</p>
               <p className="mt-1 text-sm text-muted-foreground">Everyone has been spoken to recently and their numbers look fine.</p>
             </div>
           )}
 
-          {ACTION_BUCKETS.filter(b => !focus || focus === b || focus === 'good' || focus === 'new').map(b => {
-            if (focus === 'good' || focus === 'new') return null;
-            const list = byBucket[b];
+          {ACTION_BUCKETS.filter(g => !focus || focus === g).map(g => {
+            const list = byGroup[g];
             if (list.length === 0) return null;
-            const s = BUCKET_STYLE[b];
+            const st = GROUP_STYLE[g];
             return (
-              <section key={b}>
+              <section key={g}>
                 <div className="mb-2 flex items-baseline gap-2">
-                  <span className={`w-2 h-2 rounded-full ${s.dot}`} />
-                  <h2 className="text-sm font-bold text-foreground">{sectionTitle[b]}</h2>
-                  <span className="text-xs text-muted-foreground">{list.length} · {s.hint.toLowerCase()}</span>
+                  <span className={`w-2 h-2 rounded-full ${st.dot}`} />
+                  <h2 className="text-sm font-bold text-foreground">{st.label}</h2>
+                  <span className="text-xs text-muted-foreground">{list.length} · {st.hint.toLowerCase()}</span>
                 </div>
-                <div className="space-y-2">
-                  {list.map(c => <ClientCard key={c.id} client={c} onOpen={() => open(c)} />)}
-                </div>
+                {g === 'numbers' ? (
+                  <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card/80 shadow-sm backdrop-blur-sm">
+                    {list.map(c => (
+                      <div key={c.id} className="flex items-center gap-3 px-4 py-2.5">
+                        <button onClick={() => open(c)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${st.bg} ${st.text} text-[11px] font-bold`}>{initials(c.full_name)}</span>
+                          <span className="truncate text-sm font-semibold text-foreground">{c.full_name || 'Unnamed'}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {c.days_since_submission == null ? 'No numbers yet' : `No numbers for ${c.days_since_submission}d`}
+                          </span>
+                        </button>
+                        <button
+                          onClick={async () => { try { await navigator.clipboard.writeText(nudgeText(c)); toast.success(`Reminder for ${(c.full_name ?? '').split(' ')[0]} copied. Paste it into WhatsApp`); } catch { toast.error('Could not copy'); } }}
+                          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/40 hover:text-primary"
+                        >
+                          <Copy className="h-3.5 w-3.5" /> Copy nudge
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {list.map(c => <ClientCard key={c.id} client={c} onOpen={() => open(c)} />)}
+                  </div>
+                )}
               </section>
             );
           })}
 
           <div className="space-y-2">
-            <QuietList title="Settling in" hint="Joined in the last 45 days" clients={byBucket.new} onOpen={open} openByDefault={focus === 'new'} />
-            <QuietList title="Doing well" hint="Nothing needed. Hidden to keep things calm" clients={byBucket.good} onOpen={open} openByDefault={focus === 'good'} />
+            <QuietList title="Settling in" hint="Joined in the last 45 days" clients={byGroup.new} onOpen={open} openByDefault={focus === 'new'} />
+            <QuietList title="Doing well" hint="Nothing needed. Hidden to keep things calm" clients={byGroup.good} onOpen={open} openByDefault={focus === 'good'} />
           </div>
 
           {/* Gate progress, tucked away until there's something to act on */}
@@ -498,7 +552,7 @@ export default function ClientHealth() {
                   disabled={spread.isPending}
                   className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
                 >
-                  <CalendarRange className="h-3.5 w-3.5" /> {spread.isPending ? 'Planning…' : `Spread ${needsFirstDate.length} first calls over 90 days`}
+                  <CalendarRange className="h-3.5 w-3.5" /> {spread.isPending ? 'Planning…' : `Spread ${needsFirstDate.length} first ${needsFirstDate.length === 1 ? 'call' : 'calls'} over 90 days`}
                 </button>
               )}
             </div>
@@ -525,7 +579,7 @@ export default function ClientHealth() {
                         <button key={c.id} onClick={() => open(c)} className="w-full rounded-lg border border-border bg-card p-3 text-left transition hover:border-primary/40">
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate text-sm font-semibold text-foreground">{c.full_name || 'Unnamed'}</span>
-                            <BucketPill bucket={c.attention.bucket} />
+                            <BucketPill bucket={groupOf(c)} />
                           </div>
                         </button>
                       ))}
@@ -556,7 +610,7 @@ export default function ClientHealth() {
                         <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{c.quarterly.lastAt ? formatShortDate(c.quarterly.lastAt) : 'None logged'}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{formatShortDate(c.quarterly.dueAt)}{c.quarterly.planned ? ' · planned' : ''}</td>
                         <td className={`whitespace-nowrap px-3 py-3 ${quarterlyTone(c)}`}>{describeQuarterly(c.quarterly)}</td>
-                        <td className="px-4 py-3"><div className="flex justify-end"><QuickLog clientId={c.id} /></div></td>
+                        <td className="px-4 py-3"><div className="flex justify-end"><QuickLog clientId={c.id} clientName={c.full_name} /></div></td>
                       </tr>
                     ))}
                 </tbody>
@@ -582,7 +636,7 @@ export default function ClientHealth() {
                 </thead>
                 <tbody>
                   {everyone.map(c => {
-                    const b = BUCKET_STYLE[c.attention.bucket];
+                    const b = GROUP_STYLE[groupOf(c)];
                     const r = revenueLine(c);
                     const checkin = c.days_since_submission != null ? Number(c.days_since_submission) : null;
                     return (
@@ -594,7 +648,7 @@ export default function ClientHealth() {
                           </div>
                         </td>
                         <td className="px-3 py-3">
-                          <BucketPill bucket={c.attention.bucket} />
+                          <BucketPill bucket={groupOf(c)} />
                           {c.attention.reasons.length > 0 && <p className="mt-0.5 max-w-[200px] truncate text-[10px] text-muted-foreground">{c.attention.reasons.join(' · ')}</p>}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{contactText(c)}</td>
@@ -609,7 +663,7 @@ export default function ClientHealth() {
                             ? <span className="ml-1.5 text-xs text-muted-foreground">flat</span>
                             : <span className={`ml-1.5 text-xs ${r.change > 0 ? 'text-success' : 'text-orange-600'}`}>{r.change > 0 ? '▲' : '▼'} {Math.abs(r.change)}%</span>)}
                         </td>
-                        <td className="px-4 py-3"><div className="flex justify-end"><QuickLog clientId={c.id} /></div></td>
+                        <td className="px-4 py-3"><div className="flex justify-end"><QuickLog clientId={c.id} clientName={c.full_name} /></div></td>
                       </tr>
                     );
                   })}

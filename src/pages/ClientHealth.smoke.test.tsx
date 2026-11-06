@@ -14,6 +14,8 @@ const people = [
   { id: 'marc', full_name: 'Marc', created_at: ago(300), gate: 'Gate 1 (Fix)' },
   { id: 'ethan', full_name: 'Ethan Fagan', created_at: ago(300), gate: null },
   { id: 'emily', full_name: 'Emily Phillips', created_at: ago(500), gate: null },
+  { id: 'sam', full_name: 'Sam Numbers', created_at: ago(300), gate: null },
+  { id: 'olga', full_name: 'Olga Fine', created_at: ago(300), gate: null },
 ];
 const overview = (id: string, name: string, rev: number, daysSub: number | null, extra: Record<string, unknown> = {}) => ({
   id, full_name: name, tier: 'in_flow_starter', is_admin: false, last_total_revenue: rev, last_expenses: rev * 0.5, last_mrr: rev,
@@ -25,6 +27,7 @@ const fixtures: Record<string, unknown[]> = {
     overview('tobias', 'Tobias', 19600, 5), overview('harry', 'Harry Hopkins', 0, null), overview('jake', 'Jake Nelson', 6000, 70),
     overview('lachlan', 'Lachlan Beale', 5000, 12), overview('marc', 'Marc', 2500, 80), overview('ethan', 'Ethan Fagan', 0, 134),
     overview('emily', 'Emily Phillips', 2, 3, { is_admin: true }),
+    overview('sam', 'Sam Numbers', 5000, 120), overview('olga', 'Olga Fine', 9000, 8),
   ],
   monthly_totals: [
     { user_id: 'tobias', month: month(0), total_revenue: 19600, business_confidence: 8 },
@@ -34,6 +37,10 @@ const fixtures: Record<string, unknown[]> = {
     { user_id: 'jake', month: month(3), total_revenue: 6000, business_confidence: 7 },
     { user_id: 'marc', month: month(3), total_revenue: 2500, business_confidence: 6 },
     { user_id: 'ethan', month: month(5), total_revenue: 3000, business_confidence: 6 },
+    { user_id: 'sam', month: month(4), total_revenue: 5000, business_confidence: 7 },
+    { user_id: 'olga', month: month(0), total_revenue: 9000, business_confidence: 7 },
+    { user_id: 'olga', month: month(1), total_revenue: 8000, business_confidence: 7, nps: 5 },
+    { user_id: 'tobias', month: month(2), total_revenue: 11000, business_confidence: 7, nps: 5 },
   ],
   client_touchpoints: [
     { client_id: 'tobias', kind: 'whatsapp', occurred_at: ago(6) },
@@ -49,6 +56,11 @@ const fixtures: Record<string, unknown[]> = {
     { client_id: 'ethan', kind: 'whatsapp', occurred_at: ago(1) },
     { client_id: 'ethan', kind: 'client_message', occurred_at: ago(21) },
     { client_id: 'ethan', kind: 'quarterly_call', occurred_at: ago(30) },
+    { client_id: 'sam', kind: 'whatsapp', occurred_at: ago(0) },
+    { client_id: 'sam', kind: 'client_message', occurred_at: ago(0) },
+    { client_id: 'sam', kind: 'quarterly_call', occurred_at: ago(30) },
+    { client_id: 'olga', kind: 'whatsapp', occurred_at: ago(0) },
+    { client_id: 'olga', kind: 'client_message', occurred_at: ago(0) },
   ],
   client_care: [{ client_id: 'jake', touch_every_days: null, dan_read: 'good', dan_read_note: 'Quiet but sweet', snapshot: 'Jake runs a small video studio. MRR $6,000, steady.', checkin_bullets: ['Signed one new client'], snapshot_at: ago(1) }],
 };
@@ -108,6 +120,24 @@ describe('Client Health page', () => {
     expect(screen.queryByText('Dan')).toBeNull();
   });
 
+  it('splits out people who only owe their numbers: spoke to them today, so they need a nudge, not a call', async () => {
+    renderPage();
+    await screen.findByText('Numbers overdue', { selector: 'h2' });
+    expect(await card('Sam Numbers')).toBeUndefined(); // no full card
+    expect(screen.getByText('Sam Numbers').closest('section')?.textContent).toContain('Numbers overdue');
+    expect(screen.getByText('Sam Numbers').closest('section')?.textContent).toContain('Copy nudge');
+    expect(screen.getByText(/owe you their numbers/)).toBeTruthy();
+  });
+
+  it('does not flag a middling satisfaction score, and does not nag about quarterly calls nobody planned', async () => {
+    renderPage();
+    await screen.findByText('Reach out', { selector: 'h2' });
+    expect(await card('Olga Fine')).toBeUndefined(); // doing well
+    expect(document.body.textContent).not.toContain('Quarterly call: none logged');
+    expect(document.body.textContent).not.toContain('Satisfaction 5/10');
+    expect(screen.getByText(/client doesn't have a quarterly call planned|clients don't have a quarterly call planned/)).toBeTruthy();
+  });
+
   it('puts someone who has stopped replying under Act now, marked Drifting', async () => {
     renderPage();
     const ethan = await waitFor(async () => {
@@ -152,8 +182,7 @@ describe('Client Health page', () => {
   it('offers to spread the first quarterly calls on the quarterly tab', async () => {
     renderPage();
     fireEvent.click(await screen.findByText('Quarterly calls', { selector: 'button' }));
-    // Marc's last quarterly call was logged, Harry is new, so nobody here is waiting on a first date.
-    expect(screen.queryByText(/first calls over 90 days/)).toBeNull();
+    expect(await screen.findByText(/Spread 1 first call over 90 days/)).toBeTruthy();
     expect(await screen.findByText('Last quarterly call')).toBeTruthy();
   });
 });

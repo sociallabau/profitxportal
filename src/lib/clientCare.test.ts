@@ -78,10 +78,14 @@ describe('retainer, profit and satisfaction warning signs', () => {
   it('flags spending more than they earn', () => {
     expect(computeMomentum({ ...base, revenueSeries: [6000, 5800], expensesSeries: [6500, 3000] }).reasons).toEqual(['Spending more than they earn']);
   });
-  it('flags a low satisfaction score from a current check-in', () => {
-    const r = computeMomentum({ ...base, revenueSeries: [9000, 8000], npsSeries: [5] });
+  it('flags a clearly bad satisfaction score from a current check-in', () => {
+    const r = computeMomentum({ ...base, revenueSeries: [9000, 8000], npsSeries: [3] });
     expect(r.status).toBe('watch');
-    expect(r.reasons).toEqual(['Satisfaction 5/10']);
+    expect(r.reasons).toEqual(['Satisfaction 3/10']);
+  });
+  it('ignores a 5: that is where the slider starts, so it says nothing', () => {
+    const r = computeMomentum({ ...base, revenueSeries: [9000, 8000], npsSeries: [5] });
+    expect(r.status).toBe('rolling');
   });
   it('ignores a low satisfaction score on a stale check-in', () => {
     const r = computeMomentum({ ...base, revenueSeries: [9000, 8000], npsSeries: [3], daysSinceCheckin: 90 });
@@ -152,10 +156,15 @@ describe('quarterly', () => {
     expect(q.state).toBe('new');
     expect(q.daysUntil).toBe(70);
   });
-  it('flags long-standing clients with no quarterly call ever logged', () => {
+  it('treats a long-standing client with no quarterly call ever logged as not planned, not overdue', () => {
     const q = quarterly([], ago(300), now);
-    expect(q.state).toBe('overdue');
+    expect(q.state).toBe('unscheduled');
     expect(q.neverLogged).toBe(true);
+  });
+  it('a planned date that has passed is genuinely overdue', () => {
+    const q = quarterly([], ago(300), now, '2026-11-01');
+    expect(q.state).toBe('overdue');
+    expect(q.neverLogged).toBe(false);
   });
   it('uses a planned date when there is no quarterly call yet', () => {
     const q = quarterly([], ago(300), now, '2026-11-25');
@@ -182,7 +191,7 @@ describe('attention: who to talk to next', () => {
   };
 
   it('says nothing about a client who is doing well and recently spoken to', () => {
-    expect(attention(rolling)).toEqual({ priority: 0, reasons: [], bucket: 'good', drifting: false });
+    expect(attention(rolling)).toEqual({ priority: 0, reasons: [], bucket: 'good', drifting: false, numbersOnly: false });
   });
 
   it('Lachlan: chatting weekly and replying, but never logs in, so he is fine', () => {
@@ -246,7 +255,7 @@ describe('attention: who to talk to next', () => {
   it('Harry: a new client is not flagged, but is checked on sooner than the usual cadence', () => {
     const q = quarterly([], ago(10), now);
     const fresh = attention({ status: 'new', touchEveryDays: 30, isNew: true, contact: lastContact([touch('call', 5)], now), quarterly: q });
-    expect(fresh).toEqual({ priority: 0, reasons: [], bucket: 'new', drifting: false });
+    expect(fresh).toEqual({ priority: 0, reasons: [], bucket: 'new', drifting: false, numbersOnly: false });
     const lapsed = attention({ status: 'new', touchEveryDays: 30, isNew: true, contact: lastContact([touch('call', 20)], now), quarterly: q });
     expect(lapsed.reasons).toEqual(['Last spoke 20d ago']);
     expect(lapsed.bucket).toBe('reach');
@@ -269,6 +278,27 @@ describe('attention: who to talk to next', () => {
     const a = attention({ ...rolling, quarterly: quarterly([touch('quarterly_call', 80)], ago(400), now) });
     expect(a.bucket).toBe('quarterly');
     expect(a.reasons).toEqual(['Quarterly call in 10d']);
+  });
+
+  it('does not nag about a quarterly call that was never planned', () => {
+    const a = attention({ ...rolling, quarterly: quarterly([], ago(300), now) });
+    expect(a).toEqual({ priority: 0, reasons: [], bucket: 'good', drifting: false, numbersOnly: false });
+  });
+
+  it('numbers-only: spoke today, replying, but no numbers for months is a nudge, not a call', () => {
+    const a = attention({ ...rolling, status: 'quiet', daysSinceCheckin: 196, contact: lastContact([touch('whatsapp', 0)], now) });
+    expect(a.bucket).toBe('reach');
+    expect(a.numbersOnly).toBe(true);
+  });
+
+  it('not numbers-only when you have not spoken to them either', () => {
+    const a = attention({ ...rolling, status: 'quiet', daysSinceCheckin: 196, contact: lastContact([touch('whatsapp', 60)], now) });
+    expect(a.numbersOnly).toBe(false);
+  });
+
+  it('not numbers-only when something else is wrong', () => {
+    const a = attention({ ...rolling, status: 'watch', statusReasons: ['Revenue down 25%'], daysSinceCheckin: 196 });
+    expect(a.numbersOnly).toBe(false);
   });
 
   it('respects a per-client cadence', () => {

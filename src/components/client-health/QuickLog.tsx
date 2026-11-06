@@ -9,7 +9,7 @@ const BUTTONS: { kind: TouchKind; label: string; Icon: typeof Phone }[] = [
 ];
 
 /** One-tap "I just spoke to them" buttons: logs the contact as happening now. */
-export default function QuickLog({ clientId }: { clientId: string }) {
+export default function QuickLog({ clientId, clientName }: { clientId: string; clientName?: string | null }) {
   const log = useLogTouchpoint();
   return (
     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
@@ -20,7 +20,7 @@ export default function QuickLog({ clientId }: { clientId: string }) {
           title={label}
           aria-label={label}
           disabled={log.isPending}
-          onClick={() => log.mutate({ clientId, kind })}
+          onClick={() => log.mutate({ clientId, kind, clientName })}
           className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-primary/15 hover:text-primary transition disabled:opacity-50"
         >
           <Icon className="w-3.5 h-3.5" />

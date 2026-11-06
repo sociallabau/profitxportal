@@ -35,7 +35,7 @@ export default function ClientCard({ client, onOpen }: { client: ClientWithHealt
         <p className="mt-0.5 text-sm text-foreground/85 leading-snug">{reasons.slice(0, 3).join(' · ') || b.hint}</p>
         <p className="mt-1 text-xs text-muted-foreground">{factsLine(client)}</p>
       </div>
-      <QuickLog clientId={client.id} />
+      <QuickLog clientId={client.id} clientName={client.full_name} />
     </div>
   );
 }
