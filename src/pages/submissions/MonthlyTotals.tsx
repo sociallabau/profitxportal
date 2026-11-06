@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
 import { supabase } from '@/lib/supabase';
@@ -36,6 +36,31 @@ const blankForm: Record<string, string> = {
   biggest_win: '', needs_this_month: '',
 };
 
+type Row = Record<string, unknown>;
+const str = (v: unknown) => (v == null ? '' : String(v));
+
+/** A saved month back into the form, so re-opening a month shows what's there instead of blanks. */
+const toForm = (row: Row): Record<string, string> => ({
+  ...blankForm,
+  oneoff_revenue: str(row.oneoff_revenue),
+  mrr_manual: str(row.mrr_manual ?? row.mrr),
+  total_revenue: str(row.total_revenue),
+  expenses: str(row.expenses),
+  expense_contractors: str(row.expense_contractors),
+  expense_software: str(row.expense_software),
+  expense_owner_pay: str(row.expense_owner_pay),
+  expense_other: str(row.expense_other),
+  ...Object.fromEntries(CHECK_IN_SECTIONS.flatMap(s => s.fields.map(f => [f.key, str(row[f.key])]))),
+  new_clients_total_value: str(row.new_clients_total_value),
+  new_clients_is_mrr: String(row.new_clients_is_mrr === true),
+  business_confidence: str(row.business_confidence ?? 5),
+  nps: str(row.nps ?? 5),
+  biggest_win: str(row.biggest_win),
+  needs_this_month: str(row.needs_this_month),
+});
+
+const money = (v: string) => parseFloat(v) || 0;
+
 export default function MonthlyTotals() {
   const { user } = useRequireAuth();
   usePageTracking('monthly-totals');
@@ -54,6 +79,8 @@ export default function MonthlyTotals() {
 
   const [form, setForm] = useState<Record<string, string>>(blankForm);
   const [saved, setSaved] = useState(false);
+  // Total revenue is the sum of MRR + one-offs unless they say otherwise.
+  const [overrideTotal, setOverrideTotal] = useState(false);
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
   const { data: profile } = useProfile();
   const gate = gateNumber(profile?.gate);
@@ -69,11 +96,30 @@ export default function MonthlyTotals() {
     },
   });
 
+  // The submission for the month on screen, so picking a month shows what's already saved
+  // instead of a blank form that would overwrite it on submit.
+  const existing = (history ?? []).find(r => String(r.month).slice(0, 7) === currentMonth) ?? null;
+  // Loaded once per month, not on every refetch: React Query refetches on window focus, and
+  // reloading mid-fill would throw away what they had typed.
+  const loadedMonth = useRef<string | null>(null);
+  useEffect(() => {
+    if (!history || loadedMonth.current === currentMonth) return;
+    loadedMonth.current = currentMonth;
+    const row = existing as Row | null;
+    setForm(row ? toForm(row) : blankForm);
+    setSaved(false);
+    // Keep a hand-entered total that doesn't match the sum, rather than silently replacing it.
+    const sum = money(str(row?.mrr_manual ?? row?.mrr)) + money(str(row?.oneoff_revenue));
+    setOverrideTotal(row?.total_revenue != null && Math.abs(Number(row.total_revenue) - sum) > 1);
+  }, [currentMonth, history, existing]);
+
+  const computedTotal = money(form.mrr_manual) + money(form.oneoff_revenue);
+
   const submit = useMutation({
     mutationFn: async () => {
-      const mrr = parseFloat(form.mrr_manual) || 0;
-      const oneoffs = parseFloat(form.oneoff_revenue) || 0;
-      const total = parseFloat(form.total_revenue) || (mrr + oneoffs);
+      const mrr = money(form.mrr_manual);
+      const oneoffs = money(form.oneoff_revenue);
+      const total = overrideTotal ? money(form.total_revenue) || computedTotal : computedTotal;
 
       const { error } = await supabase.from('monthly_totals').upsert({
         user_id: user!.id,
@@ -97,10 +143,12 @@ export default function MonthlyTotals() {
       }, { onConflict: 'user_id,month' });
       if (error) throw error;
 
-      if (form.biggest_win.trim()) {
+      // Only a new or changed win goes to the Wins Wall: correcting a month shouldn't post it twice.
+      const win = form.biggest_win.trim();
+      if (win && win !== str((existing as Row)?.biggest_win).trim()) {
         await supabase.from('weekly_wins').insert({
           user_id: user!.id,
-          win_text: form.biggest_win,
+          win_text: win,
           source: 'monthly',
           week_ending: new Date().toISOString().split('T')[0],
         });
@@ -111,10 +159,10 @@ export default function MonthlyTotals() {
       // and the round-up appears on Financials once the model responds.
       supabase.functions.invoke('monthly-review', { body: {} }).catch(() => {});
 
+      // The form is not cleared: the refetch below reloads this month, so they see what was saved.
       qc.invalidateQueries({ queryKey: ['monthly-totals-history'] });
       qc.invalidateQueries({ queryKey: ['monthly-history'] });
       qc.invalidateQueries({ queryKey: ['wins-wall'] });
-      setForm(blankForm);
       setSaved(true);
       setTimeout(() => setSaved(false), 4000);
     },
@@ -158,10 +206,19 @@ export default function MonthlyTotals() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1.5">Total Revenue ($)</label>
-              <input type="number" value={form.total_revenue} onChange={e => set('total_revenue', e.target.value)}
-                placeholder="5500"
-                className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
-              <p className="text-xs text-muted-foreground mt-1">Enter manually — cross-check one-offs + MRR</p>
+              {overrideTotal ? (
+                <input type="number" value={form.total_revenue} onChange={e => set('total_revenue', e.target.value)}
+                  placeholder="5500" autoFocus
+                  className="w-full px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+              ) : (
+                <div aria-live="polite" className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-lg text-sm font-semibold text-foreground">
+                  ${computedTotal.toLocaleString()}
+                </div>
+              )}
+              <button type="button" onClick={() => { setOverrideTotal(v => !v); if (overrideTotal) set('total_revenue', ''); }}
+                className="text-xs text-primary hover:underline mt-1">
+                {overrideTotal ? 'Use MRR + one-offs instead' : "Doesn't match? Enter it yourself"}
+              </button>
             </div>
           </div>
         </div>
@@ -276,11 +333,13 @@ export default function MonthlyTotals() {
 
         <div className="flex items-center justify-between">
           {saved
-            ? <span className="text-sm text-success font-semibold">✓ Submitted! Dan can see this now. Your win has been posted to the Wins Wall.</span>
-            : <span className="text-xs text-muted-foreground">All fields are optional — fill in what you know.</span>}
+            ? <span className="text-sm text-success font-semibold">✓ Saved! Dan can see this now.</span>
+            : <span className="text-xs text-muted-foreground">
+                {existing ? `You already submitted ${monthLabel} — this will update it.` : 'All fields are optional — fill in what you know.'}
+              </span>}
           <button onClick={() => submit.mutate()} disabled={submit.isPending}
             className="px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg text-sm hover:bg-primary/90 transition disabled:opacity-50">
-            {submit.isPending ? 'Submitting...' : 'Submit Month →'}
+            {submit.isPending ? 'Saving...' : existing ? 'Update Month →' : 'Submit Month →'}
           </button>
         </div>
       </div>
