@@ -10,6 +10,8 @@ import type { IgPost, IgProfile } from "./instagram.ts";
 type DB = any;
 
 export type BuildTask = {
+  /** playbook_tasks.id — absent on synthetic test personas, which have no real row to write to. */
+  id?: string;
   title: string; kind: "kickoff" | "once" | "monthly"; training: string | null;
   status: "approved" | "submitted" | "needs_changes" | "open"; review_note: string | null;
   /** The member's own running tally before they tick it (member_task_tracking). */
@@ -59,7 +61,7 @@ export function gateNumber(gate: string | null | undefined): number | null {
   return named ? GATE_NAMES[named] : null;
 }
 
-const monthKey = (d = new Date()) => d.toISOString().slice(0, 7);
+export const monthKey = (d = new Date()) => d.toISOString().slice(0, 7);
 const clip = (s: unknown, n = 220) => {
   const t = String(s ?? "").replace(/\s+/g, " ").trim();
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;
@@ -118,7 +120,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     const track = tracked.find(p => p.task_id === t.id && p.period === period);
     const training = t.module_codes?.length ? t.module_codes.join(" + ") : t.training_label;
     return {
-      title: t.title, kind: t.kind, training: training || null, status: row?.status ?? "open", review_note: row?.review_note ?? null,
+      id: t.id, title: t.title, kind: t.kind, training: training || null, status: row?.status ?? "open", review_note: row?.review_note ?? null,
       ...(track ? { working: track.working, count: track.count } : {}),
     };
   });

@@ -727,6 +727,27 @@ export type Database = {
         }
         Relationships: []
       }
+      dan_ai_saved_ideas: {
+        Row: {
+          created_at: string
+          id: string
+          idea: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dan_ai_test_results: {
         Row: {
           answer: Json | null

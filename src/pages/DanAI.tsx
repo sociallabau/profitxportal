@@ -7,7 +7,7 @@ import { usePageTracking } from '@/hooks/usePageTracking';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { resourceCatalogue, vaultSources } from '@/data/resourceCatalogue';
-import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History } from 'lucide-react';
+import { ArrowUp, Loader2, Plus, Copy, Check, BookmarkPlus, History, Lightbulb } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import DanAiOrb, { type OrbState } from '@/components/DanAiOrb';
 import KnowledgeAdmin from '@/components/dan-ai/KnowledgeAdmin';
@@ -34,6 +34,7 @@ interface Debug {
 }
 interface Msg { id: string; role: 'user' | 'assistant'; content: string; parsed?: Answer; debug?: Debug; fresh?: boolean }
 interface Thread { id: string; title: string; at: string }
+interface SavedIdea { id: string; idea: string; created_at: string }
 
 const toPoints = (v: unknown): Point[] => Array.isArray(v)
   ? v.map((p: unknown) => typeof p === 'object' && p !== null
@@ -82,6 +83,8 @@ export default function DanAI() {
   const [memberId, setMemberId] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [ideasOpen, setIdeasOpen] = useState(false);
+  const [savedIdeas, setSavedIdeas] = useState<SavedIdea[]>([]);
   const [answered, setAnswered] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -101,6 +104,7 @@ export default function DanAI() {
   useEffect(() => {
     if (!user) return;
     loadThreads();
+    loadIdeas();
   }, [user]);
 
   useEffect(() => {
@@ -123,6 +127,14 @@ export default function DanAI() {
       seen.set(r.thread_id, { id: r.thread_id, title: r.content, at: prev?.at ?? r.created_at });
     }
     setThreads([...seen.values()]);
+  };
+
+  /** Ideas Dan AI saved for them on request. See ask-dan/actions.ts for how it decides a chat turn counts as "save this". */
+  const loadIdeas = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('dan_ai_saved_ideas').select('id, idea, created_at')
+      .eq('user_id', user.id).order('created_at', { ascending: false }).limit(100);
+    setSavedIdeas((data ?? []) as SavedIdea[]);
   };
 
   const openThread = async (id: string) => {
@@ -153,6 +165,7 @@ export default function DanAI() {
       setThreadId(typeof data.thread_id === 'string' ? data.thread_id : null);
       setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: parsed.answer, parsed, fresh: true, debug: isAdmin ? data.debug as Debug : undefined }]);
       loadThreads();
+      loadIdeas();
       setAnswered(true); setTimeout(() => setAnswered(false), 1300);
       inputRef.current?.focus();
     } catch (error) {
@@ -229,6 +242,11 @@ export default function DanAI() {
               <button onClick={() => setHistoryOpen(true)} aria-label="Past chats"
                 className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] hover:bg-[hsl(var(--dan-ink)/0.08)]">
                 <History className="w-4 h-4" />
+              </button>
+              <button onClick={() => setIdeasOpen(true)} aria-label="Saved ideas"
+                className="relative w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dan-muted))] hover:text-[hsl(var(--dan-ink))] hover:bg-[hsl(var(--dan-ink)/0.08)]">
+                <Lightbulb className="w-4 h-4" />
+                {savedIdeas.length > 0 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />}
               </button>
               {convo && (
                 <button onClick={newThread} aria-label="New chat"
@@ -355,6 +373,22 @@ export default function DanAI() {
               </button>
             ))}
             {!threads.length && <p className="text-xs text-muted-foreground px-3">No chats yet.</p>}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={ideasOpen} onOpenChange={setIdeasOpen}>
+        <SheetContent side="left" className="w-72">
+          <SheetHeader><SheetTitle>Saved ideas</SheetTitle></SheetHeader>
+          <p className="mt-2 text-xs text-muted-foreground">Ask Dan AI to save a content idea mid-chat and it'll show up here.</p>
+          <div className="mt-3 space-y-2 overflow-y-auto max-h-[75vh]">
+            {savedIdeas.map(idea => (
+              <div key={idea.id} className="rounded-lg border border-border px-3 py-2">
+                <p className="text-xs text-foreground whitespace-pre-wrap">{idea.idea}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">{new Date(idea.created_at).toLocaleDateString()}</p>
+              </div>
+            ))}
+            {!savedIdeas.length && <p className="text-xs text-muted-foreground px-3">No ideas saved yet.</p>}
           </div>
         </SheetContent>
       </Sheet>

@@ -10,7 +10,7 @@ import { joinChunks } from "../_shared/danBrain.ts";
 import { isCronCall } from "../_shared/cron.ts";
 import type { ContextAnswers } from "../_shared/contextRoom.ts";
 import { buildMemberBlock, type MemberInput } from "./context.ts";
-import { loadExtras, nextBuildTask } from "./dossier.ts";
+import { loadExtras, nextBuildTask, type BuildTask } from "./dossier.ts";
 import { bestRecording } from "./recordings.ts";
 import { buildTaskTitle, isFocusQuestion, loadBuildHelp } from "./buildHelp.ts";
 import { IG_REFRESH_MS, cleanHandle, fetchProfile, fetchRecentPosts } from "./instagram.ts";
@@ -22,6 +22,7 @@ import { loadRoster, ROSTER_PROMPT } from "./roster.ts";
 import { situationBlock } from "./playbook.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, STEP_PROMPT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, limitBro, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
+import { resolveTaskProgress, validIdea, type TaskProgressIntent, type SaveIdeaIntent } from "./actions.ts";
 
 const SONNET = "claude-sonnet-5-5";
 const HAIKU = "claude-haiku-5-5";
@@ -33,7 +34,11 @@ const SOURCE_TAGS: Record<string, string> = {
 const GROUP_CALL = /momentum|q&a|q & a|workshop|hot seat|powerup|power up|pay to play|edit flow/i;
 
 type Point = { do: string; why: string };
-type Answer = { answer: string; points: Point[]; note: string | null; resource: string | null; resource_why?: string | null };
+type Answer = {
+  answer: string; points: Point[]; note: string | null; resource: string | null; resource_why?: string | null;
+  /** What Dan AI actually did, not just advised — resolved and executed only in MEMBER mode. See actions.ts. */
+  task_progress?: TaskProgressIntent; save_idea?: SaveIdeaIntent;
+};
 type Turn = { role: "user" | "assistant"; content: string };
 type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
 type Plan = {
@@ -81,15 +86,45 @@ function toAnswer(v: unknown): Answer | null {
     // Legacy shape from older chats: plain action strings become points without a reason.
     points = o.next_steps.map(String).filter(Boolean).slice(0, 4).map(s => ({ do: s, why: "" }));
   }
+  const tp = o.task_progress;
+  const taskProgress: TaskProgressIntent = tp && typeof tp === "object" && typeof (tp as Record<string, unknown>).task_title === "string"
+    ? { task_title: (tp as Record<string, unknown>).task_title as string, ...(typeof (tp as Record<string, unknown>).count === "number" ? { count: (tp as Record<string, unknown>).count as number } : {}) }
+    : null;
+  const saveIdea: SaveIdeaIntent = validIdea(o.save_idea) ? (o.save_idea as string).trim() : null;
   return {
     answer,
     points,
     note: o.note && o.note !== "null" ? String(o.note) : null,
     resource: o.resource && o.resource !== "null" ? String(o.resource) : null,
     resource_why: typeof o.resource_why === "string" && o.resource_why.trim() && o.resource_why !== "null" ? o.resource_why.trim().slice(0, 200) : null,
+    task_progress: taskProgress, save_idea: saveIdea,
   };
 }
 const fullText = (a: Answer) => [a.answer, ...a.points.map(p => `${p.do} ${p.why}`), a.note ?? ""].join("\n");
+
+/**
+ * Executes what Dan AI decided to actually DO this turn, MEMBER mode only. Best-effort: a
+ * failure here never breaks the chat response, same as the rest of the portal's analytics
+ * writes — the member still gets their answer even if the side effect didn't land.
+ */
+async function runActions(admin: DB, userId: string, final: Answer, build: BuildTask[]): Promise<void> {
+  try {
+    const resolved = resolveTaskProgress(build, final.task_progress ?? null);
+    if (resolved) {
+      const { data: existing } = await admin.from("member_task_tracking").select("count")
+        .eq("user_id", userId).eq("task_id", resolved.taskId).eq("period", resolved.period).maybeSingle();
+      await admin.from("member_task_tracking").upsert(
+        { user_id: userId, task_id: resolved.taskId, period: resolved.period, working: true, count: resolved.count ?? existing?.count ?? 0, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,task_id,period" },
+      );
+    }
+    if (validIdea(final.save_idea)) {
+      await admin.from("dan_ai_saved_ideas").insert({ user_id: userId, idea: final.save_idea.trim() });
+    }
+  } catch (err) {
+    console.error("Dan AI action failed (non-fatal):", err);
+  }
+}
 
 // ---------- model calls ----------
 async function callAnthropic(model: string, system: Block[], messages: Turn[], retried = false, metrics?: Timing, stage = "other", signal?: AbortSignal): Promise<string> {
@@ -1119,6 +1154,7 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
     const r = await answerPipeline({ admin, question, history, catalogue, vaultSources, mode, member: memberPromise, memberId, clock, status });
     const member = r.member;
     const sources = buildSources(r);
+    if (mode === "member" && memberId === userId) await runActions(admin, userId, r.final, member?.extras?.build ?? []);
     await Promise.all([
       admin.from("dan_ai_checks").insert({ user_id: userId, question, draft: r.draft, final: r.final, pass: r.pass, issues: r.issues, timing: r.timing }),
       admin.from("dan_ai_messages").insert([
