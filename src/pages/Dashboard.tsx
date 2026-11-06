@@ -17,15 +17,20 @@ import { NextMove } from '@/components/growth-hub/GrowthHubCards';
 import DanAiButton from '@/components/DanAiButton';
 import { useGateBuild } from '@/hooks/useGrowthHub';
 import { gateNumber, nextTask } from '@/lib/growthHub';
+import { CYCLE_MODES, cycleOf, type CycleMode } from '@/lib/cycle';
 import { isExampleDashboard, EXAMPLE_PROFILE, EXAMPLE_REVENUE, EXAMPLE_CALLS, EXAMPLE_WINS, EXAMPLE_NEXT } from '@/lib/dashboardExample';
 
 // -------- Quarterly cycle --------
+// Which month is which phase lives in src/lib/cycle.ts, so the dashboard, the reflect-month
+// review and Dan AI all read the same rhythm. Icons and colours stay here: presentation only.
 type Phase = 'Build' | 'Implement' | 'Reflect';
-const PHASES: Phase[] = ['Build', 'Implement', 'Reflect'];
+const PHASE_BY_MODE: Record<CycleMode, Phase> = { build: 'Build', implement: 'Implement', reflect: 'Reflect' };
+const phaseOf = (year: number, monthIdx: number): Phase =>
+  PHASE_BY_MODE[cycleOf(new Date(year, monthIdx, 1)).mode];
 const PHASE_META: Record<Phase, { icon: LucideIcon; blurb: string; color: string; bg: string }> = {
-  Build:     { icon: Hammer,  blurb: 'Learn or improve the core components of a ProfitX Business.', color: 'text-orange-600', bg: 'from-orange-500/25 to-orange-500/5' },
-  Implement: { icon: Rocket,  blurb: 'Implement the components into your business. Take massive action.', color: 'text-blue-600', bg: 'from-blue-500/25 to-blue-500/5' },
-  Reflect:   { icon: Compass, blurb: 'Reflect on how the implementation went. Set direction for the next quarter.', color: 'text-success', bg: 'from-green-500/25 to-green-500/5' },
+  Build:     { icon: Hammer,  blurb: CYCLE_MODES.build.blurb,     color: 'text-orange-600', bg: 'from-orange-500/25 to-orange-500/5' },
+  Implement: { icon: Rocket,  blurb: CYCLE_MODES.implement.blurb, color: 'text-blue-600',   bg: 'from-blue-500/25 to-blue-500/5' },
+  Reflect:   { icon: Compass, blurb: CYCLE_MODES.reflect.blurb,   color: 'text-success',    bg: 'from-green-500/25 to-green-500/5' },
 };
 
 // One-day intensives — March, July, November (each year)
@@ -41,8 +46,8 @@ function currentCycle() {
   const { year, monthIdx } = brisbaneNowParts();
   const quarter = Math.floor(monthIdx / 3) + 1;         // 1-4
   const monthInQuarter = (monthIdx % 3) + 1;            // 1-3
-  const phase = PHASES[monthInQuarter - 1];
-  const nextPhase = PHASES[monthInQuarter % 3];
+  const phase = phaseOf(year, monthIdx);
+  const nextPhase = phaseOf(year, monthIdx + 1);
   const nextMonthIdx = (monthIdx + 1) % 12;
   const nextMonthName = new Date(2000, nextMonthIdx, 1).toLocaleString(undefined, { month: 'long' });
   const monthName = new Date(2000, monthIdx, 1).toLocaleString(undefined, { month: 'long' });
@@ -88,7 +93,7 @@ function YearlyCalendar({ example = false }: { example?: boolean }) {
   const { year, monthIdx } = brisbaneNowParts();
   const months = Array.from({ length: 12 }, (_, i) => {
     const q = Math.floor(i / 3) + 1;
-    const phase = PHASES[i % 3];
+    const phase = phaseOf(year, i);
     const isNow = i === monthIdx;
     const hasIntensive = INTENSIVE_MONTHS.includes(i);
     const name = new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' });

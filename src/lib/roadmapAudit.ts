@@ -1,3 +1,5 @@
+import { MODULE_GATE, type GateNumber } from '@/lib/growthHub';
+
 export type Rating = 'red' | 'amber' | 'green';
 export type Pillar = 'offer' | 'clients' | 'delivery';
 
@@ -56,4 +58,30 @@ export function classifyAudit(answers: Record<string, Rating>): AuditResult {
     .slice(0, 3)
     .map(x => x.q.code);
   return { supplyReds, demandReds, issue, focus };
+}
+
+/** The two projects a member picks for a cycle: one to grow, one to tighten up. */
+export type PickOptions = { bigger: string[]; better: string[] };
+
+const inReach = (code: string, gate: GateNumber | null) => !gate || (MODULE_GATE[code] ?? 1) <= gate + 1;
+
+/**
+ * The shortlist for a cycle's two projects, straight from their own audit answers:
+ * anything not green, weakest first, capped to their gate and the one above so a
+ * Gate 1 member is never offered a leadership system. "Bigger" grows the business
+ * (offer and clients), "better" strengthens it (delivery). If a side came back all
+ * green, their gate-appropriate modules on that side are offered anyway, so there
+ * is always something to pick.
+ */
+export function pickOptions(answers: Record<string, Rating>, gate: GateNumber | null, perSide = 4): PickOptions {
+  const ranked = AUDIT_QUESTIONS
+    .map((q, i) => ({ q, i, s: SCORE[answers[q.code] ?? 'green'] }))
+    .filter(x => inReach(x.q.code, gate))
+    .sort((a, b) => a.s - b.s || a.i - b.i);
+  const side = (delivery: boolean) => {
+    const mine = ranked.filter(x => (x.q.pillar === 'delivery') === delivery);
+    const weak = mine.filter(x => x.s < 2);
+    return (weak.length ? weak : mine).slice(0, perSide).map(x => x.q.code);
+  };
+  return { bigger: side(false), better: side(true) };
 }

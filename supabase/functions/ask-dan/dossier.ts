@@ -89,7 +89,9 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     q(admin.from("monday_wins").select("win_text, new_client, deal_value, occurred_on").eq("user_id", memberId).order("occurred_on", { ascending: false }).limit(4)),
     q(admin.from("content_posts").select("title, hook, views, leads, created_at").eq("user_id", memberId).gte("created_at", since30).limit(100)),
     q(admin.from("ad_campaigns").select("status, daily_budget, ad_hook, launched_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(3)),
-    q(admin.from("roadmap_audits").select("focus, issue, created_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(1).maybeSingle()),
+    // Two, not one: the current cycle's review plus the one before it, so Dan AI can ask
+    // whether the two projects they picked last cycle actually shipped.
+    q(admin.from("roadmap_audits").select("focus, issue, created_at, cycle_key, bigger_code, better_code").eq("user_id", memberId).order("created_at", { ascending: false }).limit(2)),
     q(admin.from("roadmap_scores").select("module_number, pillar, score").eq("user_id", memberId)),
     q(admin.from("monthly_reviews").select("month, focus, admin_breakdown").eq("user_id", memberId).order("month", { ascending: false }).limit(1).maybeSingle()),
     q(admin.from("client_notes").select("note, created_at").eq("client_id", memberId).order("created_at", { ascending: false }).limit(5)),
@@ -149,7 +151,16 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
 
   const mem = memory as { summary: string; refreshed_at: string | null; dirty_at: string; instagram: IgPost[] | null; instagram_handle: string | null; instagram_fetched_at: string | null; instagram_profile: IgProfile | null } | null;
   const s = settings as { fast_track_lead_gen: boolean; extra_modules: string[] } | null;
-  const a = audit as { focus: string | null; issue: string | null } | null;
+  type AuditRow = { focus: string[] | string | null; issue: string | null; cycle_key: string | null; bigger_code: string | null; better_code: string | null };
+  const audits = (audit ?? []) as AuditRow[];
+  /** "cycle 2026-12 — supply — focus C2, O1 — bigger: C2, better: D1" */
+  const auditLine = (r: AuditRow) => [
+    r.cycle_key && `cycle ${r.cycle_key}`,
+    r.issue,
+    (Array.isArray(r.focus) ? r.focus.join(", ") : r.focus) && `focus ${Array.isArray(r.focus) ? r.focus.join(", ") : r.focus}`,
+    r.bigger_code && `bigger: ${r.bigger_code}`,
+    r.better_code && `better: ${r.better_code}`,
+  ].filter(Boolean).join(" — ");
   const h = health as { health_status: string | null; notes: string | null } | null;
 
   return {
@@ -164,7 +175,9 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     content_30d: { posts: postRows.length, best: best ? clip(best.title || best.hook, 90) + (best.leads ? ` (${best.leads} leads)` : best.views ? ` (${best.views} views)` : "") : null },
     ads: ((ads ?? []) as { status: string | null; daily_budget: number | null; ad_hook: string | null }[])
       .map(x => `${x.status ?? "unknown"}${x.daily_budget ? ` $${x.daily_budget}/day` : ""}${x.ad_hook ? ` — "${clip(x.ad_hook, 60)}"` : ""}`),
-    audit: a ? clip([a.focus, a.issue].filter(Boolean).join(" — "), 260) || null : null,
+    audit: audits.length
+      ? clip(auditLine(audits[0]) + (audits[1] ? ` | last cycle: ${auditLine(audits[1])}` : ""), 420) || null
+      : null,
     weak_modules: weak,
     review_focus: review ? clip((review as { focus: string | null }).focus, 260) || null : null,
     coach_notes: [
