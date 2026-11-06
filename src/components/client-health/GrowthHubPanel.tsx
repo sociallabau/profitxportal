@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Check, RotateCcw, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -11,7 +11,7 @@ import { GATES, ROMAN, buildProgress, gateLabel, gateNumber, type GateNumber } f
 
 /**
  * Dan's controls for one member: set their gate, approve or send back build
- * proof, lead gen fast-track, extra modules, and what Dan AI currently knows.
+ * proof, lead gen fast-track and extra modules.
  */
 export default function GrowthHubPanel({ memberId, gate: gateRaw }: { memberId: string; gate: string | null }) {
   const qc = useQueryClient();
@@ -41,19 +41,6 @@ export default function GrowthHubPanel({ memberId, gate: gateRaw }: { memberId: 
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['member-growth-hub', memberId] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const { data: memory, refetch: refetchMemory } = useQuery({
-    queryKey: ['member-memory', memberId],
-    queryFn: async () => (await supabase.from('member_memory').select('summary, brief, refreshed_at, instagram_handle, instagram_fetched_at').eq('user_id', memberId).maybeSingle()).data,
-  });
-  const refreshMemory = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.functions.invoke('ask-dan', { body: { action: 'refresh_memory', member_id: memberId } });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success('Dan AI memory refreshed'); refetchMemory(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -134,23 +121,6 @@ export default function GrowthHubPanel({ memberId, gate: gateRaw }: { memberId: 
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <p className="text-xs font-semibold text-primary flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />What Dan AI knows</p>
-          <Button size="sm" variant="ghost" disabled={refreshMemory.isPending} onClick={() => refreshMemory.mutate()}>
-            {refreshMemory.isPending ? 'Refreshing…' : 'Refresh'}
-          </Button>
-        </div>
-        {memory?.summary
-          ? <p className="text-xs whitespace-pre-line leading-relaxed">{memory.summary}</p>
-          : <p className="text-xs text-muted-foreground">No memory yet. It builds after their next question or check-in, or hit Refresh.</p>}
-        {memory?.brief && <p className="text-xs mt-2 pt-2 border-t border-primary/20"><span className="font-semibold">They see:</span> {memory.brief}</p>}
-        <p className="text-[10px] text-muted-foreground mt-2">
-          {memory?.refreshed_at ? `Updated ${new Date(memory.refreshed_at).toLocaleString()}` : ''}
-          {memory?.instagram_handle ? ` · IG @${memory.instagram_handle}${memory.instagram_fetched_at ? ` pulled ${new Date(memory.instagram_fetched_at).toLocaleDateString()}` : ''}` : ''}
-        </p>
       </div>
     </div>
   );

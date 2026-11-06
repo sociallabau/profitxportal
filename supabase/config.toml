@@ -15,3 +15,8 @@ verify_jwt = false
 # Public calendar feed, read by the portal on load. No user data involved.
 [functions.calendar-feed]
 verify_jwt = false
+
+# Called by the WhatsApp / recording-scan automations, which cannot present a
+# Supabase JWT. Verifies its own shared key (TOUCHPOINT_INGEST_KEY) in code.
+[functions.log-touchpoints]
+verify_jwt = false
