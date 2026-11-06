@@ -268,6 +268,54 @@ export type Database = {
           },
         ]
       }
+      client_goals: {
+        Row: {
+          author_id: string | null
+          client_id: string
+          created_at: string
+          goal: string
+          id: string
+          reviewed_at: string | null
+          set_on: string
+          status: string
+        }
+        Insert: {
+          author_id?: string | null
+          client_id: string
+          created_at?: string
+          goal: string
+          id?: string
+          reviewed_at?: string | null
+          set_on?: string
+          status?: string
+        }
+        Update: {
+          author_id?: string | null
+          client_id?: string
+          created_at?: string
+          goal?: string
+          id?: string
+          reviewed_at?: string | null
+          set_on?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_health: {
         Row: {
           client_user_id: string
