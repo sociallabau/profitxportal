@@ -183,6 +183,27 @@
       "when": 1792901601441,
       "tag": "0025_create_member_task_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793938304122,
+      "tag": "0026_20261107090000_c9a4e1d7_6b32_4f58_9d0a_3e7b5c2f8a14",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793938324333,
+      "tag": "0027_20261107100000_a1d8f3c6_2e47_4b90_9c15_7f3b8e0d6a29",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793938341268,
+      "tag": "0028_reload_api_schema_client_health",
+      "breakpoints": true
     }
   ]
 }
