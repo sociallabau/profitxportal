@@ -54,3 +54,73 @@ export const CYCLE_STEPS: Record<CycleStepKey, { label: string; href: string }> 
 export function cycleSteps(mode: CycleMode): CycleStepKey[] {
   return mode === 'reflect' ? ['numbers', 'review'] : ['numbers'];
 }
+
+// ---------- what happened in the cycle ----------
+
+/** The cycle's three months, oldest first: its reflect month and the two that follow. */
+export function cycleMonths(cycle: Cycle): string[] {
+  const [y, m] = cycle.key.split('-').map(Number);
+  return [0, 1, 2].map(i => ym(new Date(y, m - 1 + i, 1)));
+}
+
+/** A check-in, as much of it as the review needs. Nulls mean "not asked", not zero. */
+export type CycleTotals = {
+  month: string;
+  total_revenue?: number | null;
+  expenses?: number | null;
+  active_retainers?: number | null;
+  retainers_lost?: number | null;
+  new_clients?: number | null;
+  content_posts?: number | null;
+  retainer_convos?: number | null;
+  business_confidence?: number | null;
+};
+
+export type CycleReview = {
+  /** The cycle's three months, oldest first. */
+  monthKeys: string[];
+  /** How many of the three they actually submitted. The rest of this is only as good as this number. */
+  submitted: number;
+  /** Revenue across the cycle, and the change from its first submitted month to its last. */
+  revenue: { total: number; changePct: number | null };
+  profit: { total: number; marginPct: number | null };
+  /** Retainers at the end of the cycle, plus what moved during it. */
+  retainers: { end: number | null; lost: number; signed: number };
+  output: { posts: number; convos: number };
+  confidence: { first: number | null; last: number | null };
+};
+
+const sum = (rows: CycleTotals[], key: keyof CycleTotals) =>
+  rows.reduce((n, r) => n + (Number(r[key]) || 0), 0);
+
+/**
+ * The cycle in numbers, from the member's own check-ins. Everything here is computed rather
+ * than asked: a reflection should show them what happened and only ask what the data can't know.
+ */
+export function reviewCycle(cycle: Cycle, totals: CycleTotals[]): CycleReview {
+  const monthKeys = cycleMonths(cycle);
+  // Oldest first, and only the months belonging to this cycle.
+  const rows = monthKeys
+    .map(key => totals.find(t => String(t.month).slice(0, 7) === key))
+    .filter((r): r is CycleTotals => !!r);
+  const revenue = sum(rows, 'total_revenue');
+  const expenses = sum(rows, 'expenses');
+  const withRevenue = rows.filter(r => Number(r.total_revenue) > 0);
+  const [firstRev, lastRev] = [withRevenue[0], withRevenue.at(-1)];
+  const scored = rows.filter(r => r.business_confidence != null);
+  const end = [...rows].reverse().find(r => r.active_retainers != null)?.active_retainers;
+  return {
+    monthKeys,
+    submitted: rows.length,
+    revenue: {
+      total: revenue,
+      changePct: firstRev && lastRev && firstRev !== lastRev && Number(firstRev.total_revenue) > 0
+        ? Math.round(((Number(lastRev.total_revenue) - Number(firstRev.total_revenue)) / Number(firstRev.total_revenue)) * 100)
+        : null,
+    },
+    profit: { total: revenue - expenses, marginPct: revenue > 0 ? Math.round(((revenue - expenses) / revenue) * 100) : null },
+    retainers: { end: end ?? null, lost: sum(rows, 'retainers_lost'), signed: sum(rows, 'new_clients') },
+    output: { posts: sum(rows, 'content_posts'), convos: sum(rows, 'retainer_convos') },
+    confidence: { first: scored[0]?.business_confidence ?? null, last: scored.at(-1)?.business_confidence ?? null },
+  };
+}
