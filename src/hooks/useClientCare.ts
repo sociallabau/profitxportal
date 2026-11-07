@@ -54,6 +54,27 @@ export type ContactLogged = {
 type ContactLogFailed = { ok: false; reason: string; message: string };
 
 /**
+ * supabase-js never reads the edge function's own response body on a non-2xx: the error it
+ * throws just says "Edge Function returned a non-2xx status code" no matter what the function
+ * actually said. The real message is sitting unread on error.context (the raw Response), so
+ * pull it out ourselves — otherwise every failure looks identical and nothing is diagnosable
+ * from the toast alone.
+ */
+async function edgeErrorMessage(error: unknown, fallback: string): Promise<string> {
+  const context = (error as { context?: Response } | null)?.context;
+  if (context && typeof context.json === 'function') {
+    try {
+      const body = await context.clone().json();
+      if (typeof body?.error === 'string' && body.error) return body.error;
+      if (typeof body?.message === 'string' && body.message) return body.message;
+    } catch {
+      // Body wasn't JSON (or was already consumed) — fall through to whatever we have.
+    }
+  }
+  return (error as Error | null)?.message || fallback;
+}
+
+/**
  * Client Health chat: "booked a call with Harry Tuesday 8:15am" — the ask-dan edge function
  * resolves who, when and what kind of contact, then writes a touchpoint (already happened) or
  * a booked next_contact_at on client_care (still ahead). Either write can be undone.
@@ -63,7 +84,7 @@ export function useLogContactChat() {
   return useMutation({
     mutationFn: async ({ text, clientId }: { text: string; clientId?: string | null }) => {
       const { data, error } = await supabase.functions.invoke('ask-dan', { body: { action: 'client_health_log', text, client_id: clientId } });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error, "Couldn't reach Dan AI — try again"));
       const result = data as ContactLogged | ContactLogFailed;
       // Couldn't tell who or when: say so rather than write a guess.
       if (!result.ok) throw new Error((result as ContactLogFailed).message || "Couldn't log that — try again");
