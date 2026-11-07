@@ -22,6 +22,34 @@ describe('resolveClient', () => {
   });
 });
 
+describe('resolveClient — educated guesses', () => {
+  const withHarrison: Roster = [{ id: 'ht', name: 'Harrison Tzortzis' }, { id: 'h1', name: 'Harry Smith' }, { id: 'z1', name: 'Zac Brown' }];
+
+  it('matches a nickname plus a surname initial, even when they are not exact-name matches', () => {
+    expect(resolveClient('Harry T', withHarrison)).toEqual({ id: 'ht', name: 'Harrison Tzortzis' });
+  });
+  it('still matches a real first name plus a surname initial', () => {
+    expect(resolveClient('Harry S', withHarrison)).toEqual({ id: 'h1', name: 'Harry Smith' });
+  });
+  it('matches a bare nickname when it is unique in the roster', () => {
+    const roster: Roster = [{ id: 'ht', name: 'Harrison Tzortzis' }, { id: 'z1', name: 'Zac Brown' }];
+    expect(resolveClient('Harry', roster)).toEqual({ id: 'ht', name: 'Harrison Tzortzis' });
+  });
+  it('still refuses a bare nickname once it is ambiguous, nicknames included', () => {
+    // Harry Smith is literally a Harry; Harrison Tzortzis counts as one too via the nickname —
+    // widening who "Harry" could mean must never make a guess safer to make.
+    expect(resolveClient('Harry', withHarrison)).toBeNull();
+  });
+  it('still refuses a surname initial that matches more than one person', () => {
+    const roster: Roster = [{ id: 'ht', name: 'Harrison Tzortzis' }, { id: 'h2', name: 'Harry Thompson' }];
+    expect(resolveClient('Harry T', roster)).toBeNull();
+  });
+  it('is unaffected by a name with no nickname entry', () => {
+    expect(resolveClient('Zac B', withHarrison)).toEqual({ id: 'z1', name: 'Zac Brown' });
+    expect(resolveClient('Zac X', withHarrison)).toBeNull();
+  });
+});
+
 describe('resolveKind', () => {
   it('passes through a known kind', () => expect(resolveKind('whatsapp')).toBe('whatsapp'));
   it('defaults to call for anything unrecognised', () => {

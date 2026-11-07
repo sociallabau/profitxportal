@@ -1,9 +1,14 @@
 /**
  * Client Health chat: Dan or Emily types "booked a call with Harry Tuesday 8:15am" and the
  * model drafts who, when and what kind of contact. Code never trusts the draft on its own —
- * the client must be a single exact match in the roster (never a guess between two people
- * with the same first name), the date must actually parse, and "already happened" vs "still
- * ahead" is recomputed from that date rather than taken from the model's own label.
+ * the client must resolve to exactly one person in the roster, the date must actually parse,
+ * and "already happened" vs "still ahead" is recomputed from that date rather than taken from
+ * the model's own label.
+ *
+ * Resolving the client makes educated guesses — a nickname ("Harry" for "Harrison"), a surname
+ * initial ("Harry T") — but every tier still only acts when exactly one person in the roster
+ * fits. A bare "Harry" stays unresolved if there are two; nicknames widen who counts as "a
+ * Harry" without weakening that rule.
  */
 
 export type ContactLogDraft = {
@@ -23,15 +28,81 @@ const DAY = 24 * 60 * 60 * 1000;
 /** A date within a year either way of now. Anything further out is almost certainly a misread, not a real booking. */
 const YEAR = 366 * DAY;
 
-/** Exact name match first (case/whitespace-insensitive), then first-name only if that's unique. Never guesses between two people. */
+/**
+ * Common English nickname -> full name(s) it can stand in for. Deliberately small and not
+ * exhaustive — it only needs to widen a match that still has to come out unique, never to be
+ * a complete directory of names. A name with no entry here still resolves fine on its own.
+ */
+const NICKNAMES: Record<string, string[]> = {
+  harry: ["harrison", "henry", "harold"],
+  will: ["william"], bill: ["william"], liam: ["william"],
+  rob: ["robert"], bob: ["robert"], bobby: ["robert"],
+  mike: ["michael"], mick: ["michael"],
+  alex: ["alexander", "alexandra"],
+  sam: ["samuel", "samantha"],
+  dan: ["daniel"], danny: ["daniel"],
+  matt: ["matthew"],
+  nick: ["nicholas"], nic: ["nicholas"],
+  tom: ["thomas"], tommy: ["thomas"],
+  chris: ["christopher", "christina", "christine"],
+  liz: ["elizabeth"], beth: ["elizabeth"], eliza: ["elizabeth"],
+  jen: ["jennifer"], jenny: ["jennifer"],
+  kate: ["katherine", "kathryn", "catherine"], katie: ["katherine", "kathryn", "catherine"],
+  dave: ["david"],
+  jim: ["james"], jimmy: ["james"],
+  ed: ["edward"], ted: ["edward"], eddie: ["edward"],
+  steve: ["steven", "stephen"],
+  andy: ["andrew"],
+  tony: ["anthony"],
+  joe: ["joseph"], joey: ["joseph"],
+  ben: ["benjamin"],
+  charlie: ["charles"],
+  fred: ["frederick"],
+  pat: ["patrick", "patricia"],
+  greg: ["gregory"],
+  ken: ["kenneth"],
+  ron: ["ronald"],
+  rick: ["richard"], dick: ["richard"], richie: ["richard"],
+  jack: ["john"], jon: ["jonathan"], johnny: ["john"],
+  max: ["maxwell", "maximilian"],
+  zac: ["zachary"], zach: ["zachary"],
+  nat: ["nathan", "natalie", "nathaniel"],
+};
+
+/** True if `a` and `b` are plausibly the same first name — identical, or one is a known nickname for the other. */
+function sharesFirstName(a: string, b: string): boolean {
+  if (a === b) return true;
+  return (NICKNAMES[a] ?? []).includes(b) || (NICKNAMES[b] ?? []).includes(a);
+}
+
+/** Exact name match first (case/whitespace-insensitive), then a first name or nickname if that's
+ * unique, then a nickname plus a surname initial. Every tier only acts when exactly one person
+ * fits — nicknames widen who a name could mean, which makes it *more* important to check for a
+ * second match, never less, so the first-name and nickname checks run together, not in sequence. */
 export function resolveClient(name: string | null, roster: Roster): { id: string; name: string } | null {
   const q = name?.trim().toLowerCase().replace(/\s+/g, " ") ?? "";
   if (!q) return null;
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const exact = roster.filter(r => norm(r.name) === q);
   if (exact.length === 1) return exact[0];
-  const firstName = roster.filter(r => norm(r.name).split(" ")[0] === q);
-  return firstName.length === 1 ? firstName[0] : null;
+
+  const qTokens = q.split(" ");
+
+  // A bare first name or nickname — "Zac", or "Harry" meaning Harrison — only if it is unique
+  // across the roster once nicknames are taken into account.
+  if (qTokens.length === 1) {
+    const byFirstName = roster.filter(r => sharesFirstName(qTokens[0], norm(r.name).split(" ")[0]));
+    return byFirstName.length === 1 ? byFirstName[0] : null;
+  }
+
+  // A nickname plus a surname initial is specific enough to act on: "Harry T" only resolves
+  // if exactly one Harry/Harrison/Henry/Harold in the roster has a surname starting with T.
+  const surnamePrefix = qTokens[qTokens.length - 1];
+  const bySurname = roster.filter(r => {
+    const rTokens = norm(r.name).split(" ");
+    return rTokens.length > 1 && sharesFirstName(qTokens[0], rTokens[0]) && rTokens[rTokens.length - 1].startsWith(surnamePrefix);
+  });
+  return bySurname.length === 1 ? bySurname[0] : null;
 }
 
 export function resolveKind(kind: string | null | undefined): ContactKind {
@@ -70,7 +141,7 @@ ${roster ? `CLIENTS:\n${roster.join(", ")}` : "The client is already selected on
 
 Return JSON only, no other text:
 {"understood": true or false (false if this note isn't actually about contacting a client),
- "client_name": ${roster ? "the one name from CLIENTS this is about, written exactly as it appears there, or null if it's unclear which client" : "null"},
+ "client_name": ${roster ? 'the one name from CLIENTS this is about, written exactly as it appears there — even from just a nickname or a first name and surname initial (e.g. "Harry T" for "Harrison Tzortzis"), make the confident match. Only use null if it is genuinely unclear between two or more people' : "null"},
  "scheduled_at": "ISO 8601 date-time with a +10:00 offset, for when the contact happened or is booked — or null if you can't tell",
  "kind": "whatsapp" | "call" | "quarterly_call" | "group_call" | "other",
  "note": "a short note worth keeping — what was discussed or why — or null"}
