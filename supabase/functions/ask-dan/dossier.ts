@@ -33,6 +33,16 @@ export type MemberExtras = {
   content_30d: { posts: number; best: string | null };
   ads: string[];
   audit: string | null;
+  /** The latest cycle review: the two projects picked, and the answers only they could give. */
+  cycle: {
+    key: string | null;
+    bigger: string | null;
+    better: string | null;
+    moved_needle: string | null;
+    stalled: string | null;
+    not_doing: string | null;
+    confidence: { offer: number | null; content: number | null; conversations: number | null; delivery: number | null };
+  } | null;
   weak_modules: string[];
   review_focus: string | null;
   coach_notes: string[];
@@ -91,7 +101,7 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
     q(admin.from("ad_campaigns").select("status, daily_budget, ad_hook, launched_at").eq("user_id", memberId).order("created_at", { ascending: false }).limit(3)),
     // Two, not one: the current cycle's review plus the one before it, so Dan AI can ask
     // whether the two projects they picked last cycle actually shipped.
-    q(admin.from("roadmap_audits").select("focus, issue, created_at, cycle_key, bigger_code, better_code").eq("user_id", memberId).order("created_at", { ascending: false }).limit(2)),
+    q(admin.from("roadmap_audits").select("focus, issue, created_at, cycle_key, bigger_code, better_code, moved_needle, stalled, not_doing, confidence_offer, confidence_content, confidence_conversations, confidence_delivery").eq("user_id", memberId).order("created_at", { ascending: false }).limit(2)),
     q(admin.from("roadmap_scores").select("module_number, pillar, score").eq("user_id", memberId)),
     q(admin.from("monthly_reviews").select("month, focus, admin_breakdown").eq("user_id", memberId).order("month", { ascending: false }).limit(1).maybeSingle()),
     q(admin.from("client_notes").select("note, created_at").eq("client_id", memberId).order("created_at", { ascending: false }).limit(5)),
@@ -151,7 +161,13 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
 
   const mem = memory as { summary: string; refreshed_at: string | null; dirty_at: string; instagram: IgPost[] | null; instagram_handle: string | null; instagram_fetched_at: string | null; instagram_profile: IgProfile | null } | null;
   const s = settings as { fast_track_lead_gen: boolean; extra_modules: string[] } | null;
-  type AuditRow = { focus: string[] | string | null; issue: string | null; cycle_key: string | null; bigger_code: string | null; better_code: string | null };
+  type AuditRow = {
+    focus: string[] | string | null; issue: string | null; cycle_key: string | null;
+    bigger_code: string | null; better_code: string | null;
+    moved_needle: string | null; stalled: string | null; not_doing: string | null;
+    confidence_offer: number | null; confidence_content: number | null;
+    confidence_conversations: number | null; confidence_delivery: number | null;
+  };
   const audits = (audit ?? []) as AuditRow[];
   /** "cycle 2026-12 — supply — focus C2, O1 — bigger: C2, better: D1" */
   const auditLine = (r: AuditRow) => [
@@ -177,6 +193,18 @@ export async function loadExtras(admin: DB, memberId: string, gate: string | nul
       .map(x => `${x.status ?? "unknown"}${x.daily_budget ? ` $${x.daily_budget}/day` : ""}${x.ad_hook ? ` — "${clip(x.ad_hook, 60)}"` : ""}`),
     audit: audits.length
       ? clip(auditLine(audits[0]) + (audits[1] ? ` | last cycle: ${auditLine(audits[1])}` : ""), 420) || null
+      : null,
+    cycle: audits[0]
+      ? {
+          key: audits[0].cycle_key, bigger: audits[0].bigger_code, better: audits[0].better_code,
+          moved_needle: clip(audits[0].moved_needle, 300) || null,
+          stalled: clip(audits[0].stalled, 300) || null,
+          not_doing: clip(audits[0].not_doing, 200) || null,
+          confidence: {
+            offer: audits[0].confidence_offer, content: audits[0].confidence_content,
+            conversations: audits[0].confidence_conversations, delivery: audits[0].confidence_delivery,
+          },
+        }
       : null,
     weak_modules: weak,
     review_focus: review ? clip((review as { focus: string | null }).focus, 260) || null : null,

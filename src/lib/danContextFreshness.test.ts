@@ -10,7 +10,7 @@ const emptyExtras: MemberExtras = {
   gate_number: null, fast_track_lead_gen: false, extra_modules: [], build: [], check_ins: [],
   clients: { count: 0, last_signed: null, avg_value: null },
   pipeline: { total: 0, by_stage: {}, open_value: 0 },
-  wins: [], content_30d: { posts: 0, best: null }, ads: [], audit: null, weak_modules: [],
+  wins: [], content_30d: { posts: 0, best: null }, ads: [], audit: null, cycle: null, weak_modules: [],
   review_focus: null, coach_notes: [], health: null, recent_questions: [], memory: null, instagram: null,
   journey: { joined: null, starting_mrr: null, first_month: null, first_mrr: null },
   modules_done: [], training_viewed: [], financial_audit: null,

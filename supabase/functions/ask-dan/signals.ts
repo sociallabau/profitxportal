@@ -14,6 +14,26 @@ const mrrOf = (t: Totals) => t.mrr ?? t.mrr_manual ?? null;
 const POSTS: Record<number, number> = { 1: 4, 2: 8, 3: 8, 4: 8 };
 const CONVOS: Record<number, number> = { 1: 4, 2: 6 };
 
+type ProjectCheck = { code: string; label: string; started: boolean | null; fix: string };
+
+/**
+ * The projects whose start leaves a mark in the numbers, so "picked it and never started it"
+ * can be stated as fact instead of guessed. `null` means their check-in cannot say either way,
+ * and nothing is claimed. Posting and conversations are deliberately absent: those are standing
+ * build-list work, so activity there proves nothing about the project.
+ */
+function projectChecks(t: Totals | undefined): ProjectCheck[] {
+  // A check-in from before the gate-aligned form saved blank boxes as 0, so only a 0 from the
+  // newer form means "none", never "not filled in".
+  const newForm = !!t && (t.active_retainers != null || t.retainer_convos != null || t.ad_leads != null);
+  const has = (v: number | null | undefined) => (v == null || (!newForm && v === 0) ? null : v > 0);
+  return [
+    { code: "C2", label: "Profile Visit Ads", started: has(t?.ad_spend_awareness ?? t?.ad_spend), fix: "put $50 behind their best posts and log the spend (Profile Visit Ads)" },
+    { code: "C4", label: "Full Funnel Paid Ads", started: has(t?.ad_spend_leadgen ?? t?.ad_spend), fix: "get one campaign live and track cost per lead before scaling (Paid Ad Powerup)" },
+    { code: "D3", label: "Getting Help", started: has(t?.expense_contractors), fix: "hire the first editor and win back half their time (Editing Team Building)" },
+  ];
+}
+
 export function signals(m: MemberInput, d: Derived): Signal[] {
   const out: Signal[] = [];
   const t = m.totals[0];
@@ -59,6 +79,24 @@ export function signals(m: MemberInput, d: Derived): Signal[] {
 
   const conf = x?.check_ins.find(c => c.business_confidence != null)?.business_confidence;
   if (conf != null && conf <= 4) out.push({ problem: `confidence ${conf}/10 at their last check-in`, fix: "start with the one next win; keep it simple" });
+
+  // The cycle review: what they said they would do, against what their numbers show they did.
+  const cyc = x?.cycle;
+  if (cyc) {
+    for (const p of projectChecks(t)) {
+      if ((cyc.bigger === p.code || cyc.better === p.code) && p.started === false) {
+        out.push({ problem: `picked ${p.label} as a project this cycle, but their last check-in shows it hasn't started`, fix: p.fix });
+      }
+    }
+    const areas: [string, number | null][] = [
+      ["offer", cyc.confidence.offer], ["content", cyc.confidence.content],
+      ["conversations", cyc.confidence.conversations], ["delivery", cyc.confidence.delivery],
+    ];
+    for (const [area, score] of areas) {
+      if (score != null && score <= 4) out.push({ problem: `rated their ${area} ${score}/10 in the cycle review`, fix: `fix the ${area}: it is upstream of everything they are trying to do` });
+    }
+    if (cyc.stalled) out.push({ problem: `what stalled last cycle, in their words: "${cyc.stalled}"`, fix: "clear that blocker first, or it stops this cycle too" });
+  }
   if (x && x.pipeline.total >= 5) {
     const early = Object.entries(x.pipeline.by_stage).filter(([k]) => /lead|new|contact|cold|warm|dm/i.test(k)).reduce((n, [, v]) => n + v, 0);
     if (early / x.pipeline.total > 0.7) out.push({ problem: `${early} of ${x.pipeline.total} Hot List people stuck at the first stage`, fix: "follow up and book calls (The System)" });

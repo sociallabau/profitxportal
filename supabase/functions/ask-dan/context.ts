@@ -224,6 +224,22 @@ export function extrasLines(x: MemberExtras): string[] {
   if (x.content_30d.posts) L.push(`Content logged in the last 30 days: ${x.content_30d.posts} posts${x.content_30d.best ? `; best: ${x.content_30d.best}` : ""}`);
   if (x.ads.length) L.push(`Ad campaigns: ${x.ads.join(" | ")}`);
   if (x.audit) L.push(`Latest roadmap audit: ${x.audit}`);
+  if (x.cycle) {
+    const c = x.cycle;
+    const picks = [c.bigger && `bigger: ${c.bigger}`, c.better && `better: ${c.better}`].filter(Boolean).join(", ");
+    if (picks) L.push(`Projects they picked for this cycle${c.key ? ` (${c.key})` : ""} — ${picks}`);
+    const scores = [
+      c.confidence.offer != null && `offer ${c.confidence.offer}/10`,
+      c.confidence.content != null && `content ${c.confidence.content}/10`,
+      c.confidence.conversations != null && `conversations ${c.confidence.conversations}/10`,
+      c.confidence.delivery != null && `delivery ${c.confidence.delivery}/10`,
+    ].filter(Boolean).join(", ");
+    if (scores) L.push(`How confident they feel, their own scores: ${scores}`);
+    // Their words, not inferred: the three things the numbers cannot tell us.
+    if (c.moved_needle) L.push(`What they say moved the needle last cycle: "${c.moved_needle}"`);
+    if (c.stalled) L.push(`What they say stalled, and why: "${c.stalled}"`);
+    if (c.not_doing) L.push(`What they have decided NOT to do this cycle: "${c.not_doing}" (do not prescribe it)`);
+  }
   if (x.weak_modules.length) L.push(`Weakest roadmap scores: ${x.weak_modules.join(", ")}`);
   if (x.review_focus) L.push(`Dan's latest monthly review focus: ${x.review_focus}`);
   if (x.coach_notes.length || x.health) {
