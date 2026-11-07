@@ -1853,33 +1853,54 @@ export type Database = {
           answers: Json
           better_code: string | null
           bigger_code: string | null
+          confidence_content: number | null
+          confidence_conversations: number | null
+          confidence_delivery: number | null
+          confidence_offer: number | null
           created_at: string
           cycle_key: string | null
           focus: string[]
           id: string
           issue: string
+          moved_needle: string | null
+          not_doing: string | null
+          stalled: string | null
           user_id: string
         }
         Insert: {
           answers: Json
           better_code?: string | null
           bigger_code?: string | null
+          confidence_content?: number | null
+          confidence_conversations?: number | null
+          confidence_delivery?: number | null
+          confidence_offer?: number | null
           created_at?: string
           cycle_key?: string | null
           focus?: string[]
           id?: string
           issue: string
+          moved_needle?: string | null
+          not_doing?: string | null
+          stalled?: string | null
           user_id: string
         }
         Update: {
           answers?: Json
           better_code?: string | null
           bigger_code?: string | null
+          confidence_content?: number | null
+          confidence_conversations?: number | null
+          confidence_delivery?: number | null
+          confidence_offer?: number | null
           created_at?: string
           cycle_key?: string | null
           focus?: string[]
           id?: string
           issue?: string
+          moved_needle?: string | null
+          not_doing?: string | null
+          stalled?: string | null
           user_id?: string
         }
         Relationships: []
