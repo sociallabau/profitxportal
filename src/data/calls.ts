@@ -278,8 +278,16 @@ export function getUpcomingCalls(limit?: number): Call[] {
  * the same as a hand-listed one. Anything unrecognised falls back to the
  * momentum call artwork rather than showing nothing.
  */
-export function thumbnailFor(title: string): string {
+/**
+ * A thumbnail for a live-calendar call title we recognise, or undefined for one we don't —
+ * never a stand-in from a different call. Momentum Call used to be the catch-all default, which
+ * meant any new workshop (nothing here names it yet) silently wore Momentum Call's own branding.
+ * Undefined falls through to the page's own generic tile (gradient + icon), which is what an
+ * unrecognised title should look like.
+ */
+export function thumbnailFor(title: string): string | undefined {
   const t = title.toLowerCase();
+  if (t.includes('momentum call')) return momentumCallThumb;
   if (t.includes('smooth operator')) return smoothOperatorThumb;
   if (t.includes('hot seat')) return hotSeatElijahThumb;
   if (t.includes('pay to play')) return payToPlayThumb;
@@ -290,5 +298,5 @@ export function thumbnailFor(title: string): string {
   if (t.includes('the system')) return theSystemThumb;
   if (t.includes('ad metrics') || t.includes('tracking 101')) return adMetricsThumb;
   if (t.includes('christmas')) return christmasThumb;
-  return momentumCallThumb;
+  return undefined;
 }
