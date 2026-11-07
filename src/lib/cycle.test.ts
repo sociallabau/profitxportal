@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cycleMonths, cycleOf, cycleSteps, reviewCycle, type CycleTotals } from './cycle';
+import { cycleBefore, cycleMonths, cycleOf, cycleSteps, reviewCycle, type CycleTotals } from './cycle';
 
 const at = (year: number, month: number, day = 15) => new Date(year, month - 1, day);
 
@@ -45,6 +45,22 @@ describe('cycleMonths', () => {
   it('is the reflect month and the two that follow, across a year boundary', () => {
     expect(cycleMonths(cycleOf(at(2027, 1)))).toEqual(['2026-12', '2027-01', '2027-02']);
     expect(cycleMonths(cycleOf(at(2027, 6)))).toEqual(['2027-06', '2027-07', '2027-08']);
+  });
+});
+
+describe('cycleBefore', () => {
+  it('steps back a whole cycle, across a year boundary', () => {
+    expect(cycleBefore(cycleOf(at(2026, 12))).key).toBe('2026-09');
+    expect(cycleBefore(cycleOf(at(2027, 1))).key).toBe('2026-09');
+  });
+  it('is the three months the December reflection looks back on', () => {
+    expect(cycleMonths(cycleBefore(cycleOf(at(2026, 12))))).toEqual(['2026-09', '2026-10', '2026-11']);
+  });
+  it('stays on the reflect-month grid when stepped back repeatedly', () => {
+    let c = cycleOf(at(2027, 5)); // an implement month, cycle key 2027-03
+    for (let i = 0; i < 4; i++) c = cycleBefore(c);
+    expect(c.mode).toBe('reflect');
+    expect(c.key).toBe('2026-03');
   });
 });
 

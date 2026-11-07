@@ -5,6 +5,7 @@ import DashboardProgress from '@/components/DashboardProgress';
 import { Button } from '@/components/ui/button';
 import PageLayout from '@/components/PageLayout';
 import AnnouncementsModal from '@/components/AnnouncementsModal';
+import CycleBanner from '@/components/CycleBanner';
 import { useRequireAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { usePageTracking } from '@/hooks/usePageTracking';
@@ -325,6 +326,9 @@ export default function Dashboard() {
         </Button>
         </div>
       </div>
+
+      {/* What this month wants from them — sits here until both steps are done. */}
+      {!example && <CycleBanner userId={user?.id} />}
 
       <DashboardProgress example={example} series={revenueSeries} gate={dashboardProfile?.gate} moveUp={dashboardProfile?.gate_move_up} keyTask={dashboardProfile?.gate_key_task}
         nextMove={example

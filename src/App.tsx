@@ -19,6 +19,7 @@ const GrowthHub = lazy(() => import("./pages/GrowthHub"));
 const GrowthHubEditor = lazy(() => import("./pages/admin/GrowthHubEditor"));
 const NewClients = lazy(() => import("./pages/submissions/NewClients"));
 const MonthlyTotals = lazy(() => import("./pages/submissions/MonthlyTotals"));
+const CycleReview = lazy(() => import("./pages/CycleReview"));
 const Financials = lazy(() => import("./pages/Financials"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ClientHealth = lazy(() => import("./pages/ClientHealth"));
@@ -96,6 +97,7 @@ const App = () => (
           <Route path="/module/:moduleId" element={<ProtectedRoute><ModulePage /></ProtectedRoute>} />
           <Route path="/submissions/clients" element={<ProtectedRoute><NewClients /></ProtectedRoute>} />
           <Route path="/submissions/monthly" element={<ProtectedRoute><MonthlyTotals /></ProtectedRoute>} />
+          <Route path="/cycle" element={<ProtectedRoute><CycleReview /></ProtectedRoute>} />
           <Route path="/client-health" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute><ClientHealth /></AdminRoute>} />
           <Route path="/admin/health" element={<AdminRoute><ClientHealth /></AdminRoute>} />

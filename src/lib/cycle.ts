@@ -43,11 +43,22 @@ export function cycleOf(date = new Date()): Cycle {
   };
 }
 
+/**
+ * The cycle before this one — the three months the reflection actually looks back on.
+ * Reflect comes first in a cycle, not last: in December you are opening the Dec–Feb
+ * cycle, and what there is to reflect on is Sep–Nov, the build and implement months
+ * that just ran. The two projects picked in that review are for the cycle now starting.
+ */
+export function cycleBefore(cycle: Cycle): Cycle {
+  const [y, m] = cycle.key.split('-').map(Number);
+  return cycleOf(new Date(y, m - 1 - 3, 1));
+}
+
 export type CycleStepKey = 'numbers' | 'review';
 
 export const CYCLE_STEPS: Record<CycleStepKey, { label: string; href: string }> = {
   numbers: { label: "Submit last month's numbers", href: '/submissions/monthly' },
-  review: { label: 'Review the cycle and pick your two projects', href: '/roadmap' },
+  review: { label: 'Review the cycle and pick your two projects', href: '/cycle' },
 };
 
 /** Every month wants the numbers in. A reflect month also wants the review done. */
