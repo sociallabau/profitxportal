@@ -739,6 +739,42 @@ export type Database = {
         }
         Relationships: []
       }
+      dan_ai_saved_ideas: {
+        Row: {
+          created_at: string
+          id: string
+          idea: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dan_ai_saved_ideas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dan_ai_saved_ideas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dan_ai_test_results: {
         Row: {
           answer: Json | null
