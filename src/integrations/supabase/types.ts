@@ -2238,6 +2238,22 @@ export type Database = {
       }
     }
     Functions: {
+      admin_activity_by_day: {
+        Args: { _days?: number }
+        Returns: {
+          day: string
+          unique_members: number
+          views: number
+        }[]
+      }
+      admin_page_popularity: {
+        Args: { _days?: number }
+        Returns: {
+          page: string
+          unique_members: number
+          views: number
+        }[]
+      }
       dan_ai_live: { Args: never; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       my_dan_brief: {
