@@ -1,6 +1,6 @@
 import type { TaskWithStatus } from '@/lib/growthHub';
 import { OWNER_USER_ID } from '@/lib/owner';
-import type { Call } from '@/data/calls';
+import { brisbaneDateKey, type Call } from '@/data/calls';
 import momentumThumbnail from '@/assets/momentum-call-thumb.png';
 import workshopThumbnail from '@/assets/christmas-comes-early-thumb.png';
 
@@ -22,12 +22,43 @@ export const EXAMPLE_REVENUE = EXAMPLE_REVENUE_VALUES.map((revenue, index) => ({
   monthKey: `${2025 + Math.floor((10 + index) / 12)}-${String(((10 + index) % 12) + 1).padStart(2, '0')}-01`,
 }));
 
-export const EXAMPLE_CALLS: Call[] = [
-  { title: 'Momentum Call™', category: 'Coaching', start: '2026-10-27T07:30:00+10:00', durationMins: 60, meetUrl: '#', thumbnail: momentumThumbnail },
-  { title: 'Christmas Comes Early™', category: 'Workshop', workshopType: 'learn', start: '2026-10-28T07:00:00+10:00', durationMins: 90, meetUrl: '#', thumbnail: workshopThumbnail },
-  { title: 'Momentum Call™', category: 'Coaching', start: '2026-11-03T07:30:00+10:00', durationMins: 60, meetUrl: '#' },
-  { title: 'Momentum Call™', category: 'Coaching', start: '2026-11-10T07:30:00+10:00', durationMins: 60, meetUrl: '#' },
-];
+/** 'YYYY-MM-DD' + `days`, as a date key. Brisbane has no DST, so this is safe as plain UTC-anchored arithmetic. */
+function addDays(dateKey: string, days: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + days));
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** The next `weekday` (0=Sun..6=Sat) strictly after `todayKey` — never today itself, so a call
+ * generated this morning never shows as "upcoming" once it has already happened today. */
+function nextWeekday(todayKey: string, weekday: number): string {
+  const [y, m, d] = todayKey.split('-').map(Number);
+  const todayDow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const diff = ((weekday - todayDow + 7) % 7) || 7;
+  return addDays(todayKey, diff);
+}
+
+/**
+ * The owner-only screenshot dashboard's "Next Up" calls, evergreen: built relative to today
+ * rather than fixed dates, so a screenshot taken any week still shows a believable near-future
+ * schedule instead of calls that happened months ago. Same weekly Momentum Call cadence (Tuesdays)
+ * real members see, plus one named workshop — fully isolated fictional data, never live calendar rows.
+ */
+export function buildExampleCalls(now = new Date()): Call[] {
+  const today = brisbaneDateKey(now);
+  const momentum1 = nextWeekday(today, 2); // Tuesday
+  const workshop = addDays(momentum1, 1); // the Wednesday right after
+  const momentum2 = addDays(momentum1, 7);
+  const momentum3 = addDays(momentum1, 14);
+  return [
+    { title: 'Momentum Call™', category: 'Coaching', start: `${momentum1}T07:30:00+10:00`, durationMins: 60, meetUrl: '#', thumbnail: momentumThumbnail },
+    { title: 'Christmas Comes Early™', category: 'Workshop', workshopType: 'learn', start: `${workshop}T07:00:00+10:00`, durationMins: 90, meetUrl: '#', thumbnail: workshopThumbnail },
+    { title: 'Momentum Call™', category: 'Coaching', start: `${momentum2}T07:30:00+10:00`, durationMins: 60, meetUrl: '#' },
+    { title: 'Momentum Call™', category: 'Coaching', start: `${momentum3}T07:30:00+10:00`, durationMins: 60, meetUrl: '#' },
+  ];
+}
+
+export const EXAMPLE_CALLS: Call[] = buildExampleCalls();
 
 export const EXAMPLE_WINS = [
   { id: 'example-1', win_text: 'Signed two new retainers this month — the ads are paying off!', cash_amount: 3200, created_at: '2026-10-22T12:00:00+10:00' },
