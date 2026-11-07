@@ -1851,7 +1851,10 @@ export type Database = {
       roadmap_audits: {
         Row: {
           answers: Json
+          better_code: string | null
+          bigger_code: string | null
           created_at: string
+          cycle_key: string | null
           focus: string[]
           id: string
           issue: string
@@ -1859,7 +1862,10 @@ export type Database = {
         }
         Insert: {
           answers: Json
+          better_code?: string | null
+          bigger_code?: string | null
           created_at?: string
+          cycle_key?: string | null
           focus?: string[]
           id?: string
           issue: string
@@ -1867,7 +1873,10 @@ export type Database = {
         }
         Update: {
           answers?: Json
+          better_code?: string | null
+          bigger_code?: string | null
           created_at?: string
+          cycle_key?: string | null
           focus?: string[]
           id?: string
           issue?: string
