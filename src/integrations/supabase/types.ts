@@ -758,7 +758,22 @@ export type Database = {
           idea?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dan_ai_saved_ideas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dan_ai_saved_ideas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dan_ai_test_results: {
         Row: {
@@ -2263,16 +2278,16 @@ export type Database = {
         Args: { _days?: number }
         Returns: {
           day: string
-          views: number
           unique_members: number
+          views: number
         }[]
       }
       admin_page_popularity: {
         Args: { _days?: number }
         Returns: {
           page: string
-          views: number
           unique_members: number
+          views: number
         }[]
       }
       dan_ai_live: { Args: never; Returns: boolean }
