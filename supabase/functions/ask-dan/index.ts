@@ -23,7 +23,8 @@ import { situationBlock } from "./playbook.ts";
 import { BRAIN_HEADER, BUILD_HELP_FORMAT, FOCUS_FORMAT, STEP_PROMPT, CHECKER_PROMPT, FLAG_REPLY, GRADER_PROMPT, MEMORY_PROMPT, NAME_FALLBACK, PLAN_PROMPT, draftPrompt } from "./prompts.ts";
 import { findBanned, findNames, limitBro, hasCostPerClient, looksTruncated, matchResource, nameTokens, redact, repairCostPerClient, wordCount } from "./guardrails.ts";
 import { resolveTaskProgress, validIdea, type TaskProgressIntent, type SaveIdeaIntent } from "./actions.ts";
-import { resolveContactLog, contactLogPrompt, type ContactLogDraft, type Roster } from "./contactLog.ts";
+import { resolveContactLog, contactLogPrompt, standsInForQuarterly, type ContactLogDraft, type ContactKind, type Roster } from "./contactLog.ts";
+import { quarterly, type Touchpoint } from "../_shared/clientCare.ts";
 
 const SONNET = "claude-sonnet-5-5";
 const HAIKU = "claude-haiku-5-5";
@@ -775,6 +776,18 @@ async function sameSecret(a: string, b: string): Promise<boolean> {
 
 /** Claude's test loop: version, data coverage, answers for real members or personas, graded tests (all read-only), plus building member memory. */
 // deno-lint-ignore no-explicit-any
+/** Fetches what standsInForQuarterly (contactLog.ts) needs to decide, and asks it. Kept thin and
+ * untested on its own — the decision itself is the pure, tested part. */
+async function qualifiesForQuarterly(admin: DB, clientId: string, kind: ContactKind, now: Date): Promise<boolean> {
+  const [{ data: profile }, { data: care }, { data: touches }] = await Promise.all([
+    admin.from("profiles").select("created_at").eq("id", clientId).maybeSingle(),
+    admin.from("client_care").select("quarterly_due_on").eq("client_id", clientId).maybeSingle(),
+    admin.from("client_touchpoints").select("kind, occurred_at").eq("client_id", clientId).eq("kind", "quarterly_call"),
+  ]);
+  const q = quarterly((touches ?? []) as Touchpoint[], profile?.created_at ?? null, now, care?.quarterly_due_on ?? null);
+  return standsInForQuarterly(kind, q.state);
+}
+
 async function selfTest(admin: DB, body: any, clock: ReturnType<typeof timing>) {
   const catalogue = typeof body.catalogue === "string" && body.catalogue.trim() ? body.catalogue.slice(0, 20000) : "(none available)";
   const catalogueLines = catalogue.split("\n").map((l: string) => l.trim()).filter(Boolean);
@@ -1097,22 +1110,28 @@ const counted = wordCount(res.answer ? fullText(res.answer as Answer) : "");
           return json({ ok: false, reason: resolved.reason, message: messages[resolved.reason] });
         }
         let touchpointId: string | null = null;
+        // A real 1:1 contact (not WhatsApp, not a group call) booked or logged while this client's
+        // quarterly clock is due, soon, or was never set stands in for it — counted, not just noted.
+        const asQuarterly = await qualifiesForQuarterly(admin, resolved.client.id, resolved.kind, new Date());
+        const kind: ContactKind = asQuarterly ? "quarterly_call" : resolved.kind;
         if (resolved.when === "future") {
           const { error } = await admin.from("client_care").upsert({
-            client_id: resolved.client.id, next_contact_at: resolved.at.toISOString(), next_contact_kind: resolved.kind,
+            client_id: resolved.client.id, next_contact_at: resolved.at.toISOString(), next_contact_kind: kind,
             next_contact_note: resolved.note, next_contact_by: userId, updated_at: new Date().toISOString(),
+            ...(asQuarterly ? { quarterly_due_on: resolved.at.toISOString().slice(0, 10) } : {}),
           }, { onConflict: "client_id" });
           if (error) return json({ error: error.message }, 500);
         } else {
           const { data, error } = await admin.from("client_touchpoints").insert({
-            client_id: resolved.client.id, kind: resolved.kind, occurred_at: resolved.at.toISOString(), note: resolved.note, author_id: userId, source: "chat",
+            client_id: resolved.client.id, kind, occurred_at: resolved.at.toISOString(), note: resolved.note, author_id: userId, source: "chat",
           }).select("id").single();
           if (error) return json({ error: error.message }, 500);
           touchpointId = data?.id ?? null;
         }
         return json({
           ok: true, when: resolved.when, client_id: resolved.client.id, client_name: resolved.client.name,
-          scheduled_at: resolved.at.toISOString(), kind: resolved.kind, note: resolved.note, touchpoint_id: touchpointId,
+          scheduled_at: resolved.at.toISOString(), kind, note: resolved.note, touchpoint_id: touchpointId,
+          as_quarterly: asQuarterly,
         });
       }
       return json({ error: "Unknown action" }, 400);

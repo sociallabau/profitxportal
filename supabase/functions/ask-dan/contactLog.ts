@@ -10,6 +10,7 @@
  * fits. A bare "Harry" stays unresolved if there are two; nicknames widen who counts as "a
  * Harry" without weakening that rule.
  */
+import type { QuarterlyState } from "../_shared/clientCare.ts";
 
 export type ContactLogDraft = {
   client_name: string | null;
@@ -107,6 +108,18 @@ export function resolveClient(name: string | null, roster: Roster): { id: string
 
 export function resolveKind(kind: string | null | undefined): ContactKind {
   return (CONTACT_KINDS as readonly string[]).includes(kind ?? "") ? (kind as ContactKind) : "call";
+}
+
+/**
+ * Does a logged or booked call stand in for a client's quarterly catch-up? Only when they have
+ * no sensible quarterly date at all right now — overdue, or never scheduled — and it's a real
+ * 1:1 contact, not a WhatsApp message or a group call, neither of which was ever meant to replace
+ * it. A call booked while one is already planned soon never overwrites that existing plan; this
+ * only fills a gap, never reschedules a real one.
+ */
+export function standsInForQuarterly(kind: ContactKind, quarterlyState: QuarterlyState): boolean {
+  if (kind === "whatsapp" || kind === "group_call") return false;
+  return quarterlyState === "overdue" || quarterlyState === "unscheduled";
 }
 
 export type ResolvedContactLog =

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { resolveClient, resolveKind, resolveContactLog, type ContactLogDraft, type Roster } from '../../supabase/functions/ask-dan/contactLog';
+import { resolveClient, resolveKind, resolveContactLog, standsInForQuarterly, type ContactLogDraft, type Roster } from '../../supabase/functions/ask-dan/contactLog';
+import type { QuarterlyState } from '../../supabase/functions/_shared/clientCare';
 
 const roster: Roster = [{ id: 'h1', name: 'Harry Smith' }, { id: 'h2', name: 'Harry Jones' }, { id: 'z1', name: 'Zac Brown' }];
 const now = new Date('2026-11-07T00:00:00Z');
@@ -56,6 +57,30 @@ describe('resolveKind', () => {
     expect(resolveKind('zoom')).toBe('call');
     expect(resolveKind(null)).toBe('call');
     expect(resolveKind(undefined)).toBe('call');
+  });
+});
+
+describe('standsInForQuarterly', () => {
+  const states: QuarterlyState[] = ['new', 'ok', 'soon', 'overdue', 'unscheduled'];
+
+  it('fills a real gap: overdue or never scheduled, for a real 1:1 contact', () => {
+    expect(standsInForQuarterly('call', 'overdue')).toBe(true);
+    expect(standsInForQuarterly('call', 'unscheduled')).toBe(true);
+    expect(standsInForQuarterly('quarterly_call', 'overdue')).toBe(true);
+    expect(standsInForQuarterly('other', 'unscheduled')).toBe(true);
+  });
+
+  it('never overwrites an existing plan, even one that is coming up soon', () => {
+    expect(standsInForQuarterly('call', 'soon')).toBe(false);
+    expect(standsInForQuarterly('call', 'ok')).toBe(false);
+    expect(standsInForQuarterly('call', 'new')).toBe(false);
+  });
+
+  it('never counts a WhatsApp message or a group call, whatever the quarterly state', () => {
+    for (const state of states) {
+      expect(standsInForQuarterly('whatsapp', state)).toBe(false);
+      expect(standsInForQuarterly('group_call', state)).toBe(false);
+    }
   });
 });
 

@@ -50,6 +50,10 @@ export function useLogTouchpoint() {
 export type ContactLogged = {
   ok: true; when: 'past' | 'future'; client_id: string; client_name: string;
   scheduled_at: string; kind: TouchKind; note: string | null; touchpoint_id: string | null;
+  /** True when this contact also stood in for the client's quarterly call (they had no sensible
+   * quarterly date at all) — the edge function already wrote client_care.quarterly_due_on for a
+   * future booking, so undo needs to clear it back out too. */
+  as_quarterly: boolean;
 };
 type ContactLogFailed = { ok: false; reason: string; message: string };
 
@@ -98,15 +102,19 @@ export function useLogContactChat() {
       };
       refresh();
       const headline = result.when === 'future'
-        ? `Booked for ${formatShortDateTime(new Date(result.scheduled_at))}`
-        : `${touchLabel(result.kind)} logged`;
+        ? `${result.as_quarterly ? 'Quarterly call booked' : 'Booked'} for ${formatShortDateTime(new Date(result.scheduled_at))}`
+        : `${result.as_quarterly ? 'Quarterly call' : touchLabel(result.kind)} logged`;
       toast.success(`${headline} — ${result.client_name}`, {
         duration: 8000,
         action: {
           label: 'Undo',
           onClick: async () => {
             const undo = result.when === 'future'
-              ? supabase.from('client_care').update({ next_contact_at: null, next_contact_kind: null, next_contact_note: null, next_contact_by: null }).eq('client_id', result.client_id)
+              ? supabase.from('client_care').update({
+                  next_contact_at: null, next_contact_kind: null, next_contact_note: null, next_contact_by: null,
+                  // Only this action's own fill-in gets cleared, never a quarterly date Dan set some other way.
+                  ...(result.as_quarterly ? { quarterly_due_on: null } : {}),
+                }).eq('client_id', result.client_id)
               : result.touchpoint_id ? supabase.from('client_touchpoints').delete().eq('id', result.touchpoint_id) : null;
             if (!undo) return;
             const { error } = await undo;
