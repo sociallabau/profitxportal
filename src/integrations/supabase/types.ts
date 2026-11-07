@@ -219,10 +219,6 @@ export type Database = {
           dan_read_at: string | null
           dan_read_by: string | null
           dan_read_note: string | null
-          next_contact_at: string | null
-          next_contact_by: string | null
-          next_contact_kind: string | null
-          next_contact_note: string | null
           quarterly_due_on: string | null
           snapshot: string | null
           snapshot_at: string | null
@@ -237,10 +233,6 @@ export type Database = {
           dan_read_at?: string | null
           dan_read_by?: string | null
           dan_read_note?: string | null
-          next_contact_at?: string | null
-          next_contact_by?: string | null
-          next_contact_kind?: string | null
-          next_contact_note?: string | null
           quarterly_due_on?: string | null
           snapshot?: string | null
           snapshot_at?: string | null
@@ -255,10 +247,6 @@ export type Database = {
           dan_read_at?: string | null
           dan_read_by?: string | null
           dan_read_note?: string | null
-          next_contact_at?: string | null
-          next_contact_by?: string | null
-          next_contact_kind?: string | null
-          next_contact_note?: string | null
           quarterly_due_on?: string | null
           snapshot?: string | null
           snapshot_at?: string | null
@@ -735,27 +723,6 @@ export type Database = {
           id?: string
           role?: string
           thread_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      dan_ai_saved_ideas: {
-        Row: {
-          created_at: string
-          id: string
-          idea: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          idea: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          idea?: string
           user_id?: string
         }
         Relationships: []
@@ -1725,8 +1692,6 @@ export type Database = {
           training_label: string | null
           training_url: string | null
           updated_at: string
-          week_end: number | null
-          week_start: number | null
           why: string
         }
         Insert: {
@@ -1742,8 +1707,6 @@ export type Database = {
           training_label?: string | null
           training_url?: string | null
           updated_at?: string
-          week_end?: number | null
-          week_start?: number | null
           why?: string
         }
         Update: {
@@ -1759,8 +1722,6 @@ export type Database = {
           training_label?: string | null
           training_url?: string | null
           updated_at?: string
-          week_end?: number | null
-          week_start?: number | null
           why?: string
         }
         Relationships: [
@@ -1872,56 +1833,26 @@ export type Database = {
       roadmap_audits: {
         Row: {
           answers: Json
-          better_code: string | null
-          bigger_code: string | null
-          confidence_content: number | null
-          confidence_conversations: number | null
-          confidence_delivery: number | null
-          confidence_offer: number | null
           created_at: string
-          cycle_key: string | null
           focus: string[]
           id: string
           issue: string
-          moved_needle: string | null
-          not_doing: string | null
-          stalled: string | null
           user_id: string
         }
         Insert: {
           answers: Json
-          better_code?: string | null
-          bigger_code?: string | null
-          confidence_content?: number | null
-          confidence_conversations?: number | null
-          confidence_delivery?: number | null
-          confidence_offer?: number | null
           created_at?: string
-          cycle_key?: string | null
           focus?: string[]
           id?: string
           issue: string
-          moved_needle?: string | null
-          not_doing?: string | null
-          stalled?: string | null
           user_id: string
         }
         Update: {
           answers?: Json
-          better_code?: string | null
-          bigger_code?: string | null
-          confidence_content?: number | null
-          confidence_conversations?: number | null
-          confidence_delivery?: number | null
-          confidence_offer?: number | null
           created_at?: string
-          cycle_key?: string | null
           focus?: string[]
           id?: string
           issue?: string
-          moved_needle?: string | null
-          not_doing?: string | null
-          stalled?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2259,22 +2190,6 @@ export type Database = {
       }
     }
     Functions: {
-      admin_activity_by_day: {
-        Args: { _days?: number }
-        Returns: {
-          day: string
-          views: number
-          unique_members: number
-        }[]
-      }
-      admin_page_popularity: {
-        Args: { _days?: number }
-        Returns: {
-          page: string
-          views: number
-          unique_members: number
-        }[]
-      }
       dan_ai_live: { Args: never; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       my_dan_brief: {
